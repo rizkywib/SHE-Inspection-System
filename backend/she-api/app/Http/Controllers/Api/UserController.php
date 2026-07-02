@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+
+class UserController extends Controller
+{
+    public function index(Request $request)
+    {
+        $data = User::with(['company', 'branch', 'division', 'department', 'section'])
+            ->orderBy('id')
+            ->get();
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:users,username',
+            'password' => 'required|min:8',
+            'role' => 'required|in:super_admin,admin,inspector,viewer',
+            'company_id' => 'nullable|exists:companies,id',
+            'branch_id' => 'nullable|exists:branches,id',
+            'division_id' => 'nullable|exists:divisions,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'section_id' => 'nullable|exists:sections,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $data['password_hash'] = Hash::make($data['password']);
+        unset($data['password']);
+
+        $user = User::create($data);
+
+        return response()->json(['data' => $user], 201);
+    }
+
+    public function show($id)
+    {
+        $user = User::with(['company', 'branch', 'division', 'department', 'section'])->findOrFail($id);
+        return response()->json(['data' => $user]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:users,username,' . $id,
+            'role' => 'required|in:super_admin,admin,inspector,viewer',
+            'password' => 'nullable|min:8',
+            'company_id' => 'nullable|exists:companies,id',
+            'branch_id' => 'nullable|exists:branches,id',
+            'division_id' => 'nullable|exists:divisions,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'section_id' => 'nullable|exists:sections,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        if (isset($data['password']) && $data['password']) {
+            $data['password_hash'] = Hash::make($data['password']);
+            unset($data['password']);
+        }
+
+        $user->update($data);
+
+        return response()->json(['data' => $user]);
+    }
+
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return response()->json(['message' => 'Deleted successfully']);
+    }
+}

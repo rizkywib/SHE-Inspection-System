@@ -1,0 +1,67 @@
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
+
+class AuthService extends ChangeNotifier {
+  final ApiService _api = ApiService();
+  Map<String, dynamic>? _user;
+  String? _token;
+  bool _isLoading = false;
+
+  Map<String, dynamic>? get user => _user;
+  String? get token => _token;
+  bool get isLoading => _isLoading;
+  bool get isLoggedIn => _token != null && _user != null;
+
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+    if (_token != null) {
+      _api.setToken(_token);
+      try {
+        final response = await _api.getProfile();
+        _user = response;
+      } catch (e) {
+        _token = null;
+        _user = null;
+        await prefs.remove('token');
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>?> login(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await _api.login(email, password);
+      if (response.containsKey('token')) {
+        _token = response['token'];
+        _user = response['user'];
+        _api.setToken(_token);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', _token!);
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+      _isLoading = false;
+      notifyListeners();
+      return response;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return {'error': e.toString()};
+    }
+  }
+
+  Future<void> logout() async {
+    _token = null;
+    _user = null;
+    _api.setToken(null);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    notifyListeners();
+  }
+}
