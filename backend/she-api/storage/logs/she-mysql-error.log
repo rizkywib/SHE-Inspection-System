@@ -1,0 +1,1 @@
+2026-07-03  8:15:02 0 [Note] Using unique option prefix 'key_buffer' is error-prone and can break in the future. Please use the full name 'key_buffer_size' instead.

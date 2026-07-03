@@ -42,7 +42,7 @@
             </form>
 
             <div class="text-center">
-                <p class="text-xs text-gray-500">Demo credentials: admin / admin123</p>
+                <p class="text-xs text-gray-500">Demo credentials: admin@sheinspection.com / admin123</p>
             </div>
         </div>
     </main>
