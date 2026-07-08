@@ -13,9 +13,14 @@ class FireHydrantController extends Controller
 {
     public function index(Request $request)
     {
-        $data = FireHydrantInspection::with(['inspector', 'location', 'area'])
-            ->orderByDesc('inspection_date')
-            ->get();
+        $query = FireHydrantInspection::with(['inspector', 'location', 'area', 'items'])
+            ->orderByDesc('inspection_date');
+
+        if ($request->filled('location_id')) {
+            $query->where('location_id', $request->location_id);
+        }
+
+        $data = $query->get();
 
         return response()->json(['data' => $data]);
     }
@@ -44,7 +49,7 @@ class FireHydrantController extends Controller
             'checked_in_at' => 'nullable|date',
             'signed_at' => 'nullable|date',
             'notes' => 'nullable|string',
-            'status' => 'nullable|in:draft,completed,signed',
+            'status' => 'nullable|in:new,completed,signed',
             'items' => 'nullable|array',
             'items.*.hydrant_number' => 'required_with:items|string|max:200',
             'items.*.name' => 'required_with:items|string|max:100',
@@ -56,8 +61,8 @@ class FireHydrantController extends Controller
             'items.*.valve_condition' => 'nullable|boolean',
             'items.*.coupling_extra_condition' => 'nullable|boolean',
             'items.*.remark' => 'nullable|string',
-            'items.*.photo_before' => 'nullable|image|max:5120',
-            'items.*.photo_after' => 'nullable|image|max:5120',
+            'items.*.photo_before' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif|max:10240',
+            'items.*.photo_after' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif|max:10240',
             'items.*.item_lat' => 'nullable|numeric',
             'items.*.item_lng' => 'nullable|numeric',
         ]);
@@ -69,10 +74,10 @@ class FireHydrantController extends Controller
         $data = $validator->validated();
         $items = $data['items'] ?? [];
         unset($data['items'], $data['reference_no']);
-        $this->storeItemPhotos($request);
+        $items = $this->mergeItemPhotos($items, $this->storeItemPhotos($request));
 
         $data['inspector_id'] = $data['inspector_id'] ?? $request->user()->id;
-        $data['status'] = $data['status'] ?? 'draft';
+        $data['status'] = $data['status'] ?? 'new';
         $data['checked_in_at'] = $data['checked_in_at'] ?? now();
         if ($data['status'] === 'signed') {
             $data['signed_at'] = $data['signed_at'] ?? now();
@@ -112,7 +117,7 @@ class FireHydrantController extends Controller
             'checked_in_at' => 'nullable|date',
             'signed_at' => 'nullable|date',
             'notes' => 'nullable|string',
-            'status' => 'nullable|in:draft,completed,signed',
+            'status' => 'nullable|in:new,completed,signed',
             'items' => 'nullable|array',
             'items.*.hydrant_number' => 'required_with:items|string|max:200',
             'items.*.name' => 'required_with:items|string|max:100',
@@ -124,8 +129,8 @@ class FireHydrantController extends Controller
             'items.*.valve_condition' => 'nullable|boolean',
             'items.*.coupling_extra_condition' => 'nullable|boolean',
             'items.*.remark' => 'nullable|string',
-            'items.*.photo_before' => 'nullable|image|max:5120',
-            'items.*.photo_after' => 'nullable|image|max:5120',
+            'items.*.photo_before' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif|max:10240',
+            'items.*.photo_after' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif|max:10240',
             'items.*.item_lat' => 'nullable|numeric',
             'items.*.item_lng' => 'nullable|numeric',
         ]);
@@ -135,9 +140,13 @@ class FireHydrantController extends Controller
         }
 
         $data = $validator->validated();
+        $hasItems = $request->has('items');
         $items = $data['items'] ?? [];
         unset($data['items'], $data['reference_no']);
-        $this->storeItemPhotos($request);
+        if ($hasItems) {
+            $items = $this->mergeItemPhotos($items, $this->storeItemPhotos($request));
+            $items = $this->carryExistingItemPhotos($inspection, $items);
+        }
 
         if (array_key_exists('checkin_lat', $data) && $data['checkin_lat'] === null) {
             unset($data['checkin_lat']);
@@ -151,12 +160,14 @@ class FireHydrantController extends Controller
             $data['signed_at'] = $inspection->signed_at ?: now();
         }
 
-        DB::transaction(function () use ($inspection, $data, $items) {
+        DB::transaction(function () use ($inspection, $data, $items, $hasItems) {
             $inspection->update($data);
             if (empty($inspection->reference_no)) {
                 $this->assignReferenceNo($inspection);
             }
-            $this->syncItems($inspection, $items);
+            if ($hasItems) {
+                $this->syncItems($inspection, $items);
+            }
         });
 
         $inspection->load('items');
@@ -180,6 +191,8 @@ class FireHydrantController extends Controller
                 'valve_condition' => $item['valve_condition'] ?? false,
                 'coupling_extra_condition' => $item['coupling_extra_condition'] ?? false,
                 'remark' => $item['remark'] ?? null,
+                'photo_before' => $item['photo_before'] ?? null,
+                'photo_after' => $item['photo_after'] ?? null,
                 'item_lat' => $item['item_lat'] ?? null,
                 'item_lng' => $item['item_lng'] ?? null,
             ]);
@@ -219,11 +232,12 @@ class FireHydrantController extends Controller
         return (int) ($row->next_id ?? (FireHydrantInspection::max('id') + 1));
     }
 
-    private function storeItemPhotos(Request $request): void
+    private function storeItemPhotos(Request $request): array
     {
+        $stored = [];
         $items = $request->file('items', []);
         if (!is_array($items)) {
-            return;
+            return $stored;
         }
 
         $targetPath = public_path('images');
@@ -246,8 +260,42 @@ class FireHydrantController extends Controller
                 );
 
                 $file->move($targetPath, $filename);
+                $stored[$index][$field] = 'images/' . $filename;
             }
         }
+
+        return $stored;
+    }
+
+    private function mergeItemPhotos(array $items, array $photos): array
+    {
+        foreach ($photos as $index => $fields) {
+            foreach ($fields as $field => $path) {
+                $items[$index][$field] = $path;
+            }
+        }
+
+        return $items;
+    }
+
+    private function carryExistingItemPhotos(FireHydrantInspection $inspection, array $items): array
+    {
+        $existingItems = $inspection->items()->orderBy('id')->get()->values();
+
+        foreach ($items as $index => $item) {
+            $existing = $existingItems->get($index);
+            if (!$existing) {
+                continue;
+            }
+
+            foreach (['photo_before', 'photo_after'] as $field) {
+                if (empty($items[$index][$field]) && !empty($existing->{$field})) {
+                    $items[$index][$field] = $existing->{$field};
+                }
+            }
+        }
+
+        return $items;
     }
 
     public function destroy($id)
