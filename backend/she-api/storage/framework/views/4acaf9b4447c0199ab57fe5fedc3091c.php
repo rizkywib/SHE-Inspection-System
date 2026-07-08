@@ -17,17 +17,12 @@
         <h2 id="formTitle" class="text-xl font-bold text-gray-900 mb-4">Create Inspection</h2>
         <form id="extinguisherForm" class="space-y-6">
             <input type="hidden" id="eid_id">
-
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 <div class="xl:col-span-6 space-y-5">
                     <div class="border-b border-gray-200 pb-3">
                         <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Inspection Data</h3>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Reference No</label>
-                            <input id="reference_no" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Inspection Date</label>
                             <input id="inspection_date" type="date" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -109,7 +104,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -124,17 +119,73 @@
     </div>
 </div>
 
+<!-- View Modal -->
+<div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden overflow-y-auto" onclick="if(event.target===this)closeView()">
+    <div class="min-h-screen px-4 py-8 flex items-start justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl transform transition-all" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-8 py-5 border-b border-gray-200">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Inspection Detail</h2>
+                    <p id="viewReference" class="text-sm text-blue-600 font-medium mt-0.5"></p>
+                </div>
+                <button onclick="closeView()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="px-8 py-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 font-medium">Reference No</span>
+                        <span id="viewReferenceNo" class="text-gray-900 font-semibold"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 font-medium">Inspection Date</span>
+                        <span id="viewDate" class="text-gray-900 font-semibold"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 font-medium">Location</span>
+                        <span id="viewLocation" class="text-gray-900 font-semibold"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 font-medium">Status</span>
+                        <span id="viewStatus" class="px-3 py-1 inline-flex text-xs font-semibold rounded-full"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 font-medium">Inspector</span>
+                        <span id="viewInspector" class="text-gray-900 font-semibold"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 font-medium">Assigned To</span>
+                        <span id="viewAssigned" class="text-gray-900 font-semibold"></span>
+                    </div>
+                    <div class="md:col-span-3">
+                        <span class="block text-gray-500 font-medium">Notes</span>
+                        <span id="viewNotes" class="text-gray-900"></span>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-5">
+                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Fire Extinguisher Items</h3>
+                    <div id="viewItems" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="px-8 py-4 border-t border-gray-200 flex justify-end">
+                <button onclick="closeView()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const API_URL = '/api';
 let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || '{}');
 let extinguishers = [];
+let referenceDataPromise;
 
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
 
 function escapeHtml(value) {
-    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    return String(value ?? '').replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#039;');
 }
 function formatDateOnly(value) { return value ? String(value).slice(0, 10) : ''; }
 function boolValue(value) { return value === true || value === 1 || value === '1'; }
@@ -160,16 +211,39 @@ async function loadReferenceData() {
     fillSelect('assigned_to', users, '- Not Assigned -', 'User');
 }
 
+async function ensureReferenceData() {
+    if (!referenceDataPromise) {
+        referenceDataPromise = loadReferenceData();
+    }
+    await referenceDataPromise;
+}
+
+async function fillNextReferenceNo() {
+    const input = document.getElementById('reference_no');
+    input.value = 'Generating...';
+
+    try {
+        const res = await fetch(`${API_URL}/fire-extinguishers/next-reference`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        const json = await res.json();
+        input.value = json.data?.reference_no || 'Auto generated';
+    } catch (error) {
+        input.value = 'Auto generated';
+    }
+}
+
 function conditionCheckbox(field, label, item) {
     return `<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700"><input data-field="${field}" type="checkbox" ${boolValue(item[field]) ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"><span>${label}</span></label>`;
 }
 function addExtinguisherItem(item = {}) {
     const container = document.getElementById('extinguisherItems');
+    const index = container.children.length + 1;
     const card = document.createElement('div');
     card.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50 extinguisher-item';
     card.innerHTML = `
         <div class="flex items-center justify-between gap-3 mb-4">
-            <h4 class="font-semibold text-gray-900">Item APAR <span class="item-number"></span></h4>
+            <h4 class="font-semibold text-gray-900">Item APAR <span class="item-number">${index}</span></h4>
             <button type="button" onclick="removeItem(this)" class="text-red-600 hover:text-red-800 text-sm font-medium"><i class="fas fa-trash mr-1"></i>Remove</button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -187,7 +261,7 @@ function addExtinguisherItem(item = {}) {
     renumberItems();
 }
 function removeItem(button) { button.closest('.extinguisher-item').remove(); renumberItems(); }
-function renumberItems() { document.querySelectorAll('#extinguisherItems .item-number').forEach((el, i) => el.textContent = i + 1); }
+function renumberItems() { document.querySelectorAll('#extinguisherItems .extinguisher-item').forEach((item, index) => { item.querySelector('.item-number').textContent = index + 1; }); }
 function resetItems(items = []) { document.getElementById('extinguisherItems').innerHTML = ''; (items.length ? items : [{}]).forEach(item => addExtinguisherItem(item)); }
 function collectItems() {
     return Array.from(document.querySelectorAll('#extinguisherItems .extinguisher-item')).map(card => {
@@ -222,7 +296,7 @@ async function loadExtinguishers() {
         tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
         return;
     }
-    tbody.innerHTML = extinguishers.map(e => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(e.id)}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(e.reference_no)}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(e.inspection_date))}</td><td class="px-6 py-4 text-sm"><span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${e.status==='completed'?'bg-green-100 text-green-800':e.status==='signed'?'bg-blue-100 text-blue-800':'bg-yellow-100 text-yellow-800'}">${escapeHtml(e.status)}</span></td><td class="px-6 py-4 text-sm"><button onclick="editItem(${e.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${e.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button></td></tr>`).join('');
+    tbody.innerHTML = extinguishers.map((e, index) => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900 text-center">${index + 1}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(e.reference_no)}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(e.inspection_date))}</td><td class="px-6 py-4 text-sm"><span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${e.status==='completed'?'bg-green-100 text-green-800':e.status==='signed'?'bg-blue-100 text-blue-800':'bg-yellow-100 text-yellow-800'}">${escapeHtml(e.status)}</span></td><td class="px-6 py-4 text-sm"><button onclick="viewItem(${e.id})" class="text-green-600 hover:text-green-800 mr-3 font-medium"><i class="fas fa-eye mr-1"></i>View</button><button onclick="editItem(${e.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${e.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button></td></tr>`).join('');
 }
 function openForm() {
     document.getElementById('formCard').classList.remove('hidden');
@@ -231,27 +305,112 @@ function openForm() {
     document.getElementById('eid_id').value = '';
     document.getElementById('status').value = 'draft';
     document.getElementById('inspector_id').value = user.id || '';
+    fillNextReferenceNo();
     resetItems();
 }
 function closeForm() { document.getElementById('formCard').classList.add('hidden'); }
-async function editItem(id) {
-    const res = await fetch(`${API_URL}/fire-extinguishers/${id}`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
-    const json = await res.json();
-    const e = json.data || {};
-    openForm();
-    document.getElementById('formTitle').textContent = 'Edit Inspection';
-    document.getElementById('eid_id').value = e.id || '';
-    document.getElementById('reference_no').value = e.reference_no || '';
-    document.getElementById('inspection_date').value = formatDateOnly(e.inspection_date);
-    document.getElementById('location_id').value = e.location_id || '';
-    document.getElementById('area_id').value = e.area_id || '';
-    document.getElementById('qr_code_id').value = e.qr_code_id || '';
-    document.getElementById('inspector_id').value = e.inspector_id || '';
-    document.getElementById('assigned_to').value = e.assigned_to || '';
-    document.getElementById('notes').value = e.notes || '';
-    document.getElementById('status').value = e.status || 'draft';
-    resetItems(Array.isArray(e.items) ? e.items : []);
+
+function closeView() {
+    document.getElementById('viewModal').classList.add('hidden');
 }
+
+async function viewItem(id) {
+    const res = await fetch(`${API_URL}/fire-extinguishers/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const json = await res.json();
+    const detail = json.data;
+
+    document.getElementById('viewReferenceNo').textContent = detail.reference_no || '-';
+    document.getElementById('viewDate').textContent = formatDateOnly(detail.inspection_date) || '-';
+
+    const locName = detail.location ? detail.location.name : (detail.location_id || '-');
+    document.getElementById('viewLocation').textContent = locName;
+
+    const statusSpan = document.getElementById('viewStatus');
+    statusSpan.textContent = detail.status || '-';
+    statusSpan.className = 'px-3 py-1 inline-flex text-xs font-semibold rounded-full ' +
+        (detail.status === 'completed' ? 'bg-green-100 text-green-800' :
+         detail.status === 'signed' ? 'bg-blue-100 text-blue-800' :
+         'bg-yellow-100 text-yellow-800');
+
+    const inspName = detail.inspector ? detail.inspector.name : (detail.inspector_id || '-');
+    document.getElementById('viewInspector').textContent = inspName;
+
+    const assignedName = detail.assigned_to ? detail.assigned_to.name : (detail.assigned_to || '-');
+    document.getElementById('viewAssigned').textContent = assignedName;
+
+    document.getElementById('viewNotes').textContent = detail.notes || '-';
+
+    const itemsContainer = document.getElementById('viewItems');
+    const items = Array.isArray(detail.items) ? detail.items : [];
+    if (items.length === 0) {
+        itemsContainer.innerHTML = '<p class="text-sm text-gray-400 italic">No items</p>';
+    } else {
+        itemsContainer.innerHTML = items.map((item, i) => `
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-semibold text-gray-900">Item APAR ${i + 1}</h4>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                    <div>
+                        <span class="block text-gray-500">Name</span>
+                        <span class="font-medium text-gray-900">${escapeHtml(item.name || '-')}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500">Type</span>
+                        <span class="font-medium text-gray-900">${escapeHtml(item.type || '-')}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500">Location Detail</span>
+                        <span class="font-medium text-gray-900">${escapeHtml(item.location_detail || '-')}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500">Expiry Date</span>
+                        <span class="font-medium text-gray-900">${escapeHtml(formatDateOnly(item.expiry_date))}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500">Remark</span>
+                        <span class="font-medium text-gray-900">${escapeHtml(item.remark || '-')}</span>
+                    </div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    ${item.pressure_condition ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Pressure OK</span>' : '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">Pressure Bad</span>'}
+                    ${item.seal_condition ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Seal OK</span>' : '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">Seal Bad</span>'}
+                    ${item.nozzle_condition ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Nozzle OK</span>' : '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">Nozzle Bad</span>'}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('viewModal').classList.remove('hidden');
+}
+
+async function editItem(id) {
+    const e = extinguishers.find(item => item.id === id);
+    if (!e) return;
+
+    const res = await fetch(`${API_URL}/fire-extinguishers/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const detailJson = await res.json();
+    const detail = detailJson.data || e;
+
+    await openForm({ generateReference: false });
+    document.getElementById('formTitle').textContent = 'Edit Inspection';
+    document.getElementById('eid_id').value = detail.id;
+    document.getElementById('reference_no').value = detail.reference_no || '';
+    document.getElementById('inspection_date').value = formatDateOnly(detail.inspection_date);
+    document.getElementById('location_id').value = detail.location_id || '';
+    document.getElementById('area_id').value = detail.area_id || '';
+    document.getElementById('qr_code_id').value = detail.qr_code_id || '';
+    document.getElementById('inspector_id').value = detail.inspector_id || '';
+    document.getElementById('assigned_to').value = detail.assigned_to || '';
+    document.getElementById('notes').value = detail.notes || '';
+    document.getElementById('status').value = detail.status || 'draft';
+    resetItems(Array.isArray(detail.items) ? detail.items : []);
+}
+
 document.getElementById('extinguisherForm').addEventListener('submit', async ev => {
     ev.preventDefault();
     const id = document.getElementById('eid_id').value;
@@ -293,9 +452,9 @@ async function deleteItem(id) {
 function logout() {
     fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }).finally(() => { localStorage.clear(); window.location.href='/'; });
 }
-loadReferenceData();
+
+referenceDataPromise = loadReferenceData();
 loadExtinguishers();
 </script>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\2.ANDROID\3.FlutterVSCode\projects\SHE Inspection System\backend\she-api\resources\views/pages/fire_extinguishers.blade.php ENDPATH**/ ?>

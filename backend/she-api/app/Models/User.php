@@ -26,6 +26,7 @@ class User extends Authenticatable
         'role',
         'is_active',
         'last_login',
+        'signature_path',
     ];
 
     protected $hidden = [

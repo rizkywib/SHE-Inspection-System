@@ -187,6 +187,24 @@
         </form>
     </div>
 
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">Show</label>
+            <select id="pageSize" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="text-sm text-gray-500">entries</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">Search:</label>
+            <input id="searchFilter" type="text" placeholder="Search points..." class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+        </div>
+    </div>
+
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -205,6 +223,14 @@
                     <tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div id="paginationControls" class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div id="paginationInfo" class="text-sm text-gray-600"></div>
+            <div class="flex items-center gap-2">
+                <button id="prevPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <span id="pageNumbers" class="text-sm text-gray-700"></span>
+                <button id="nextPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
         </div>
     </div>
 
@@ -249,6 +275,9 @@ let offlineCurrentMarker;
 let offlineMapCenter = { lat: -6.200000, lng: 106.816666 };
 const offlineMapSpan = { lat: 0.08, lng: 0.08 };
 let points = [];
+let currentPage = 1;
+let pageSize = 25;
+let searchFilter = '';
 const defaultPoint = [-6.200000, 106.816666];
 
 if (!token) window.location.href = '/';
@@ -256,10 +285,10 @@ document.getElementById('userName').textContent = user.name || 'User';
 
 function escapeHtml(value) {
     return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
         .replace(/'/g, '&#039;');
 }
 
@@ -786,40 +815,82 @@ async function loadPoints() {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const json = await res.json();
-    const tbody = document.getElementById('pointTable');
     points = Array.isArray(json.data) ? json.data : [];
-    if (points.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No points found</td></tr>';
-        return;
+    renderTable();
+}
+
+function renderTable() {
+    const tbody = document.getElementById('pointTable');
+    const search = searchFilter.toLowerCase().trim();
+
+    let filtered = points;
+    if (search) {
+        filtered = points.filter(loc => {
+            return String(loc.id).includes(search) ||
+                (loc.name_point || '').toLowerCase().includes(search) ||
+                (loc.lat || '').toLowerCase().includes(search) ||
+                (loc.lng || '').toLowerCase().includes(search) ||
+                (loc.ket1 || '').toLowerCase().includes(search) ||
+                (loc.ket2 || '').toLowerCase().includes(search) ||
+                (loc.qr_code || '').toLowerCase().includes(search) ||
+                (Number(loc.status) === 1 ? 'active' : 'inactive').includes(search);
+        });
     }
-    tbody.innerHTML = points.map(loc => `
-        <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(loc.id)}</td>
-            <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(loc.name_point)}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${hasCoordinates(loc) ? `${escapeHtml(loc.lat)}, ${escapeHtml(loc.lng)}` : '-'}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">
-                <div>${escapeHtml(loc.ket1 || '-')}</div>
-                <div class="text-xs text-gray-400 mt-1">${escapeHtml(loc.ket2 || '-')}</div>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-500">
-                ${loc.qr_code ? `
-                    <button onclick="viewQr(${loc.id})" class="text-indigo-600 hover:text-indigo-800 font-medium">
-                        <i class="fas fa-qrcode mr-1"></i>View
+
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, totalItems);
+    const pageItems = filtered.slice(start, end);
+
+    if (totalItems === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No points found</td></tr>';
+    } else {
+        tbody.innerHTML = pageItems.map(loc => `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(loc.id)}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(loc.name_point)}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">${hasCoordinates(loc) ? `${escapeHtml(loc.lat)}, ${escapeHtml(loc.lng)}` : '-'}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    <div>${escapeHtml(loc.ket1 || '-')}</div>
+                    <div class="text-xs text-gray-400 mt-1">${escapeHtml(loc.ket2 || '-')}</div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    ${loc.qr_code ? `
+                        <button onclick="viewQr(${loc.id})" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                            <i class="fas fa-qrcode mr-1"></i>View
+                        </button>
+                        <div class="text-xs font-mono text-gray-400 mt-1">${escapeHtml(loc.qr_code)}</div>
+                    ` : '<span class="text-gray-400">Belum ada</span>'}
+                </td>
+                <td class="px-6 py-4 text-sm">${statusBadge(loc.status)}</td>
+                <td class="px-6 py-4 text-sm">
+                    <button onclick="editItem(${loc.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
+                        <i class="fas fa-edit mr-1"></i>Edit
                     </button>
-                    <div class="text-xs font-mono text-gray-400 mt-1">${escapeHtml(loc.qr_code)}</div>
-                ` : '<span class="text-gray-400">Belum ada</span>'}
-            </td>
-            <td class="px-6 py-4 text-sm">${statusBadge(loc.status)}</td>
-            <td class="px-6 py-4 text-sm">
-                <button onclick="editItem(${loc.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
-                    <i class="fas fa-edit mr-1"></i>Edit
-                </button>
-                <button onclick="deleteItem(${loc.id})" class="text-red-600 hover:text-red-800 font-medium">
-                    <i class="fas fa-trash mr-1"></i>Delete
-                </button>
-            </td>
-        </tr>
-    `).join('');
+                    <button onclick="deleteItem(${loc.id})" class="text-red-600 hover:text-red-800 font-medium">
+                        <i class="fas fa-trash mr-1"></i>Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    const info = document.getElementById('paginationInfo');
+    if (totalItems === 0) {
+        info.textContent = 'Showing 0 to 0 of 0 entries';
+    } else {
+        info.textContent = `Showing ${start + 1} to ${end} of ${totalItems} entries`;
+    }
+
+    const pageNumbers = document.getElementById('pageNumbers');
+    pageNumbers.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
 }
 
 function openForm() {
@@ -887,6 +958,45 @@ function logout() {
     fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } })
         .finally(() => { localStorage.clear(); window.location.href='/'; });
 }
+
+document.getElementById('pageSize').addEventListener('change', function() {
+    pageSize = parseInt(this.value);
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('searchFilter').addEventListener('input', function() {
+    searchFilter = this.value;
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('prevPage').addEventListener('click', function() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', function() {
+    const totalItems = points.filter(loc => {
+        const search = searchFilter.toLowerCase().trim();
+        if (!search) return true;
+        return String(loc.id).includes(search) ||
+            (loc.name_point || '').toLowerCase().includes(search) ||
+            (loc.lat || '').toLowerCase().includes(search) ||
+            (loc.lng || '').toLowerCase().includes(search) ||
+            (loc.ket1 || '').toLowerCase().includes(search) ||
+            (loc.ket2 || '').toLowerCase().includes(search) ||
+            (loc.qr_code || '').toLowerCase().includes(search) ||
+            (Number(loc.status) === 1 ? 'active' : 'inactive').includes(search);
+    }).length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+    }
+});
 
 loadPoints();
 </script>

@@ -6,7 +6,7 @@
 <div class="p-8">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Fire Hydrant Inspections</h1>
-        <p class="text-gray-600 mt-1">Manage and track fire hydrant inspections</p>
+        
     </div>
 
     <div class="mb-6">
@@ -19,6 +19,7 @@
         <h2 id="formTitle" class="text-xl font-bold text-gray-900 mb-4">Create Inspection</h2>
         <form id="hydrantForm" class="space-y-6">
             <input type="hidden" id="hid_id">
+            <input type="hidden" id="reference_no">
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 <div class="xl:col-span-6 space-y-5">
                     <div class="border-b border-gray-200 pb-3">
@@ -26,10 +27,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Reference No</label>
-                            <input id="reference_no" readonly placeholder="Auto generated" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-100 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Inspection Date</label>
                             <input id="inspection_date" type="date" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -43,9 +40,8 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select id="status" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="draft">Draft</option>
+                                <option value="new">New</option>
                                 <option value="completed">Completed</option>
-                                <option value="signed">Signed</option>
                             </select>
                         </div>
                     </div>
@@ -98,15 +94,68 @@
                 </button>
             </div>
         </form>
-    </div>
+    </div><style>
+@media print {
+    @page { size: A4 landscape; margin: 8mm; }
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+    }
+    .no-print { display: none !important; }
+    .print-page {
+        font-family: Arial, sans-serif;
+        color: #000;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        font-size: 11px;
+        line-height: 1.25;
+    }
+    #printContent { padding: 0 !important; }
+    .print-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+    .print-brand { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+    .print-logo { width: 30px; height: 30px; position: relative; display: inline-block; }
+    .print-logo span { position: absolute; display: block; background: #27930f; border-radius: 999px 999px 999px 4px; transform: rotate(-35deg); }
+    .print-logo span:nth-child(1) { width: 13px; height: 20px; left: 2px; top: 1px; }
+    .print-logo span:nth-child(2) { width: 12px; height: 18px; left: 15px; top: 0; }
+    .print-logo span:nth-child(3) { width: 10px; height: 16px; left: 8px; top: 14px; }
+    .print-doc-code { font-size: 11px; text-align: right; }
+    .print-meta { margin-bottom: 20px; font-size: 11px; }
+    .print-meta div { margin: 4px 0; }
+    .print-table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 10px; }
+    .print-table th, .print-table td { border: 1px solid #000; padding: 2px 3px; vertical-align: middle; }
+    .print-table th { font-weight: 700; text-align: center; }
+    .print-table .print-title-row th { background: #000; color: #fff; font-size: 14px; padding: 4px 0; }
+    .print-table .center { text-align: center; }
+    .print-table .check { font-family: Arial, sans-serif; font-size: 17px; font-weight: 700; line-height: 1; }
+    .print-notes { display: flex; justify-content: flex-end; gap: 70px; margin-top: 4px; font-size: 11px; }
+    .print-signatures { display: flex; justify-content: space-between; margin-top: 54px; font-size: 11px; }
+    .print-sign-block { width: 260px; }
+    .print-sign-block.right { margin-right: 38px; }
+    .print-sign-image { height: 42px; max-width: 120px; object-fit: contain; display: block; margin: 12px 0 4px 8px; }
+    .print-sign-space { height: 58px; }
+    .print-sign-name { font-weight: 700; text-decoration: underline; }
+}
+</style>
 
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+<!-- Print Area (hidden, shown during print) -->
+<div id="printArea" class="hidden">
+    <div id="printContent" class="bg-white p-8" style="font-family: Arial, sans-serif; color: #000;">
+        <!-- Content will be populated by JavaScript -->
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-lg overflow-hidden no-print">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inspector</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -115,7 +164,7 @@
                     </tr>
                 </thead>
                 <tbody id="hydrantTable" class="bg-white divide-y divide-gray-200">
-                    <tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                    <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -164,6 +213,52 @@
             </div>
             <div class="px-8 py-4 border-t border-gray-200 flex justify-end">
                 <button onclick="closeView()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Detail Modal -->
+<div id="locationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden overflow-y-auto" onclick="if(event.target===this)closeLocationModal()">
+    <div class="min-h-screen px-4 py-8 flex items-start justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl transform transition-all" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-8 py-5 border-b border-gray-200">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Fire Hydrant Items Checklist</h2>
+                    <p id="locationModalTitle" class="text-sm text-blue-600 font-medium mt-0.5"></p>
+                </div>
+                <button onclick="closeLocationModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="px-8 py-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hydrant Number</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location Detail</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hose</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nozzle</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupling</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wrench</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valve</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Extra Coupling</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remark</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo Before</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo After</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Inspection</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationDetailTable" class="bg-white divide-y divide-gray-200">
+                            <tr><td colspan="15" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="px-8 py-4 border-t border-gray-200 flex justify-end">
+                <button onclick="closeLocationModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition">Close</button>
             </div>
         </div>
     </div>
@@ -291,6 +386,105 @@ function applyHydrantPoint(select, overwrite = true) {
     }
 }
 
+function photoUrl(path) {
+    if (!path) return '';
+    const value = String(path);
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:') || value.startsWith('blob:')) {
+        return value;
+    }
+
+    return `/${value.replace(/^\/+/, '').replace(/^public\//, '')}`;
+}
+
+function canPreviewImage(path) {
+    return !/\.(heic|heif)$/i.test(String(path || '').split('?')[0]);
+}
+
+function itemPhotoPreview(field, label, path = '') {
+    const url = photoUrl(path);
+    if (!url) {
+        return `<div data-photo-preview="${field}" class="mt-2 text-xs text-gray-400">No photo saved</div>`;
+    }
+
+    const image = canPreviewImage(url)
+        ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(label)}" class="mt-2 h-24 w-32 object-cover rounded-lg border border-gray-200 bg-white">`
+        : `<div class="mt-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">Preview tidak tersedia untuk HEIC/HEIF</div>`;
+
+    return `
+        <div data-photo-preview="${field}" class="mt-2">
+            ${image}
+            <a href="${escapeHtml(url)}" target="_blank" class="inline-flex items-center mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">
+                <i class="fas fa-external-link-alt mr-1"></i>Open saved photo
+            </a>
+        </div>
+    `;
+}
+
+function updateSelectedPhotoPreview(input) {
+    const wrapper = input.closest('[data-photo-wrapper]');
+    const preview = wrapper?.querySelector(`[data-photo-preview="${input.dataset.field}"]`);
+    const file = input.files[0];
+    if (!preview || !file) return;
+
+    const localUrl = URL.createObjectURL(file);
+    const isPreviewable = file.type.startsWith('image/') && !/\.(heic|heif)$/i.test(file.name);
+    preview.innerHTML = isPreviewable
+        ? `<img src="${localUrl}" alt="Selected photo" class="mt-2 h-24 w-32 object-cover rounded-lg border border-gray-200 bg-white"><div class="mt-1 text-xs text-gray-500">${escapeHtml(file.name)}</div>`
+        : `<div class="mt-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">${escapeHtml(file.name)} selected</div>`;
+}
+
+function viewPhotoPreview(label, path) {
+    const url = photoUrl(path);
+    if (!url) {
+        return `
+            <div class="bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-gray-400">
+                <span class="block text-gray-500 font-medium mb-1">${label}</span>
+                No photo
+            </div>
+        `;
+    }
+
+    const image = canPreviewImage(url)
+        ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(label)}" class="h-32 w-full object-cover rounded-lg border border-gray-200 bg-white">`
+        : `<div class="h-32 flex items-center justify-center text-xs text-gray-500 bg-white border border-gray-200 rounded-lg">HEIC/HEIF preview unavailable</div>`;
+
+    return `
+        <div class="bg-white border border-gray-200 rounded-lg p-3">
+            <span class="block text-gray-500 font-medium mb-2">${label}</span>
+            ${image}
+            <a href="${escapeHtml(url)}" target="_blank" class="inline-flex items-center mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">
+                <i class="fas fa-external-link-alt mr-1"></i>Open photo
+            </a>
+        </div>
+    `;
+}
+
+function viewPhotoPreviewSmall(label, path) {
+    const url = photoUrl(path);
+    if (!url) {
+        return `
+            <div class="bg-white border border-gray-200 rounded-lg p-2 text-sm text-gray-400">
+                <span class="block text-gray-500 font-medium text-xs mb-1">${label}</span>
+                <span class="text-xs">No photo</span>
+            </div>
+        `;
+    }
+
+    const image = canPreviewImage(url)
+        ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(label)}" class="h-16 w-full object-cover rounded border border-gray-200 bg-white">`
+        : `<div class="h-16 flex items-center justify-center text-xs text-gray-500 bg-white border border-gray-200 rounded">HEIC/HEIF</div>`;
+
+    return `
+        <div class="bg-white border border-gray-200 rounded-lg p-2">
+            <span class="block text-gray-500 font-medium text-xs mb-1">${label}</span>
+            ${image}
+            <a href="${escapeHtml(url)}" target="_blank" class="inline-flex items-center mt-1 text-xs font-medium text-blue-600 hover:text-blue-800">
+                <i class="fas fa-external-link-alt mr-1"></i>Open
+            </a>
+        </div>
+    `;
+}
+
 function boolValue(value) {
     return value === true || value === 1 || value === '1';
 }
@@ -354,13 +548,15 @@ function addHydrantItem(item = {}) {
                     ${conditionRadio('coupling_extra_condition', 'Extra Coupling', item, index)}
                 </div>
             </div>
-            <div>
+            <div data-photo-wrapper>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Photo Before</label>
-                <input data-field="photo_before" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <input data-field="photo_before" type="file" accept="image/*,.heic,.heif" onchange="updateSelectedPhotoPreview(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                ${itemPhotoPreview('photo_before', 'Photo Before', item.photo_before || '')}
             </div>
-            <div>
+            <div data-photo-wrapper>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Photo After</label>
-                <input data-field="photo_after" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <input data-field="photo_after" type="file" accept="image/*,.heic,.heif" onchange="updateSelectedPhotoPreview(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                ${itemPhotoPreview('photo_after', 'Photo After', item.photo_after || '')}
             </div>
             <div class="md:col-span-3">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Remark</label>
@@ -446,14 +642,13 @@ async function loadHydrants() {
     const tbody = document.getElementById('hydrantTable');
     hydrants = Array.isArray(json.data) ? json.data : [];
     if (hydrants.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
         return;
     }
-    tbody.innerHTML = hydrants.map(h => `
+    tbody.innerHTML = hydrants.map((h, index) => `
         <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(h.id)}</td>
-            <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(h.reference_no)}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(h.location ? (h.location.id_location + ' - ' + h.location.name) : (h.location_id || '-'))}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 text-center">${index + 1}</td>
+            <td class="px-6 py-4 text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-medium" onclick="event.stopPropagation(); showLocationDetail(${h.location_id || 'null'})">${escapeHtml(h.location ? (h.location.name) : (h.location_id || '-'))}</td>
             <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(h.inspector ? h.inspector.name : (h.inspector_id || '-'))}</td>
             <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(h.inspection_date))}</td>
             <td class="px-6 py-4 text-sm">
@@ -465,6 +660,9 @@ async function loadHydrants() {
                 </button>
                 <button onclick="editItem(${h.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
                     <i class="fas fa-edit mr-1"></i>Edit
+                </button>
+                <button onclick="printItem(${h.id})" class="text-purple-600 hover:text-purple-800 mr-3 font-medium">
+                    <i class="fas fa-print mr-1"></i>Print
                 </button>
                 <button onclick="deleteItem(${h.id})" class="text-red-600 hover:text-red-800 font-medium">
                     <i class="fas fa-trash mr-1"></i>Delete
@@ -482,7 +680,7 @@ async function openForm(options = {}) {
     document.getElementById('formTitle').textContent = 'Create Inspection';
     document.getElementById('hydrantForm').reset();
     document.getElementById('hid_id').value = '';
-    document.getElementById('status').value = 'draft';
+    document.getElementById('status').value = 'new';
     document.getElementById('inspector_id').value = user.id || '';
     if (generateReference) {
         fillNextReferenceNo();
@@ -509,12 +707,85 @@ async function editItem(id) {
     document.getElementById('location_id').value = detail.location_id || '';
     document.getElementById('inspector_id').value = detail.inspector_id || '';
     document.getElementById('notes').value = detail.notes || '';
-    document.getElementById('status').value = detail.status || 'draft';
+    document.getElementById('status').value = detail.status || 'new';
     resetHydrantItems(Array.isArray(detail.items) ? detail.items : []);
 }
 
 function closeView() {
     document.getElementById('viewModal').classList.add('hidden');
+}
+
+function closeLocationModal() {
+    document.getElementById('locationModal').classList.add('hidden');
+}
+
+async function showLocationDetail(locationId) {
+    if (!locationId) return;
+    const loc = locations.find(l => String(l.id_location) === String(locationId));
+    document.getElementById('locationModalTitle').textContent = loc ? loc.name : ('Location #' + locationId);
+    document.getElementById('locationModal').classList.remove('hidden');
+
+    const res = await fetch(`${API_URL}/fire-hydrants?location_id=${locationId}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const json = await res.json();
+    const inspections = Array.isArray(json.data) ? json.data : [];
+    
+    const tbody = document.getElementById('locationDetailTable');
+    
+    if (inspections.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="15" class="px-6 py-8 text-center text-gray-500">No hydrant inspections found for this location</td></tr>';
+        return;
+    }
+
+    const allItems = [];
+    inspections.forEach(inspection => {
+        if (Array.isArray(inspection.items)) {
+            inspection.items.forEach(item => {
+                allItems.push({
+                    ...item,
+                    inspection_date: inspection.inspection_date,
+                    status: inspection.status
+                });
+            });
+        }
+    });
+
+    if (allItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="15" class="px-6 py-8 text-center text-gray-500">No items found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = allItems.map((item, index) => {
+        const lastInspection = item.inspection_date ? formatDateOnly(item.inspection_date) : '-';
+        const statusClass = item.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                           item.status === 'signed' ? 'bg-blue-100 text-blue-800' : 
+                           'bg-yellow-100 text-yellow-800';
+        const photoBefore = item.photo_before ? `<a href="${escapeHtml(photoUrl(item.photo_before))}" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs"><i class="fas fa-image mr-1"></i>View</a>` : '-';
+        const photoAfter = item.photo_after ? `<a href="${escapeHtml(photoUrl(item.photo_after))}" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs"><i class="fas fa-image mr-1"></i>View</a>` : '-';
+        
+        return `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 text-sm text-gray-900 text-center">${index + 1}</td>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${escapeHtml(item.hydrant_number || '-')}</td>
+                <td class="px-4 py-3 text-sm text-gray-900">${escapeHtml(item.name || '-')}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">${escapeHtml(item.location_detail || '-')}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.hose_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.nozzle_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.coupling_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.wrench_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.valve_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.coupling_extra_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">${escapeHtml(item.remark || '-')}</td>
+                <td class="px-4 py-3 text-sm text-center">${photoBefore}</td>
+                <td class="px-4 py-3 text-sm text-center">${photoAfter}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">${lastInspection}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full ${statusClass}">${escapeHtml(item.status || '-')}</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 async function viewItem(id) {
@@ -576,6 +847,10 @@ async function viewItem(id) {
                     ${viewConditionLabel('Valve', item.valve_condition)}
                     ${viewConditionLabel('Extra Coupling', item.coupling_extra_condition)}
                 </div>
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    ${viewPhotoPreview('Photo Before', item.photo_before)}
+                    ${viewPhotoPreview('Photo After', item.photo_after)}
+                </div>
             </div>
         `).join('');
     }
@@ -631,7 +906,12 @@ document.getElementById('hydrantForm').addEventListener('submit', async e => {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         body: formData
     });
-    if (!res.ok) { alert('Save failed'); return; }
+    if (!res.ok) {
+        const error = await res.json().catch(() => null);
+        const message = error?.message || Object.values(error?.errors || {}).flat()[0] || 'Save failed';
+        alert(message);
+        return;
+    }
     closeForm();
     loadHydrants();
 });
@@ -643,6 +923,168 @@ async function deleteItem(id) {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     if (res.ok) loadHydrants();
+}
+
+function printConditionMark(value) {
+    return boolValue(value) ? '<span class="check">&#10003;</span>' : '<span class="check">X</span>';
+}
+
+function formatDatePrint(value) {
+    if (!value) return '-';
+    const d = new Date(value + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return value;
+
+    return String(d.getDate()).padStart(2, '0') + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        d.getFullYear();
+}
+
+function printLogoHtml() {
+    return '<span class="print-logo"><span></span><span></span><span></span></span>';
+}
+
+function printSignatureHtml(path) {
+    const url = photoUrl(path);
+    if (!url || !canPreviewImage(url)) {
+        return '<div class="print-sign-space"></div>';
+    }
+
+    return '<img src="' + escapeHtml(url) + '" class="print-sign-image" alt="Inspector signature">';
+}
+
+function buildPrintHtml(detail) {
+    const locName = detail.location ? detail.location.name : (detail.location_id || '-');
+    const inspName = detail.inspector ? detail.inspector.name : (detail.inspector_id || '-');
+    const inspPosition = detail.inspector?.position || 'Safety Inspector';
+    const inspectorSignature = detail.inspector?.signature_path || '';
+    const items = Array.isArray(detail.items) ? detail.items : [];
+    
+    let itemsHtml = '';
+    if (items.length === 0) {
+        itemsHtml = '<tr><td colspan="11" class="center" style="padding:10px;font-style:italic;">No items</td></tr>';
+    } else {
+        items.forEach((item, i) => {
+            itemsHtml += '<tr>' +
+                '<td class="center">' + (i + 1) + '</td>' +
+                '<td>' + escapeHtml(item.hydrant_number || '-') + '</td>' +
+                '<td>' + escapeHtml(item.name || '-') + '</td>' +
+                '<td>' + escapeHtml(item.location_detail || '-') + '</td>' +
+                '<td class="center">' + printConditionMark(item.hose_condition) + '</td>' +
+                '<td class="center">' + printConditionMark(item.nozzle_condition) + '</td>' +
+                '<td class="center">' + printConditionMark(item.coupling_condition) + '</td>' +
+                '<td class="center">' + printConditionMark(item.wrench_condition) + '</td>' +
+                '<td class="center">' + printConditionMark(item.valve_condition) + '</td>' +
+                '<td class="center">' + printConditionMark(item.coupling_extra_condition) + '</td>' +
+                '<td>' + escapeHtml(item.remark || '-') + '</td>' +
+            '</tr>';
+        });
+    }
+
+    return `
+        <div class="print-page">
+            <div class="print-top">
+                <div class="print-brand">
+                    ${printLogoHtml()}
+                    <span>PT. Ecogreen Oleochemicals</span>
+                </div>
+                <div class="print-doc-code">EOB-Saf-004 Rev. 4 31/12/2018</div>
+            </div>
+
+            <div class="print-meta">
+                <div>Batam Plan</div>
+                <div>Location : <strong>${escapeHtml(locName)}</strong></div>
+                <div>Date Inspected : <strong>${formatDatePrint(detail.inspection_date)}</strong></div>
+            </div>
+            
+            <table class="print-table">
+                <colgroup>
+                    <col style="width: 2.6%;">
+                    <col style="width: 24.6%;">
+                    <col style="width: 7.3%;">
+                    <col style="width: 22.4%;">
+                    <col style="width: 4.1%;">
+                    <col style="width: 5.8%;">
+                    <col style="width: 7.6%;">
+                    <col style="width: 6.7%;">
+                    <col style="width: 4.8%;">
+                    <col style="width: 7.8%;">
+                    <col style="width: 6.3%;">
+                </colgroup>
+                <thead>
+                    <tr class="print-title-row">
+                        <th colspan="11">FIRE HYDRANT MONTHLY INSPECTION</th>
+                    </tr>
+                    <tr>
+                        <th rowspan="2">NO</th>
+                        <th rowspan="2">Nama</th>
+                        <th rowspan="2">NOMOR<br>HYDRANT</th>
+                        <th rowspan="2">LOCATION</th>
+                        <th colspan="4">HYDRANT BOX</th>
+                        <th colspan="2">HYDRANT PILLAR</th>
+                        <th rowspan="2">REMARK</th>
+                    </tr>
+                    <tr>
+                        <th>HOSE</th>
+                        <th>NOZZLE</th>
+                        <th>COUPLING</th>
+                        <th>WRENCH</th>
+                        <th>VALVE</th>
+                        <th>COUPLING</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+
+            <div class="print-notes">
+                <div>Note :</div>
+                <div>
+                    <div>&#8730; = Function Well</div>
+                    <div>X = Need Correction</div>
+                </div>
+            </div>
+
+            <div class="print-signatures">
+                <div class="print-sign-block">
+                    <div>Inspected by,</div>
+                    ${printSignatureHtml(inspectorSignature)}
+                    <div class="print-sign-name">${escapeHtml(inspName)}</div>
+                    <div>${escapeHtml(inspPosition)}</div>
+                </div>
+                <div class="print-sign-block right">
+                    <div>Noted by,</div>
+                    <div class="print-sign-space"></div>
+                    <div>Belum di ttd</div>
+                    <div>Safety Supervisor</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function printItem(id) {
+    await ensureReferenceData();
+    
+    const res = await fetch(`${API_URL}/fire-hydrants/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const json = await res.json();
+    const detail = json.data;
+    
+    const printContainer = document.getElementById('printArea');
+    const printContent = document.getElementById('printContent');
+    
+    printContent.innerHTML = buildPrintHtml(detail);
+    printContainer.classList.remove('hidden');
+    
+    setTimeout(() => {
+        window.print();
+        
+        setTimeout(() => {
+            printContainer.classList.add('hidden');
+        }, 500);
+    }, 300);
 }
 
 function logout() {

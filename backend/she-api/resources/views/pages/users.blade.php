@@ -37,9 +37,14 @@
                     <select id="role" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <option value="inspector">Inspector</option>
                         <option value="admin">Admin</option>
-                        <option value="viewer">Viewer</option>
+                        <option value="supervisor">Supervisor</option>
                         <option value="super_admin">Super Admin</option>
                     </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanda Tangan</label>
+                    <input id="signature" type="file" accept="image/*" onchange="previewSelectedSignature(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div id="signaturePreview" class="mt-3 text-sm text-gray-400">Belum ada tanda tangan</div>
                 </div>
             </div>
             <div class="flex items-center space-x-3 pt-2">
@@ -62,11 +67,12 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanda Tangan</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="userTable" class="bg-white divide-y divide-gray-200">
-                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                    <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -82,6 +88,51 @@ let users = [];
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function imageUrl(path) {
+    if (!path) return '';
+    const value = String(path);
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:') || value.startsWith('blob:')) {
+        return value;
+    }
+
+    return `/${value.replace(/^\/+/, '').replace(/^public\//, '')}`;
+}
+
+function signaturePreviewHtml(path) {
+    const url = imageUrl(path);
+    if (!url) {
+        return '<span class="text-sm text-gray-400">Belum ada tanda tangan</span>';
+    }
+
+    return `
+        <div class="inline-flex flex-col items-start gap-2">
+            <img src="${escapeHtml(url)}" alt="Tanda tangan" class="h-16 max-w-[220px] object-contain rounded border border-gray-200 bg-white p-2">
+            <a href="${escapeHtml(url)}" target="_blank" class="text-xs font-medium text-blue-600 hover:text-blue-800">Open image</a>
+        </div>
+    `;
+}
+
+function previewSelectedSignature(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    document.getElementById('signaturePreview').innerHTML = `
+        <div class="inline-flex flex-col items-start gap-2">
+            <img src="${URL.createObjectURL(file)}" alt="Preview tanda tangan" class="h-16 max-w-[220px] object-contain rounded border border-gray-200 bg-white p-2">
+            <span class="text-xs text-gray-500">${escapeHtml(file.name)}</span>
+        </div>
+    `;
+}
+
 async function loadUsers() {
     const res = await fetch(`${API_URL}/users`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
@@ -90,17 +141,18 @@ async function loadUsers() {
     const tbody = document.getElementById('userTable');
     users = Array.isArray(json.data) ? json.data : [];
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No users found</td></tr>';
         return;
     }
     tbody.innerHTML = users.map(u => `
         <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900">${u.id}</td>
-            <td class="px-6 py-4 text-sm text-gray-900 font-medium">${u.name}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${u.username}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(u.id)}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(u.name)}</td>
+            <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(u.username)}</td>
             <td class="px-6 py-4 text-sm">
-                <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${u.role==='super_admin'?'bg-purple-100 text-purple-800':u.role==='admin'?'bg-blue-100 text-blue-800':u.role==='inspector'?'bg-green-100 text-green-800':'bg-gray-100 text-gray-800'}">${u.role}</span>
+                <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${u.role==='super_admin'?'bg-purple-100 text-purple-800':u.role==='admin'?'bg-blue-100 text-blue-800':u.role==='inspector'?'bg-green-100 text-green-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}">${escapeHtml(u.role)}</span>
             </td>
+            <td class="px-6 py-4 text-sm">${signaturePreviewHtml(u.signature_path)}</td>
             <td class="px-6 py-4 text-sm">
                 <button onclick="editItem(${u.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
                     <i class="fas fa-edit mr-1"></i>Edit
@@ -118,6 +170,7 @@ function openForm() {
     document.getElementById('formTitle').textContent = 'Create User';
     document.getElementById('userForm').reset();
     document.getElementById('user_id').value = '';
+    document.getElementById('signaturePreview').innerHTML = signaturePreviewHtml('');
 }
 function closeForm() { document.getElementById('formCard').classList.add('hidden'); }
 
@@ -132,27 +185,36 @@ function editItem(id) {
     document.getElementById('username').value = u.username;
     document.getElementById('role').value = u.role;
     document.getElementById('password').value = '';
+    document.getElementById('signaturePreview').innerHTML = signaturePreviewHtml(u.signature_path);
 }
 
 document.getElementById('userForm').addEventListener('submit', async e => {
     e.preventDefault();
     const id = document.getElementById('user_id').value;
-    const payload = {
-        name: document.getElementById('name').value,
-        username: document.getElementById('username').value,
-        role: document.getElementById('role').value,
-    };
+    const formData = new FormData();
+    formData.append('name', document.getElementById('name').value);
+    formData.append('username', document.getElementById('username').value);
+    formData.append('role', document.getElementById('role').value);
+
     const password = document.getElementById('password').value;
-    if (password) payload.password = password;
+    if (password) formData.append('password', password);
+
+    const signature = document.getElementById('signature').files[0];
+    if (signature) formData.append('signature', signature);
+    if (id) formData.append('_method', 'PUT');
 
     const url = id ? `${API_URL}/users/${id}` : `${API_URL}/users`;
-    const method = id ? 'PUT' : 'POST';
     const res = await fetch(url, {
-        method,
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+        body: formData
     });
-    if (!res.ok) { alert('Save failed'); return; }
+    if (!res.ok) {
+        const error = await res.json().catch(() => null);
+        const message = error?.message || Object.values(error?.errors || {}).flat()[0] || 'Save failed';
+        alert(message);
+        return;
+    }
     closeForm();
     loadUsers();
 });

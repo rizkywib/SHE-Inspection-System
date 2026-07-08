@@ -63,7 +63,7 @@
     },
     {
       "name": "cross_file",
-      "rootUri": "file:///C:/Users/rizkywib/AppData/Local/Pub/Cache/hosted/pub.dev/cross_file-0.3.5+3",
+      "rootUri": "file:///C:/Users/rizkywib/AppData/Local/Pub/Cache/hosted/pub.dev/cross_file-0.3.5+4",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -138,12 +138,6 @@
       "rootUri": "file:///D:/2.ANDROID/3.FlutterVSCode/flutter/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.10"
-    },
-    {
-      "name": "flutter_barcode_scanner",
-      "rootUri": "file:///C:/Users/rizkywib/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_barcode_scanner-2.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
     },
     {
       "name": "flutter_cache_manager",
@@ -540,12 +534,6 @@
       "rootUri": "file:///C:/Users/rizkywib/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
-    },
-    {
-      "name": "qr_code_scanner",
-      "rootUri": "file:///C:/Users/rizkywib/AppData/Local/Pub/Cache/hosted/pub.dev/qr_code_scanner-1.0.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.17"
     },
     {
       "name": "record_use",

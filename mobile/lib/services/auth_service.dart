@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'dart:io';
 import 'api_service.dart';
 
 class AuthService extends ChangeNotifier {
@@ -49,10 +51,24 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return response;
+    } on TimeoutException {
+      _isLoading = false;
+      notifyListeners();
+      return {
+        'error':
+            'Koneksi ke server timeout. Pastikan backend berjalan dan adb reverse aktif.'
+      };
+    } on SocketException {
+      _isLoading = false;
+      notifyListeners();
+      return {
+        'error':
+            'Tidak bisa terhubung ke server. Pastikan backend berjalan dan adb reverse tcp:8000 tcp:8000 aktif.'
+      };
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return {'error': e.toString()};
+      return {'error': 'Login gagal: ${e.toString()}'};
     }
   }
 

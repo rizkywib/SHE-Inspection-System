@@ -38,7 +38,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -47,6 +47,47 @@
                     <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden overflow-y-auto" onclick="if(event.target===this)closeDetailModal()">
+        <div class="min-h-screen px-4 py-8 flex items-start justify-center">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl transform transition-all" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between px-8 py-5 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Fire Hydrant Items Checklist</h2>
+                        <p id="detailLocationName" class="text-sm text-blue-600 font-medium mt-0.5"></p>
+                    </div>
+                    <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                </div>
+                <div class="px-8 py-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hydrant Number</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hose</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nozzle</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupling</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wrench</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valve</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Extra Coupling</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Inspection</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailTable" class="bg-white divide-y divide-gray-200">
+                                <tr><td colspan="10" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="px-8 py-4 border-t border-gray-200 flex justify-end">
+                    <button onclick="closeDetailModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition">Close</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -82,15 +123,15 @@ async function loadLocations() {
         return;
     }
 
-    tbody.innerHTML = locations.map(item => `
-        <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(item.id_location)}</td>
+    tbody.innerHTML = locations.map((item, index) => `
+        <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="showLocationDetail(${item.id_location})">
+            <td class="px-6 py-4 text-sm text-gray-900 text-center">${index + 1}</td>
             <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(item.name)}</td>
             <td class="px-6 py-4 text-sm">
-                <button onclick="editItem(${item.id_location})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
+                <button onclick="event.stopPropagation(); editItem(${item.id_location})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
                     <i class="fas fa-edit mr-1"></i>Edit
                 </button>
-                <button onclick="deleteItem(${item.id_location})" class="text-red-600 hover:text-red-800 font-medium">
+                <button onclick="event.stopPropagation(); deleteItem(${item.id_location})" class="text-red-600 hover:text-red-800 font-medium">
                     <i class="fas fa-trash mr-1"></i>Delete
                 </button>
             </td>
@@ -150,6 +191,78 @@ async function deleteItem(id) {
 function logout() {
     fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } })
         .finally(() => { localStorage.clear(); window.location.href='/'; });
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+}
+
+async function showLocationDetail(locationId) {
+    const location = locations.find(loc => Number(loc.id_location) === Number(locationId));
+    if (!location) return;
+
+    document.getElementById('detailLocationName').textContent = location.name;
+    document.getElementById('detailModal').classList.remove('hidden');
+
+    const res = await fetch(`${API_URL}/fire-hydrants?location_id=${locationId}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const json = await res.json();
+    const inspections = Array.isArray(json.data) ? json.data : [];
+    
+    const tbody = document.getElementById('detailTable');
+    
+    if (inspections.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-8 text-center text-gray-500">No hydrant inspections found for this location</td></tr>';
+        return;
+    }
+
+    const allItems = [];
+    inspections.forEach(inspection => {
+        if (Array.isArray(inspection.items)) {
+            inspection.items.forEach(item => {
+                allItems.push({
+                    ...item,
+                    inspection_date: inspection.inspection_date,
+                    status: inspection.status
+                });
+            });
+        }
+    });
+
+    if (allItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-8 text-center text-gray-500">No items found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = allItems.map((item, index) => {
+        const lastInspection = item.inspection_date ? formatDate(item.inspection_date) : '-';
+        const statusClass = item.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                           item.status === 'signed' ? 'bg-blue-100 text-blue-800' : 
+                           'bg-yellow-100 text-yellow-800';
+        
+        return `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 text-sm text-gray-900 text-center">${index + 1}</td>
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${escapeHtml(item.hydrant_number || '-')}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.hose_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.nozzle_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.coupling_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.wrench_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.valve_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-center">${item.coupling_extra_condition ? '✓' : '✗'}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">${lastInspection}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full ${statusClass}">${escapeHtml(item.status || '-')}</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function formatDate(value) {
+    if (!value) return '-';
+    return String(value).slice(0, 10);
 }
 
 loadLocations();

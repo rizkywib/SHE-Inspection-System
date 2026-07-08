@@ -1,11 +1,23 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class ApiService extends ChangeNotifier {
-  static const String baseUrl = 'http://10.0.2.2:8000/api'; // Android emulator
-  String? _token;
+  late String baseUrl;
+  static const Duration _requestTimeout = Duration(seconds: 15);
+  
+  ApiService() {
+    // Default to localhost for USB debugging with:
+    // adb reverse tcp:8000 tcp:8000
+    baseUrl = const String.fromEnvironment(
+      'API_URL',
+      defaultValue: 'http://127.0.0.1:8000/api',
+    );
+  }
+  
+  static String? _token;
 
   Map<String, String> get headers => {
         'Content-Type': 'application/json',
@@ -22,9 +34,19 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'username': email, 'password': password}),
+    ).timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      try {
+        return jsonDecode(response.body);
+      } catch (_) {
+        return {'error': 'Server error (${response.statusCode})'};
+      }
+    }
     return jsonDecode(response.body);
   }
 
@@ -32,9 +54,19 @@ class ApiService extends ChangeNotifier {
       String name, String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
       body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
+    if (response.statusCode >= 400) {
+      try {
+        return jsonDecode(response.body);
+      } catch (_) {
+        return {'error': 'Server error (${response.statusCode})'};
+      }
+    }
     return jsonDecode(response.body);
   }
 
@@ -42,7 +74,14 @@ class ApiService extends ChangeNotifier {
     final response = await http.get(
       Uri.parse('$baseUrl/auth/me'),
       headers: headers,
-    );
+    ).timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      try {
+        return jsonDecode(response.body);
+      } catch (_) {
+        return {'error': 'Server error (${response.statusCode})'};
+      }
+    }
     return jsonDecode(response.body);
   }
 
@@ -70,7 +109,10 @@ class ApiService extends ChangeNotifier {
     final response = await http.get(
       Uri.parse('$baseUrl/fire-hydrants'),
       headers: headers,
-    );
+    ).timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
     return jsonDecode(response.body)['data'] ?? [];
   }
 
@@ -80,7 +122,34 @@ class ApiService extends ChangeNotifier {
       Uri.parse('$baseUrl/fire-hydrants'),
       headers: headers,
       body: jsonEncode(data),
-    );
+    ).timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateFireHydrant(
+      int id, Map<String, dynamic> data) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/fire-hydrants/$id'),
+      headers: headers,
+      body: jsonEncode(data),
+    ).timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> deleteFireHydrant(int id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/fire-hydrants/$id'),
+      headers: headers,
+    ).timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
     return jsonDecode(response.body);
   }
 
@@ -161,5 +230,21 @@ class ApiService extends ChangeNotifier {
     var response = await request.send();
     var responseData = await response.stream.bytesToString();
     return jsonDecode(responseData);
+  }
+
+  String _errorMessage(http.Response response) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic>) {
+        if (body['message'] != null) return body['message'].toString();
+        if (body['error'] != null) return body['error'].toString();
+        if (body['errors'] is Map && (body['errors'] as Map).isNotEmpty) {
+          final first = (body['errors'] as Map).values.first;
+          if (first is List && first.isNotEmpty) return first.first.toString();
+          return first.toString();
+        }
+      }
+    } catch (_) {}
+    return 'Server error (${response.statusCode})';
   }
 }
