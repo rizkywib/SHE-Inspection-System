@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 class ApiService extends ChangeNotifier {
   late String baseUrl;
   static const Duration _requestTimeout = Duration(seconds: 15);
-  
+
   ApiService() {
     // Default to localhost for USB debugging with:
     // adb reverse tcp:8000 tcp:8000
@@ -16,7 +16,7 @@ class ApiService extends ChangeNotifier {
       defaultValue: 'http://127.0.0.1:8000/api',
     );
   }
-  
+
   static String? _token;
 
   Map<String, String> get headers => {
@@ -32,14 +32,16 @@ class ApiService extends ChangeNotifier {
 
   // Auth
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({'username': email, 'password': password}),
-    ).timeout(_requestTimeout);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/login'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode({'username': email, 'password': password}),
+        )
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       try {
         return jsonDecode(response.body);
@@ -71,10 +73,12 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> getProfile() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/auth/me'),
-      headers: headers,
-    ).timeout(_requestTimeout);
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/auth/me'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       try {
         return jsonDecode(response.body);
@@ -106,10 +110,93 @@ class ApiService extends ChangeNotifier {
 
   // Fire Hydrant
   Future<List<dynamic>> getFireHydrants() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/fire-hydrants'),
-      headers: headers,
-    ).timeout(_requestTimeout);
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/fire-hydrants'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return jsonDecode(response.body)['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getFireHydrant(int id) async {
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/fire-hydrants/$id'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    final body = jsonDecode(response.body);
+    return Map<String, dynamic>.from(body['data'] ?? {});
+  }
+
+  Future<Map<String, dynamic>> getInspectionDetail(
+      String resourcePath, int id) async {
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/$resourcePath/$id'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    final body = jsonDecode(response.body);
+    return Map<String, dynamic>.from(body['data'] ?? {});
+  }
+
+  Future<List<dynamic>> getFireHydrantLocations() async {
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/fire-hydrant-locations'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return jsonDecode(response.body)['data'] ?? [];
+  }
+
+  Future<List<dynamic>> getUsers() async {
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/users'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return jsonDecode(response.body)['data'] ?? [];
+  }
+
+  Future<List<dynamic>> getAreas() async {
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/areas'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return jsonDecode(response.body)['data'] ?? [];
+  }
+
+  Future<List<dynamic>> getPoints() async {
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/points'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       throw Exception(_errorMessage(response));
     }
@@ -118,11 +205,13 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> createFireHydrant(
       Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/fire-hydrants'),
-      headers: headers,
-      body: jsonEncode(data),
-    ).timeout(_requestTimeout);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/fire-hydrants'),
+          headers: headers,
+          body: jsonEncode(data),
+        )
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       return {'error': _errorMessage(response)};
     }
@@ -131,11 +220,13 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> updateFireHydrant(
       int id, Map<String, dynamic> data) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/fire-hydrants/$id'),
-      headers: headers,
-      body: jsonEncode(data),
-    ).timeout(_requestTimeout);
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl/fire-hydrants/$id'),
+          headers: headers,
+          body: jsonEncode(data),
+        )
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       return {'error': _errorMessage(response)};
     }
@@ -143,10 +234,12 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> deleteFireHydrant(int id) async {
-    final response = await http.delete(
-      Uri.parse('$baseUrl/fire-hydrants/$id'),
-      headers: headers,
-    ).timeout(_requestTimeout);
+    final response = await http
+        .delete(
+          Uri.parse('$baseUrl/fire-hydrants/$id'),
+          headers: headers,
+        )
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       return {'error': _errorMessage(response)};
     }
@@ -209,8 +302,7 @@ class ApiService extends ChangeNotifier {
     return jsonDecode(response.body)['data'] ?? [];
   }
 
-  Future<Map<String, dynamic>> createIncident(
-      Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createIncident(Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$baseUrl/incidents'),
       headers: headers,

@@ -1,187 +1,263 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  List<_InspectionItem> _inspections = [];
+  String _selectedStatus = 'all';
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInspections();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInspections() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final api = context.read<ApiService>();
+      final results = await Future.wait<List<_InspectionItem>>([
+        _loadType(
+          loader: api.getFireHydrants,
+          type: 'Fire Hydrant',
+          route: '/fire-hydrant',
+          detailPath: 'fire-hydrants',
+          color: const Color(0xFFDC2626),
+          icon: Icons.water_damage_outlined,
+        ),
+        _loadType(
+          loader: api.getFireExtinguishers,
+          type: 'Fire Extinguisher',
+          route: '/fire-extinguisher',
+          detailPath: 'fire-extinguishers',
+          color: const Color(0xFFEA580C),
+          icon: Icons.fire_extinguisher,
+        ),
+        _loadType(
+          loader: api.getFireAlarms,
+          type: 'Fire Alarm',
+          route: '/fire-alarm',
+          detailPath: 'fire-alarms',
+          color: const Color(0xFFD97706),
+          icon: Icons.notifications_active_outlined,
+        ),
+        _loadType(
+          loader: api.getEsEw,
+          type: 'ES/EW',
+          route: '/es-ew',
+          detailPath: 'es-ew',
+          color: const Color(0xFF059669),
+          icon: Icons.shower_outlined,
+        ),
+      ]);
+
+      final inspections = results.expand((items) => items).toList()
+        ..sort((a, b) => b.dateText.compareTo(a.dateText));
+
+      if (!mounted) return;
+      setState(() {
+        _inspections = inspections;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<List<_InspectionItem>> _loadType({
+    required Future<List<dynamic>> Function() loader,
+    required String type,
+    required String route,
+    required String detailPath,
+    required Color color,
+    required IconData icon,
+  }) async {
+    try {
+      final rows = await loader();
+      return rows
+          .map((row) => _InspectionItem.fromMap(
+                _mapFrom(row),
+                type: type,
+                route: route,
+                detailPath: detailPath,
+                color: color,
+                icon: icon,
+              ))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  List<_InspectionItem> get _filteredInspections {
+    final query = _searchController.text.trim().toLowerCase();
+    return _inspections.where((item) {
+      final matchesStatus =
+          _selectedStatus == 'all' || item.status == _selectedStatus;
+      if (!matchesStatus) return false;
+      if (query.isEmpty) return true;
+      return item.searchText.contains(query);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final user = auth.user;
+    final filtered = _filteredInspections;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('SHE Inspection'),
+        title: const Text('Inspection Dashboard'),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scan QR',
             onPressed: () => Navigator.pushNamed(context, '/qr-scanner'),
           ),
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
             onPressed: () => Navigator.pushNamed(context, '/profile'),
           ),
         ],
       ),
       drawer: _buildDrawer(context, user),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Card
-            Card(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF1A56DB), Color(0xFF1E40AF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+            _DashboardHeader(
+              total: _inspections.length,
+              completed: _countByStatus('completed'),
+              signed: _countByStatus('signed'),
+              open: _countOpen(),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Search reference, type, location, inspector',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Clear search',
+                            ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome, ${user?['name'] ?? 'Inspector'}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _StatusFilterChip(
+                          label: 'All',
+                          selected: _selectedStatus == 'all',
+                          onTap: () => setState(() => _selectedStatus = 'all'),
+                        ),
+                        _StatusFilterChip(
+                          label: 'New',
+                          selected: _selectedStatus == 'new',
+                          onTap: () => setState(() => _selectedStatus = 'new'),
+                        ),
+                        _StatusFilterChip(
+                          label: 'Completed',
+                          selected: _selectedStatus == 'completed',
+                          onTap: () =>
+                              setState(() => _selectedStatus = 'completed'),
+                        ),
+                        _StatusFilterChip(
+                          label: 'Signed',
+                          selected: _selectedStatus == 'signed',
+                          onTap: () =>
+                              setState(() => _selectedStatus = 'signed'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user?['email'] ?? '',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Quick Actions
-            const Text(
-              'Quick Actions',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            // Scan QR Card
-            _buildActionCard(
-              context,
-              icon: Icons.qr_code_scanner,
-              title: 'Scan QR Code',
-              subtitle: 'Check-in to inspection point',
-              color: const Color(0xFF1A56DB),
-              onTap: () => Navigator.pushNamed(context, '/qr-scanner'),
-            ),
-            const SizedBox(height: 12),
-
-            // Inspection Modules
-            const Text(
-              'Inspections',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMenuCard(
-                    context,
-                    icon: Icons.water_damage,
-                    title: 'Fire\nHydrant',
-                    color: const Color(0xFFDC2626),
-                    route: '/fire-hydrant',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildMenuCard(
-                    context,
-                    icon: Icons.fire_extinguisher,
-                    title: 'Fire\nExtinguisher',
-                    color: const Color(0xFFEA580C),
-                    route: '/fire-extinguisher',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMenuCard(
-                    context,
-                    icon: Icons.notifications_active,
-                    title: 'Fire\nAlarm',
-                    color: const Color(0xFFD97706),
-                    route: '/fire-alarm',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildMenuCard(
-                    context,
-                    icon: Icons.shower,
-                    title: 'ES/EW',
-                    color: const Color(0xFF059669),
-                    route: '/es-ew',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            _buildMenuCard(
-              context,
-              icon: Icons.checklist,
-              title: 'General Checklist',
-              color: const Color(0xFF7C3AED),
-              route: '/checklist',
-              fullWidth: true,
-            ),
-            const SizedBox(height: 20),
-
-            // Incident Section
-            const Text(
-              'Incidents',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMenuCard(
-                    context,
-                    icon: Icons.report_problem,
-                    title: 'Report\nIncident',
-                    color: const Color(0xFFB91C1C),
-                    route: '/incident-form',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildMenuCard(
-                    context,
-                    icon: Icons.list_alt,
-                    title: 'Incident\nList',
-                    color: const Color(0xFF1D4ED8),
-                    route: '/incidents',
-                  ),
-                ),
-              ],
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? _ErrorState(message: _error!, onRetry: _loadInspections)
+                      : RefreshIndicator(
+                          onRefresh: _loadInspections,
+                          child: filtered.isEmpty
+                              ? ListView(
+                                  padding: const EdgeInsets.all(24),
+                                  children: const [
+                                    SizedBox(height: 96),
+                                    Icon(Icons.assignment_outlined,
+                                        size: 56, color: Colors.black38),
+                                    SizedBox(height: 12),
+                                    Center(
+                                      child: Text(
+                                        'No inspections found',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                                  itemCount: filtered.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, index) {
+                                    final item = filtered[index];
+                                    return _InspectionListTile(
+                                      item: item,
+                                      onTap: () => _showInspectionDetail(item),
+                                    );
+                                  },
+                                ),
+                        ),
             ),
           ],
         ),
@@ -189,60 +265,156 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 2,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
-      ),
-    );
+  int _countByStatus(String status) {
+    return _inspections.where((item) => item.status == status).length;
   }
 
-  Widget _buildMenuCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required Color color,
-    required String route,
-    bool fullWidth = false,
-  }) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.pushNamed(context, route),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+  int _countOpen() {
+    return _inspections
+        .where((item) => item.status != 'completed' && item.status != 'signed')
+        .length;
+  }
+
+  Future<void> _showInspectionDetail(_InspectionItem item) async {
+    Map<String, dynamic> detail = item.rawData;
+    final id = int.tryParse(item.id);
+
+    if (id != null) {
+      try {
+        detail = await context
+            .read<ApiService>()
+            .getInspectionDetail(item.detailPath, id);
+      } catch (_) {
+        detail = item.rawData;
+      }
+    }
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final items = _listFrom(detail['items']);
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.82,
+          minChildSize: 0.42,
+          maxChildSize: 0.95,
+          builder: (context, controller) {
+            return ListView(
+              controller: controller,
+              padding: const EdgeInsets.all(20),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: item.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(item.icon, color: item.color),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.reference,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(item.type, style: TextStyle(color: item.color)),
+                        ],
+                      ),
+                    ),
+                    _StatusBadge(status: item.status),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                const SizedBox(height: 18),
+                _DetailSection(
+                  title: 'Inspection Detail',
+                  children: [
+                    _DetailRow(label: 'Reference', value: item.reference),
+                    _DetailRow(label: 'Type', value: item.type),
+                    _DetailRow(
+                        label: 'Date',
+                        value: _dateOnly(detail['inspection_date'])),
+                    _DetailRow(label: 'Status', value: detail['status']),
+                    if (_hasValue(_relationName(
+                        detail['location'], detail['location_id'])))
+                      _DetailRow(
+                          label: 'Location',
+                          value: _relationName(
+                              detail['location'], detail['location_id'])),
+                    if (_hasValue(
+                        _relationName(detail['area'], detail['area_id'])))
+                      _DetailRow(
+                          label: 'Area',
+                          value:
+                              _relationName(detail['area'], detail['area_id'])),
+                    if (_hasValue(_relationName(
+                        detail['inspector'], detail['inspector_id'])))
+                      _DetailRow(
+                          label: 'Inspector',
+                          value: _relationName(
+                              detail['inspector'], detail['inspector_id'])),
+                    if (_hasValue(detail['assigned_to']))
+                      _DetailRow(
+                          label: 'Assigned To', value: detail['assigned_to']),
+                    if (_hasValue(_dateTime(detail['checked_in_at'])))
+                      _DetailRow(
+                          label: 'Checked In At',
+                          value: _dateTime(detail['checked_in_at'])),
+                    if (_hasValue(_dateTime(detail['signed_at'])))
+                      _DetailRow(
+                          label: 'Signed At',
+                          value: _dateTime(detail['signed_at'])),
+                    if (_hasValue(detail['checkin_lat']))
+                      _DetailRow(
+                          label: 'Check-in Lat', value: detail['checkin_lat']),
+                    if (_hasValue(detail['checkin_lng']))
+                      _DetailRow(
+                          label: 'Check-in Lng', value: detail['checkin_lng']),
+                    if (_hasValue(detail['notes']))
+                      _DetailRow(label: 'Notes', value: detail['notes']),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Items',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                if (items.isEmpty)
+                  const Text('No items')
+                else
+                  ...items.asMap().entries.map((entry) {
+                    return _InspectionDetailItem(
+                      index: entry.key + 1,
+                      item: _mapFrom(entry.value),
+                    );
+                  }),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -252,18 +424,14 @@ class HomeScreen extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1A56DB), Color(0xFF1E40AF)],
-              ),
-            ),
+            decoration: const BoxDecoration(color: Color(0xFF0F172A)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 const CircleAvatar(
-                  radius: 30,
-                  child: Icon(Icons.person, size: 30),
+                  radius: 28,
+                  child: Icon(Icons.person_outline, size: 28),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -276,17 +444,15 @@ class HomeScreen extends StatelessWidget {
                 ),
                 Text(
                   user?['email'] ?? '',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.dashboard),
+            leading: const Icon(Icons.dashboard_outlined),
             title: const Text('Dashboard'),
+            selected: true,
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
@@ -299,7 +465,7 @@ class HomeScreen extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.water_damage),
+            leading: const Icon(Icons.water_damage_outlined),
             title: const Text('Fire Hydrant'),
             onTap: () {
               Navigator.pop(context);
@@ -315,7 +481,7 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.notifications_active),
+            leading: const Icon(Icons.notifications_active_outlined),
             title: const Text('Fire Alarm'),
             onTap: () {
               Navigator.pop(context);
@@ -323,7 +489,7 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.shower),
+            leading: const Icon(Icons.shower_outlined),
             title: const Text('ES/EW'),
             onTap: () {
               Navigator.pop(context);
@@ -331,28 +497,13 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.checklist),
+            leading: const Icon(Icons.checklist_outlined),
             title: const Text('Checklist'),
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/checklist');
             },
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.report_problem),
-            title: const Text('Incidents'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/incidents');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.medical_services),
-            title: const Text('Medical Reports'),
-            onTap: () => Navigator.pop(context),
-          ),
-          const Spacer(),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -369,4 +520,602 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader({
+    required this.total,
+    required this.completed,
+    required this.signed,
+    required this.open,
+  });
+
+  final int total;
+  final int completed;
+  final int signed;
+  final int open;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'All Inspections',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Review and continue inspection records from one place.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.black54,
+                ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _MetricTile(label: 'Total', value: total)),
+              const SizedBox(width: 8),
+              Expanded(child: _MetricTile(label: 'Open', value: open)),
+              const SizedBox(width: 8),
+              Expanded(child: _MetricTile(label: 'Done', value: completed)),
+              const SizedBox(width: 8),
+              Expanded(child: _MetricTile(label: 'Signed', value: signed)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value.toString(),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, color: Colors.black54),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusFilterChip extends StatelessWidget {
+  const _StatusFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+      ),
+    );
+  }
+}
+
+class _InspectionListTile extends StatelessWidget {
+  const _InspectionListTile({required this.item, required this.onTap});
+
+  final _InspectionItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(item.icon, color: item.color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.reference,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        _StatusBadge(status: item.status),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.type,
+                      style: TextStyle(
+                        color: item.color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined,
+                            size: 14, color: Colors.black45),
+                        const SizedBox(width: 4),
+                        Text(item.dateText.isEmpty ? '-' : item.dateText),
+                        const SizedBox(width: 12),
+                        const Icon(Icons.place_outlined,
+                            size: 15, color: Colors.black45),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.location.isEmpty ? '-' : item.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline,
+                            size: 15, color: Colors.black45),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.inspector.isEmpty ? '-' : item.inspector,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: Colors.black38),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      'completed' => const Color(0xFF15803D),
+      'signed' => const Color(0xFF1D4ED8),
+      _ => const Color(0xFFB45309),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        status.isEmpty ? 'new' : status,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+
+  final String label;
+  final dynamic value;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = value?.toString().trim();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
+            ),
+          ),
+          Expanded(child: Text(text == null || text.isEmpty ? '-' : text)),
+        ],
+      ),
+    );
+  }
+}
+
+class _InspectionDetailItem extends StatelessWidget {
+  const _InspectionDetailItem({required this.index, required this.item});
+
+  final int index;
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = item['name'] ??
+        item['hydrant_number'] ??
+        item['alarm_number'] ??
+        item['type'] ??
+        'Item $index';
+    final rows = item.entries
+        .where((entry) =>
+            !_hiddenItemFields.contains(entry.key) &&
+            entry.value != null &&
+            entry.value.toString().isNotEmpty)
+        .toList();
+    final photoBefore = item['photo_before'];
+    final photoAfter = item['photo_after'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$index. $title',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          ...rows.map((entry) {
+            return _DetailRow(
+              label: _formatKey(entry.key),
+              value: _formatValue(entry.value),
+            );
+          }),
+          if (_hasValue(photoBefore) || _hasValue(photoAfter)) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (_hasValue(photoBefore))
+                  _SmallPhotoPreview(label: 'Before', path: photoBefore),
+                if (_hasValue(photoAfter))
+                  _SmallPhotoPreview(label: 'After', path: photoAfter),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallPhotoPreview extends StatelessWidget {
+  const _SmallPhotoPreview({required this.label, required this.path});
+
+  final String label;
+  final dynamic path;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = _mediaUrl(context, path);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 72,
+            height: 72,
+            color: const Color(0xFFE2E8F0),
+            child: url == null
+                ? const Icon(Icons.image_not_supported_outlined,
+                    color: Colors.black45)
+                : Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.black45,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InspectionItem {
+  const _InspectionItem({
+    required this.id,
+    required this.reference,
+    required this.type,
+    required this.status,
+    required this.dateText,
+    required this.location,
+    required this.inspector,
+    required this.route,
+    required this.detailPath,
+    required this.rawData,
+    required this.color,
+    required this.icon,
+  });
+
+  factory _InspectionItem.fromMap(
+    Map<String, dynamic> data, {
+    required String type,
+    required String route,
+    required String detailPath,
+    required Color color,
+    required IconData icon,
+  }) {
+    final id = data['id']?.toString() ?? '';
+    final reference =
+        (data['reference_no'] ?? data['code'] ?? data['inspection_no'] ?? '')
+            .toString();
+    final location = _relationName(data['location'], data['location_id']);
+    final inspector = _relationName(data['inspector'], data['inspector_id']);
+
+    return _InspectionItem(
+      id: id,
+      reference: reference.isEmpty ? '$type #$id' : reference,
+      type: type,
+      status: (data['status'] ?? 'new').toString(),
+      dateText: _dateOnly(data['inspection_date']),
+      location: location,
+      inspector: inspector,
+      route: route,
+      detailPath: detailPath,
+      rawData: data,
+      color: color,
+      icon: icon,
+    );
+  }
+
+  final String id;
+  final String reference;
+  final String type;
+  final String status;
+  final String dateText;
+  final String location;
+  final String inspector;
+  final String route;
+  final String detailPath;
+  final Map<String, dynamic> rawData;
+  final Color color;
+  final IconData icon;
+
+  String get searchText {
+    return [
+      id,
+      reference,
+      type,
+      status,
+      dateText,
+      location,
+      inspector,
+    ].join(' ').toLowerCase();
+  }
+}
+
+Map<String, dynamic> _mapFrom(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return <String, dynamic>{};
+}
+
+const Set<String> _hiddenItemFields = {
+  'id',
+  'inspection_id',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'photo_before',
+  'photo_after',
+  'item_lat',
+  'item_lng',
+};
+
+bool _hasValue(dynamic value) {
+  if (value == null) return false;
+  final text = value.toString().trim();
+  return text.isNotEmpty && text != '-';
+}
+
+String? _mediaUrl(BuildContext context, dynamic path) {
+  if (!_hasValue(path)) return null;
+  final text = path.toString();
+  if (text.startsWith('http://') || text.startsWith('https://')) {
+    return text;
+  }
+  final apiBase = context.read<ApiService>().baseUrl;
+  final appBase = apiBase.replaceFirst(RegExp(r'/api/?$'), '');
+  final cleanBase = appBase.endsWith('/')
+      ? appBase.substring(0, appBase.length - 1)
+      : appBase;
+  final cleanPath = text.startsWith('/') ? text.substring(1) : text;
+  return '$cleanBase/$cleanPath';
+}
+
+String _relationName(dynamic relation, dynamic fallbackId) {
+  final data = _mapFrom(relation);
+  if (data.isNotEmpty) {
+    final name = data['name'] ??
+        data['location_name'] ??
+        data['description'] ??
+        data['username'] ??
+        data['name_point'];
+    if (name != null) return name.toString();
+  }
+  return fallbackId == null ? '' : '#$fallbackId';
+}
+
+String _dateOnly(dynamic value) {
+  if (value == null) return '';
+  final text = value.toString();
+  if (text.isEmpty) return '';
+  return text.split('T').first.split(' ').first;
+}
+
+String _dateTime(dynamic value) {
+  if (value == null) return '';
+  final text = value.toString();
+  if (text.isEmpty) return '';
+  return text.replaceFirst('T', ' ').split('.').first;
+}
+
+List<dynamic> _listFrom(dynamic value) {
+  if (value is List) return value;
+  return <dynamic>[];
+}
+
+String _formatKey(String key) {
+  return key
+      .split('_')
+      .map((word) =>
+          word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
+      .join(' ');
+}
+
+String _formatValue(dynamic value) {
+  if (value is bool) return value ? 'Yes' : 'No';
+  if (value is num && (value == 0 || value == 1)) {
+    return value == 1 ? 'Yes' : 'No';
+  }
+  return value.toString();
 }

@@ -44,19 +44,52 @@ class MyApp extends StatelessWidget {
           ),
         ),
         initialRoute: '/splash',
-        routes: {
-          '/splash': (context) => const SplashScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/profile': (context) => const ProfileScreen(),
-          '/qr-scanner': (context) => const QrScannerScreen(),
-          '/fire-hydrant': (context) => const FireHydrantScreen(),
-          '/fire-extinguisher': (context) => const FireExtinguisherScreen(),
-          '/fire-alarm': (context) => const FireAlarmScreen(),
-          '/es-ew': (context) => const EsEwScreen(),
-          '/checklist': (context) => const ChecklistScreen(),
-          '/incidents': (context) => const IncidentListScreen(),
-          '/incident-form': (context) => const IncidentFormScreen(),
+        onGenerateRoute: (settings) {
+          Widget page;
+          String? idArg;
+          if (settings.arguments is String) idArg = settings.arguments as String;
+
+          switch (settings.name) {
+            case '/splash':
+              page = const SplashScreen();
+              break;
+            case '/login':
+              page = const LoginScreen();
+              break;
+            case '/home':
+              page = const HomeScreen();
+              break;
+            case '/profile':
+              page = const ProfileScreen();
+              break;
+            case '/qr-scanner':
+              page = const QrScannerScreen();
+              break;
+            case '/fire-hydrant':
+              page = FireHydrantScreen(initialId: idArg);
+              break;
+            case '/fire-extinguisher':
+              page = const FireExtinguisherScreen();
+              break;
+            case '/fire-alarm':
+              page = const FireAlarmScreen();
+              break;
+            case '/es-ew':
+              page = const EsEwScreen();
+              break;
+            case '/checklist':
+              page = const ChecklistScreen();
+              break;
+            case '/incidents':
+              page = const IncidentListScreen();
+              break;
+            case '/incident-form':
+              page = const IncidentFormScreen();
+              break;
+            default:
+              page = const HomeScreen();
+          }
+          return MaterialPageRoute(builder: (_) => page, settings: settings);
         },
       ),
     );
