@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateOwnProfileRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -35,7 +39,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user' => $user,
+            'user' => array_merge($user->toArray(), ['permissions' => $user->permissionNames()]),
         ]);
     }
 
@@ -71,21 +75,83 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
-    }
-
-    public function updateProfile(Request $request)
-    {
         $user = $request->user();
 
-        $request->validate([
-            'name' => 'string|max:255',
-            'phone' => 'string|max:255',
-            'position' => 'string|max:255',
+        return response()->json(array_merge($user->toArray(), [
+            'permissions' => $user->permissionNames(),
+        ]));
+    }
+
+    public function updateProfile(UpdateOwnProfileRequest $request)
+    {
+        $user = $request->user();
+        $data = $request->validated();
+        $newSignaturePath = null;
+        $oldSignaturePath = $user->signature_path;
+
+        if (filled($data['password'] ?? null)) {
+            if (!Hash::check((string) ($data['current_password'] ?? ''), $user->password_hash)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['Password saat ini tidak sesuai.'],
+                ]);
+            }
+
+            $data['password_hash'] = Hash::make($data['password']);
+        }
+
+        unset($data['password'], $data['password_confirmation'], $data['current_password'], $data['signature']);
+
+        try {
+            if ($request->hasFile('signature')) {
+                $targetPath = public_path('images');
+                File::ensureDirectoryExists($targetPath);
+                $file = $request->file('signature');
+                $extension = $file->getClientOriginalExtension() ?: 'png';
+                $filename = 'user_signature_' . now()->format('YmdHisv') . '_' . uniqid() . '.' . $extension;
+                $file->move($targetPath, $filename);
+                $newSignaturePath = 'images/' . $filename;
+                $data['signature_path'] = $newSignaturePath;
+            }
+
+            DB::transaction(fn () => $user->update($data));
+        } catch (Throwable $exception) {
+            if ($newSignaturePath) {
+                $this->deleteProfileSignature($newSignaturePath);
+            }
+            report($exception);
+
+            return response()->json([
+                'message' => 'Profil gagal diperbarui. Silakan coba lagi.',
+            ], 500);
+        }
+
+        if ($newSignaturePath && $oldSignaturePath && $oldSignaturePath !== $newSignaturePath) {
+            $this->deleteProfileSignature($oldSignaturePath);
+        }
+
+        $user = $user->fresh();
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui.',
+            'user' => array_merge($user->toArray(), [
+                'permissions' => $user->permissionNames(),
+            ]),
         ]);
+    }
 
-        $user->update($request->only(['name', 'phone', 'position']));
+    private function deleteProfileSignature(string $path): void
+    {
+        $normalized = str_replace('\\', '/', ltrim($path, '/'));
 
-        return response()->json($user);
+        if (!str_starts_with($normalized, 'images/')) {
+            return;
+        }
+
+        $filename = substr($normalized, strlen('images/'));
+        if ($filename === '' || basename($filename) !== $filename) {
+            return;
+        }
+
+        File::delete(public_path('images/' . $filename));
     }
 }

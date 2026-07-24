@@ -29,8 +29,17 @@
                     <input id="username" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">No Telepon</label>
+                    <input id="phone" type="tel" maxlength="30" placeholder="Contoh: 081234567890" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input id="password" type="password" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div class="relative">
+                        <input id="password" type="password" class="w-full border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <button type="button" onclick="togglePassword()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                            <i id="passwordIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
@@ -39,6 +48,8 @@
                         <option value="admin">Admin</option>
                         <option value="supervisor">Supervisor</option>
                         <option value="super_admin">Super Admin</option>
+                        <option value="she_section_head">SHE Section Head</option>
+                        <option value="user_dept_head">User Dept Head</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
@@ -63,16 +74,17 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No Telepon</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanda Tangan</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="userTable" class="bg-white divide-y divide-gray-200">
-                    <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                    <tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -141,14 +153,15 @@ async function loadUsers() {
     const tbody = document.getElementById('userTable');
     users = Array.isArray(json.data) ? json.data : [];
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No users found</td></tr>';
         return;
     }
-    tbody.innerHTML = users.map(u => `
+    tbody.innerHTML = users.map((u, index) => `
         <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(u.id)}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${index + 1}</td>
             <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(u.name)}</td>
             <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(u.username)}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">${escapeHtml(u.phone || '-')}</td>
             <td class="px-6 py-4 text-sm">
                 <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${u.role==='super_admin'?'bg-purple-100 text-purple-800':u.role==='admin'?'bg-blue-100 text-blue-800':u.role==='inspector'?'bg-green-100 text-green-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}">${escapeHtml(u.role)}</span>
             </td>
@@ -174,6 +187,21 @@ function openForm() {
 }
 function closeForm() { document.getElementById('formCard').classList.add('hidden'); }
 
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const passwordIcon = document.getElementById('passwordIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        passwordIcon.classList.remove('fa-eye');
+        passwordIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        passwordIcon.classList.remove('fa-eye-slash');
+        passwordIcon.classList.add('fa-eye');
+    }
+}
+
 function editItem(id) {
     const u = users.find(item => Number(item.id) === Number(id));
     if (!u) return;
@@ -183,8 +211,12 @@ function editItem(id) {
     document.getElementById('user_id').value = u.id;
     document.getElementById('name').value = u.name;
     document.getElementById('username').value = u.username;
+    document.getElementById('phone').value = u.phone || '';
     document.getElementById('role').value = u.role;
     document.getElementById('password').value = '';
+    document.getElementById('password').type = 'password';
+    document.getElementById('passwordIcon').classList.remove('fa-eye-slash');
+    document.getElementById('passwordIcon').classList.add('fa-eye');
     document.getElementById('signaturePreview').innerHTML = signaturePreviewHtml(u.signature_path);
 }
 
@@ -194,6 +226,7 @@ document.getElementById('userForm').addEventListener('submit', async e => {
     const formData = new FormData();
     formData.append('name', document.getElementById('name').value);
     formData.append('username', document.getElementById('username').value);
+    formData.append('phone', document.getElementById('phone').value.trim());
     formData.append('role', document.getElementById('role').value);
 
     const password = document.getElementById('password').value;

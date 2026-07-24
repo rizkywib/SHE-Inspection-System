@@ -284,25 +284,17 @@ CREATE TABLE fire_hydrant_items (
 CREATE TABLE fire_extinguisher_inspections (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   reference_no VARCHAR(40) NOT NULL UNIQUE,
-  location_id BIGINT UNSIGNED,
-  area_id BIGINT UNSIGNED,
-  qr_code_id BIGINT UNSIGNED,
+  location_id BIGINT UNSIGNED NOT NULL,
   inspection_date DATE NOT NULL,
   inspector_id BIGINT UNSIGNED NOT NULL,
-  assigned_to BIGINT UNSIGNED,
   checkin_lat DECIMAL(10,8),
   checkin_lng DECIMAL(11,8),
   checked_in_at DATETIME,
   signed_at DATETIME,
-  notes TEXT,
-  status ENUM('draft', 'completed', 'signed') NOT NULL DEFAULT 'draft',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_fei_inspector FOREIGN KEY (inspector_id) REFERENCES users(id) ON DELETE RESTRICT,
-  CONSTRAINT fk_fei_assigned FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
-  CONSTRAINT fk_fei_location FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL,
-  CONSTRAINT fk_fei_area FOREIGN KEY (area_id) REFERENCES areas(id) ON DELETE SET NULL,
-  CONSTRAINT fk_fei_qr FOREIGN KEY (qr_code_id) REFERENCES asset_qr_codes(id) ON DELETE SET NULL
+  CONSTRAINT fk_fei_location FOREIGN KEY (location_id) REFERENCES fire_extinguisher_location(id_location) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 CREATE TABLE fire_extinguisher_items (
@@ -504,6 +496,7 @@ CREATE TABLE incidents (
   incident_type_id BIGINT UNSIGNED,
   incident_level_id BIGINT UNSIGNED,
   location_id BIGINT UNSIGNED,
+  location_text VARCHAR(255),
   area_id BIGINT UNSIGNED,
   department_id BIGINT UNSIGNED,
   section_id BIGINT UNSIGNED,

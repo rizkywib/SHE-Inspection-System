@@ -10,7 +10,7 @@ class Incident extends Model
 
     protected $fillable = [
         'reference_no', 'reporter_id', 'incident_type_id', 'incident_level_id',
-        'location_id', 'area_id', 'department_id', 'section_id',
+        'location_id', 'location_text', 'area_id', 'department_id', 'section_id',
         'incident_date', 'incident_time', 'description', 'root_cause',
         'immediate_action', 'recommendation', 'corrective_action', 'review_notes',
         'latitude', 'longitude', 'status', 'is_medical'

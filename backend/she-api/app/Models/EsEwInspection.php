@@ -17,14 +17,14 @@ class EsEwInspection extends Model
     ];
 
     protected $casts = [
-        'inspection_date' => 'date',
+        'inspection_date' => 'date:Y-m-d',
         'checked_in_at' => 'datetime',
         'signed_at' => 'datetime',
     ];
 
     public function items()
     {
-        return $this->hasMany(EsEwItem::class, 'inspection_id');
+        return $this->hasMany(EsEwItem::class, 'inspection_id')->orderBy('id');
     }
 
     public function inspector()

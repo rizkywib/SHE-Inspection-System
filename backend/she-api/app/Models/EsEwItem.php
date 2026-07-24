@@ -20,6 +20,22 @@ class EsEwItem extends Model
         'item_lat', 'item_lng'
     ];
 
+    protected $casts = [
+        'water_flow_es' => 'boolean',
+        'water_flow_ew' => 'boolean',
+        'water_condition' => 'boolean',
+        'actual_valve_es' => 'boolean',
+        'actual_valve_ew' => 'boolean',
+        'physical_condition_es' => 'boolean',
+        'physical_condition_ew' => 'boolean',
+        'sign_board_condition' => 'boolean',
+        'housekeeping_condition' => 'boolean',
+        'road_access_condition' => 'boolean',
+        'sewer_condition' => 'boolean',
+        'item_lat' => 'decimal:8',
+        'item_lng' => 'decimal:8',
+    ];
+
     public function inspection()
     {
         return $this->belongsTo(EsEwInspection::class, 'inspection_id');

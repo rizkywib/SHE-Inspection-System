@@ -12,23 +12,28 @@ class FireHydrantInspection extends Model
         'reference_no', 'location_id', 'area_id', 'qr_code_id',
         'inspection_date', 'inspector_id', 'assigned_to',
         'checkin_lat', 'checkin_lng', 'checked_in_at',
-        'signed_at', 'notes', 'status'
+        'signed_at', 'signed_by', 'notes'
     ];
 
     protected $casts = [
-        'inspection_date' => 'date',
+        'inspection_date' => 'date:Y-m-d',
         'checked_in_at' => 'datetime',
         'signed_at' => 'datetime',
     ];
 
     public function items()
     {
-        return $this->hasMany(FireHydrantItem::class, 'inspection_id');
+        return $this->hasMany(FireHydrantItem::class, 'inspection_id')->orderBy('id');
     }
 
     public function inspector()
     {
         return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function signer()
+    {
+        return $this->belongsTo(User::class, 'signed_by');
     }
 
     public function assignedTo()

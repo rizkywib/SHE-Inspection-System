@@ -13,8 +13,9 @@ class FireHydrantController extends Controller
 {
     public function index(Request $request)
     {
-        $query = FireHydrantInspection::with(['inspector', 'location', 'area', 'items'])
-            ->orderByDesc('inspection_date');
+        $query = FireHydrantInspection::with(['inspector', 'signer', 'location', 'area', 'items'])
+            ->orderByDesc('inspection_date')
+            ->orderByDesc('id');
 
         if ($request->filled('location_id')) {
             $query->where('location_id', $request->location_id);
@@ -49,7 +50,6 @@ class FireHydrantController extends Controller
             'checked_in_at' => 'nullable|date',
             'signed_at' => 'nullable|date',
             'notes' => 'nullable|string',
-            'status' => 'nullable|in:new,completed,signed',
             'items' => 'nullable|array',
             'items.*.hydrant_number' => 'required_with:items|string|max:200',
             'items.*.name' => 'required_with:items|string|max:100',
@@ -77,11 +77,7 @@ class FireHydrantController extends Controller
         $items = $this->mergeItemPhotos($items, $this->storeItemPhotos($request));
 
         $data['inspector_id'] = $data['inspector_id'] ?? $request->user()->id;
-        $data['status'] = $data['status'] ?? 'new';
         $data['checked_in_at'] = $data['checked_in_at'] ?? now();
-        if ($data['status'] === 'signed') {
-            $data['signed_at'] = $data['signed_at'] ?? now();
-        }
 
         $inspection = DB::transaction(function () use ($data, $items) {
             $inspection = FireHydrantInspection::create($data);
@@ -96,7 +92,7 @@ class FireHydrantController extends Controller
 
     public function show($id)
     {
-        $item = FireHydrantInspection::with(['inspector', 'location', 'area', 'items'])->findOrFail($id);
+        $item = FireHydrantInspection::with(['inspector', 'signer', 'location', 'area', 'items'])->findOrFail($id);
         return response()->json(['data' => $item]);
     }
 
@@ -117,7 +113,6 @@ class FireHydrantController extends Controller
             'checked_in_at' => 'nullable|date',
             'signed_at' => 'nullable|date',
             'notes' => 'nullable|string',
-            'status' => 'nullable|in:new,completed,signed',
             'items' => 'nullable|array',
             'items.*.hydrant_number' => 'required_with:items|string|max:200',
             'items.*.name' => 'required_with:items|string|max:100',
@@ -156,9 +151,6 @@ class FireHydrantController extends Controller
         }
 
         $data['checked_in_at'] = $inspection->checked_in_at ?: now();
-        if (($data['status'] ?? $inspection->status) === 'signed') {
-            $data['signed_at'] = $inspection->signed_at ?: now();
-        }
 
         DB::transaction(function () use ($inspection, $data, $items, $hasItems) {
             $inspection->update($data);
@@ -331,8 +323,39 @@ class FireHydrantController extends Controller
     public function sign(Request $request, $id)
     {
         $inspection = FireHydrantInspection::findOrFail($id);
-        $inspection->update(['signed_at' => now(), 'status' => 'signed']);
+        $user = $request->user();
 
-        return response()->json(['data' => $inspection]);
+        if (empty($user->signature_path)) {
+            return response()->json([
+                'message' => 'User login belum memiliki tanda tangan yang terdaftar.',
+            ], 422);
+        }
+
+        if ($inspection->signed_by) {
+            return response()->json([
+                'message' => 'Inspeksi ini sudah ditandatangani.',
+            ], 409);
+        }
+
+        $inspection->update([
+            'signed_at' => now(),
+            'signed_by' => $user->id,
+        ]);
+
+        return response()->json(['data' => $inspection->load('signer')]);
+    }
+
+    public function deleteItem($inspectionId, $itemIndex)
+    {
+        $inspection = FireHydrantInspection::findOrFail($inspectionId);
+        $items = $inspection->items()->orderBy('id')->get()->values();
+
+        if ($itemIndex < 0 || $itemIndex >= $items->count()) {
+            return response()->json(['message' => 'Invalid item index'], 404);
+        }
+
+        $items->get($itemIndex)->delete();
+
+        return response()->json(['message' => 'Item deleted successfully']);
     }
 }

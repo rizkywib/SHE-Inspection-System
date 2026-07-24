@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 
 class FireHydrantScreen extends StatefulWidget {
   const FireHydrantScreen({super.key, this.initialId});
@@ -15,7 +16,6 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
   List<dynamic> _inspections = [];
   List<dynamic> _locations = [];
   List<dynamic> _users = [];
-  List<dynamic> _areas = [];
   List<dynamic> _points = [];
   bool _isLoading = true;
   bool _isLoadingReferences = false;
@@ -93,18 +93,16 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
 
     try {
       final api = context.read<ApiService>();
-      final results = await Future.wait([
-        api.getFireHydrantLocations(),
-        api.getUsers(),
-        api.getAreas(),
-        api.getPoints(),
+      final results = await Future.wait<List<dynamic>>([
+        _safeReferenceLoad(api.getFireHydrantLocations),
+        _safeReferenceLoad(api.getUsers),
+        _safeReferenceLoad(api.getPoints),
       ]);
       if (!mounted) return;
       setState(() {
         _locations = results[0];
         _users = results[1];
-        _areas = results[2];
-        _points = results[3];
+        _points = results[2];
         _isLoadingReferences = false;
       });
     } catch (_) {
@@ -113,11 +111,17 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     }
   }
 
+  Future<List<dynamic>> _safeReferenceLoad(
+      Future<List<dynamic>> Function() loader) async {
+    try {
+      return await loader();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> _ensureReferenceData() async {
-    if (_locations.isEmpty ||
-        _users.isEmpty ||
-        _areas.isEmpty ||
-        _points.isEmpty) {
+    if (_locations.isEmpty || _users.isEmpty || _points.isEmpty) {
       await _loadReferenceData();
     }
   }
@@ -275,29 +279,16 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                           detail['location_id'], 'Location'),
                     ),
                     _DetailRow(
-                      label: 'Area',
-                      value: _relationName(
-                          detail['area'], detail['area_id'], 'Area'),
-                    ),
-                    _DetailRow(
                       label: 'Inspector',
                       value: _relationName(detail['inspector'],
                           detail['inspector_id'], 'Inspector'),
                     ),
-                    _DetailRow(
-                        label: 'Assigned To', value: detail['assigned_to']),
                     _DetailRow(
                         label: 'Checked In At',
                         value: _dateTime(detail['checked_in_at'])),
                     _DetailRow(
                         label: 'Signed At',
                         value: _dateTime(detail['signed_at'])),
-                    _DetailRow(
-                        label: 'Check-in Latitude',
-                        value: detail['checkin_lat']),
-                    _DetailRow(
-                        label: 'Check-in Longitude',
-                        value: detail['checkin_lng']),
                     _DetailRow(label: 'Notes', value: detail['notes']),
                   ],
                 ),
@@ -355,27 +346,31 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     if (!mounted) return;
 
     final isEdit = item != null;
+    final currentUser = _mapFrom(context.read<AuthService>().user);
     final dateController = TextEditingController(
       text: _dateOnly(item?['inspection_date']) ?? _today(),
     );
     final notesController =
         TextEditingController(text: item?['notes']?.toString() ?? '');
-    final checkinLatController =
-        TextEditingController(text: item?['checkin_lat']?.toString() ?? '');
-    final checkinLngController =
-        TextEditingController(text: item?['checkin_lng']?.toString() ?? '');
     var status = (item?['status'] ?? 'new').toString();
     if (!['new', 'completed', 'signed'].contains(status)) status = 'new';
 
     int? locationId =
         _selectedId(item?['location_id'], _locations, 'id_location');
-    int? areaId = _selectedId(item?['area_id'], _areas, 'id');
-    int? inspectorId = _selectedId(item?['inspector_id'], _users, 'id');
-    int? assignedTo = _selectedId(item?['assigned_to'], _users, 'id');
+    final inspectorId = _intValue(currentUser['id']) ??
+        _selectedId(item?['inspector_id'], _users, 'id');
+    final inspectorName = _genericOption(
+      currentUser.isNotEmpty ? currentUser : _mapFrom(item?['inspector']),
+      'Current User',
+    );
     final referenceNo = item?['reference_no']?.toString();
     final itemForms = _listFrom(item?['items'])
         .map((value) => _HydrantItemFormData.fromMap(_mapFrom(value)))
         .toList();
+    if (!isEdit && itemForms.isEmpty) {
+      itemForms.add(_HydrantItemFormData());
+    }
+    var didSave = false;
 
     await showModalBottomSheet(
       context: context,
@@ -458,72 +453,14 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                           setSheetState(() => locationId = value),
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<int?>(
-                      initialValue: areaId,
-                      decoration: const InputDecoration(
-                        labelText: 'Area',
-                        prefixIcon: Icon(Icons.map_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                            value: null, child: Text('- Select Area -')),
-                        ..._areas.map((area) {
-                          final data = _mapFrom(area);
-                          return DropdownMenuItem<int?>(
-                            value: _intValue(data['id']),
-                            child: Text(_genericOption(data, 'Area'),
-                                overflow: TextOverflow.ellipsis),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) => setSheetState(() => areaId = value),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int?>(
-                      initialValue: inspectorId,
+                    TextFormField(
+                      initialValue: inspectorName,
+                      readOnly: true,
                       decoration: const InputDecoration(
                         labelText: 'Inspector',
                         prefixIcon: Icon(Icons.person_outline),
                         border: OutlineInputBorder(),
                       ),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                            value: null, child: Text('- Current User -')),
-                        ..._users.map((user) {
-                          final data = _mapFrom(user);
-                          return DropdownMenuItem<int?>(
-                            value: _intValue(data['id']),
-                            child: Text(_genericOption(data, 'User'),
-                                overflow: TextOverflow.ellipsis),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) =>
-                          setSheetState(() => inspectorId = value),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int?>(
-                      initialValue: assignedTo,
-                      decoration: const InputDecoration(
-                        labelText: 'Assigned To',
-                        prefixIcon: Icon(Icons.assignment_ind_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                            value: null, child: Text('- Not Assigned -')),
-                        ..._users.map((user) {
-                          final data = _mapFrom(user);
-                          return DropdownMenuItem<int?>(
-                            value: _intValue(data['id']),
-                            child: Text(_genericOption(data, 'User'),
-                                overflow: TextOverflow.ellipsis),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) =>
-                          setSheetState(() => assignedTo = value),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -545,34 +482,6 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: checkinLatController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true, signed: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Check-in Lat',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: checkinLngController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true, signed: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Check-in Lng',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
                     TextField(
                       controller: notesController,
                       minLines: 3,
@@ -592,14 +501,6 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            setSheetState(
-                                () => itemForms.add(_HydrantItemFormData()));
-                          },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add Item'),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -614,6 +515,7 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                           index: entry.key,
                           data: entry.value,
                           points: _points,
+                          canRemove: isEdit && itemForms.length > 1,
                           onRemove: () {
                             setSheetState(() {
                               final removed = itemForms.removeAt(entry.key);
@@ -654,9 +556,7 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                               final payload = <String, dynamic>{
                                 'inspection_date': dateController.text,
                                 'location_id': locationId,
-                                'area_id': areaId,
                                 'inspector_id': inspectorId,
-                                'assigned_to': assignedTo,
                                 'status': status,
                                 'notes': _nullIfEmpty(notesController.text),
                                 'items': itemForms
@@ -664,20 +564,13 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                                     .toList(),
                               };
 
-                              final checkinLat =
-                                  _nullableDouble(checkinLatController.text);
-                              final checkinLng =
-                                  _nullableDouble(checkinLngController.text);
-                              if (checkinLat != null) {
-                                payload['checkin_lat'] = checkinLat;
-                              }
-                              if (checkinLng != null) {
-                                payload['checkin_lng'] = checkinLng;
-                              }
-
-                              await _saveInspection(item, payload);
+                              final saved =
+                                  await _saveInspection(item, payload);
                               if (!context.mounted) return;
-                              Navigator.pop(context);
+                              if (saved) {
+                                didSave = true;
+                                Navigator.pop(context);
+                              }
                             },
                             icon: const Icon(Icons.save),
                             label: const Text('Save'),
@@ -696,10 +589,16 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
 
     dateController.dispose();
     notesController.dispose();
-    checkinLatController.dispose();
-    checkinLngController.dispose();
     for (final form in itemForms) {
       form.dispose();
+    }
+
+    if (didSave && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fire Hydrant saved')),
+      );
+      setState(() => _isLoading = true);
+      await _loadInspections();
     }
   }
 
@@ -716,14 +615,14 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     return null;
   }
 
-  Future<void> _saveInspection(
+  Future<bool> _saveInspection(
       Map<String, dynamic>? item, Map<String, dynamic> payload) async {
     final api = context.read<ApiService>();
     final response = item == null
         ? await api.createFireHydrant(payload)
         : await api.updateFireHydrant(_intValue(item['id'])!, payload);
 
-    if (!mounted) return;
+    if (!mounted) return false;
     if (response.containsKey('error')) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -731,14 +630,10 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      return;
+      return false;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fire Hydrant saved')),
-    );
-    setState(() => _isLoading = true);
-    await _loadInspections();
+    return true;
   }
 
   Future<void> _confirmDelete(Map<String, dynamic> item) async {
@@ -839,8 +734,6 @@ class _HydrantItemFormData {
     String name = '',
     String locationDetail = '',
     String remark = '',
-    String itemLat = '',
-    String itemLng = '',
     this.hoseCondition = true,
     this.nozzleCondition = true,
     this.couplingCondition = true,
@@ -850,9 +743,7 @@ class _HydrantItemFormData {
   })  : hydrantNumber = TextEditingController(text: hydrantNumber),
         name = TextEditingController(text: name),
         locationDetail = TextEditingController(text: locationDetail),
-        remark = TextEditingController(text: remark),
-        itemLat = TextEditingController(text: itemLat),
-        itemLng = TextEditingController(text: itemLng);
+        remark = TextEditingController(text: remark);
 
   factory _HydrantItemFormData.fromMap(Map<String, dynamic> item) {
     return _HydrantItemFormData(
@@ -860,8 +751,6 @@ class _HydrantItemFormData {
       name: item['name']?.toString() ?? '',
       locationDetail: item['location_detail']?.toString() ?? '',
       remark: item['remark']?.toString() ?? '',
-      itemLat: item['item_lat']?.toString() ?? '',
-      itemLng: item['item_lng']?.toString() ?? '',
       hoseCondition: _truthy(item['hose_condition']),
       nozzleCondition: _truthy(item['nozzle_condition']),
       couplingCondition: _truthy(item['coupling_condition']),
@@ -875,8 +764,6 @@ class _HydrantItemFormData {
   final TextEditingController name;
   final TextEditingController locationDetail;
   final TextEditingController remark;
-  final TextEditingController itemLat;
-  final TextEditingController itemLng;
   bool hoseCondition;
   bool nozzleCondition;
   bool couplingCondition;
@@ -897,10 +784,6 @@ class _HydrantItemFormData {
       'coupling_extra_condition': couplingExtraCondition,
       'remark': _nullIfEmpty(remark.text),
     };
-    final lat = _nullableDouble(itemLat.text);
-    final lng = _nullableDouble(itemLng.text);
-    if (lat != null) payload['item_lat'] = lat;
-    if (lng != null) payload['item_lng'] = lng;
     return payload;
   }
 
@@ -910,8 +793,6 @@ class _HydrantItemFormData {
     final pointLocation = point['ket2']?.toString() ?? '';
     if (pointName.isNotEmpty) name.text = pointName;
     if (pointLocation.isNotEmpty) locationDetail.text = pointLocation;
-    if (point['lat'] != null) itemLat.text = point['lat'].toString();
-    if (point['lng'] != null) itemLng.text = point['lng'].toString();
   }
 
   void dispose() {
@@ -919,8 +800,6 @@ class _HydrantItemFormData {
     name.dispose();
     locationDetail.dispose();
     remark.dispose();
-    itemLat.dispose();
-    itemLng.dispose();
   }
 }
 
@@ -929,6 +808,7 @@ class _HydrantItemEditor extends StatelessWidget {
     required this.index,
     required this.data,
     required this.points,
+    required this.canRemove,
     required this.onRemove,
     required this.onChanged,
   });
@@ -936,11 +816,17 @@ class _HydrantItemEditor extends StatelessWidget {
   final int index;
   final _HydrantItemFormData data;
   final List<dynamic> points;
+  final bool canRemove;
   final VoidCallback onRemove;
   final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final selectedPointId = _selectedPointIdForHydrant(
+      data.hydrantNumber.text,
+      points,
+    );
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
@@ -953,53 +839,62 @@ class _HydrantItemEditor extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: IconButton(
-          onPressed: onRemove,
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Remove item',
-        ),
+        trailing: canRemove
+            ? IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Remove item',
+              )
+            : null,
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
-          if (points.isNotEmpty) ...[
-            DropdownButtonFormField<int?>(
-              decoration: const InputDecoration(
-                labelText: 'Use Point Data',
-                border: OutlineInputBorder(),
+          DropdownButtonFormField<int?>(
+            initialValue: selectedPointId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Hydrant Number',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              DropdownMenuItem<int?>(
+                value: null,
+                child: Text(
+                  data.hydrantNumber.text.trim().isEmpty
+                      ? '- Select Hydrant Number -'
+                      : data.hydrantNumber.text.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              items: points
+              ...points
                   .map(_mapFrom)
                   .where((point) => _intValue(point['id']) != null)
                   .map((point) {
                 return DropdownMenuItem<int?>(
                   value: _intValue(point['id']),
-                  child: Text(_pointOption(point),
-                      overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    _pointOption(point),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
-              }).toList(),
-              onChanged: (id) {
-                final point = points.map(_mapFrom).firstWhere(
-                      (value) => _intValue(value['id']) == id,
-                      orElse: () => <String, dynamic>{},
-                    );
-                if (point.isNotEmpty) {
-                  data.applyPoint(point);
-                  onChanged();
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
-          TextField(
-            controller: data.hydrantNumber,
-            decoration: const InputDecoration(
-              labelText: 'Hydrant Number',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (_) => onChanged(),
+              }),
+            ],
+            onChanged: (id) {
+              final point = points.map(_mapFrom).firstWhere(
+                    (value) => _intValue(value['id']) == id,
+                    orElse: () => <String, dynamic>{},
+                  );
+              if (point.isNotEmpty) {
+                data.applyPoint(point);
+                onChanged();
+              }
+            },
           ),
           const SizedBox(height: 12),
           TextField(
             controller: data.name,
+            readOnly: true,
             decoration: const InputDecoration(
               labelText: 'Name',
               border: OutlineInputBorder(),
@@ -1008,6 +903,7 @@ class _HydrantItemEditor extends StatelessWidget {
           const SizedBox(height: 12),
           TextField(
             controller: data.locationDetail,
+            readOnly: true,
             decoration: const InputDecoration(
               labelText: 'Location Detail',
               border: OutlineInputBorder(),
@@ -1077,34 +973,6 @@ class _HydrantItemEditor extends StatelessWidget {
               labelText: 'Remark',
               border: OutlineInputBorder(),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: data.itemLat,
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Item Lat',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: data.itemLng,
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Item Lng',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -1386,10 +1254,25 @@ int? _selectedId(dynamic value, List<dynamic> options, String key) {
   return exists ? id : null;
 }
 
-double? _nullableDouble(String value) {
-  final text = value.trim();
-  if (text.isEmpty) return null;
-  return double.tryParse(text);
+int? _selectedPointIdForHydrant(String hydrantNumber, List<dynamic> points) {
+  final selected = hydrantNumber.trim();
+  if (selected.isEmpty) return null;
+
+  for (final pointValue in points) {
+    final point = _mapFrom(pointValue);
+    final pointId = _intValue(point['id']);
+    if (pointId == null) continue;
+
+    final names = [
+      point['name_point'],
+      point['ket1'],
+      point['id'],
+    ].map((value) => value?.toString().trim()).whereType<String>();
+
+    if (names.any((value) => value == selected)) return pointId;
+  }
+
+  return null;
 }
 
 String? _nullIfEmpty(String value) {

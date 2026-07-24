@@ -22,11 +22,14 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $this->normalizePhone($request);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users,username',
             'password' => 'required|min:8',
-            'role' => 'required|in:super_admin,admin,inspector,viewer',
+            'phone' => 'nullable|string|max:30',
+            'role' => 'required|in:super_admin,admin,inspector,viewer,supervisor,she_section_head,user_dept_head',
             'company_id' => 'nullable|exists:companies,id',
             'branch_id' => 'nullable|exists:branches,id',
             'division_id' => 'nullable|exists:divisions,id',
@@ -58,11 +61,13 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $this->normalizePhone($request);
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users,username,' . $id,
-            'role' => 'required|in:super_admin,admin,inspector,viewer',
+            'phone' => 'nullable|string|max:30',
+            'role' => 'required|in:super_admin,admin,inspector,viewer,supervisor,she_section_head,user_dept_head',
             'password' => 'nullable|min:8',
             'company_id' => 'nullable|exists:companies,id',
             'branch_id' => 'nullable|exists:branches,id',
@@ -117,5 +122,16 @@ class UserController extends Controller
         $file->move($targetPath, $filename);
 
         $data['signature_path'] = 'images/' . $filename;
+    }
+
+    private function normalizePhone(Request $request): void
+    {
+        if (!$request->has('phone')) {
+            return;
+        }
+
+        $request->merge([
+            'phone' => filled($request->phone) ? trim((string) $request->phone) : null,
+        ]);
     }
 }

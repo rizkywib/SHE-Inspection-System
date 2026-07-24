@@ -24,6 +24,8 @@ use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\MedicalReportController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\QrCodeController;
+use App\Http\Controllers\Api\SafeWorkPermitInspectionController;
+use App\Http\Controllers\Api\SafetyTalkTrainingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +72,40 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/incident-types/{id}', [IncidentTypeController::class, 'destroy']);
     Route::apiResource('users', UserController::class);
 
+    // Permit Matrix / Safe Work Permit Inspections
+    Route::get('/safe-work-permit-inspections/master-data', [SafeWorkPermitInspectionController::class, 'masterData'])
+        ->middleware('permission:safe-work-permit-inspection.view');
+    Route::get('/safe-work-permit-inspections', [SafeWorkPermitInspectionController::class, 'index'])
+        ->middleware('permission:safe-work-permit-inspection.view');
+    Route::post('/safe-work-permit-inspections', [SafeWorkPermitInspectionController::class, 'store'])
+        ->middleware('permission:safe-work-permit-inspection.create');
+    Route::get('/safe-work-permit-inspections/{id}', [SafeWorkPermitInspectionController::class, 'show'])
+        ->whereNumber('id')
+        ->middleware('permission:safe-work-permit-inspection.view');
+    Route::put('/safe-work-permit-inspections/{id}', [SafeWorkPermitInspectionController::class, 'update'])
+        ->whereNumber('id')
+        ->middleware('permission:safe-work-permit-inspection.update');
+    Route::delete('/safe-work-permit-inspections/{id}', [SafeWorkPermitInspectionController::class, 'destroy'])
+        ->whereNumber('id')
+        ->middleware('permission:safe-work-permit-inspection.delete');
+
+    // Safety Talk / Training On Site
+    Route::get('/safety-talk-trainings/master-data', [SafetyTalkTrainingController::class, 'masterData'])
+        ->middleware('permission:safety-talk-training.view');
+    Route::get('/safety-talk-trainings', [SafetyTalkTrainingController::class, 'index'])
+        ->middleware('permission:safety-talk-training.view');
+    Route::post('/safety-talk-trainings', [SafetyTalkTrainingController::class, 'store'])
+        ->middleware('permission:safety-talk-training.create');
+    Route::get('/safety-talk-trainings/{id}', [SafetyTalkTrainingController::class, 'show'])
+        ->whereNumber('id')
+        ->middleware('permission:safety-talk-training.view');
+    Route::put('/safety-talk-trainings/{id}', [SafetyTalkTrainingController::class, 'update'])
+        ->whereNumber('id')
+        ->middleware('permission:safety-talk-training.update');
+    Route::delete('/safety-talk-trainings/{id}', [SafetyTalkTrainingController::class, 'destroy'])
+        ->whereNumber('id')
+        ->middleware('permission:safety-talk-training.delete');
+
     // QR Codes
     Route::get('/qr-codes/generate/{assetType}/{assetId}', [QrCodeController::class, 'generate']);
     Route::post('/qr-codes/scan', [QrCodeController::class, 'scan']);
@@ -84,9 +120,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/fire-hydrants/{id}', [FireHydrantController::class, 'destroy']);
     Route::post('/fire-hydrants/{id}/checkin', [FireHydrantController::class, 'checkin']);
     Route::post('/fire-hydrants/{id}/sign', [FireHydrantController::class, 'sign']);
+    Route::delete('/fire-hydrants/{inspectionId}/items/{itemIndex}', [FireHydrantController::class, 'deleteItem']);
 
     // Fire Extinguisher Inspections
     Route::get('/fire-extinguishers', [FireExtinguisherController::class, 'index']);
+    Route::get('/fire-extinguishers/next-reference', [FireExtinguisherController::class, 'nextReference']);
     Route::post('/fire-extinguishers', [FireExtinguisherController::class, 'store']);
     Route::get('/fire-extinguishers/{id}', [FireExtinguisherController::class, 'show']);
     Route::put('/fire-extinguishers/{id}', [FireExtinguisherController::class, 'update']);
@@ -104,6 +142,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/fire-alarms/{id}/sign', [FireAlarmController::class, 'sign']);
 
     // ES/EW Inspections
+    Route::get('/es-ew/master-data', [EsEwController::class, 'masterData']);
+    Route::get('/es-ew/next-reference', [EsEwController::class, 'nextReference']);
     Route::get('/es-ew', [EsEwController::class, 'index']);
     Route::post('/es-ew', [EsEwController::class, 'store']);
     Route::get('/es-ew/{id}', [EsEwController::class, 'show']);

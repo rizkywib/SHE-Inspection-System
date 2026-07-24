@@ -63,13 +63,29 @@
                     <i class="fas fa-fire-extinguisher w-5"></i>
                     <span>Fire Hydrants</span>
                 </a>
-                <a href="/dashboard/fire-extinguishers" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-fire-extinguishers', ''); ?>">
+                <a href="/dashboard/fire-extinguishers#inspection-list" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-fire-extinguishers', ''); ?>">
                     <i class="fas fa-fire w-5"></i>
                     <span>Fire Extinguishers</span>
                 </a>
                 <a href="/dashboard/fire-alarms" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-fire-alarms', ''); ?>">
                     <i class="fas fa-bell w-5"></i>
                     <span>Fire Alarms</span>
+                </a>
+                <a href="/dashboard/es-ew-inspections" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-es-ew-inspections', ''); ?>">
+                    <i class="fas fa-shower w-5"></i>
+                    <span>ES&amp;EW Inspection</span>
+                </a>
+                <a href="/dashboard/inspections" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-inspections', ''); ?>">
+                    <i class="fas fa-clipboard-check w-5"></i>
+                    <span>Inspection</span>
+                </a>
+                <a href="/dashboard/permit-matrix" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-permit-matrix', ''); ?>">
+                    <i class="fas fa-file-signature w-5"></i>
+                    <span>Permit Matrix</span>
+                </a>
+                <a href="/dashboard/safety-talk-trainings" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-safety-talk-trainings', ''); ?>">
+                    <i class="fas fa-people-group w-5"></i>
+                    <span>Safety Talk / Training</span>
                 </a>
                 <div class="border-t border-gray-700 my-2"></div>
                 <p class="px-4 text-xs font-semibold text-gray-400 uppercase">Master Data</p>
@@ -89,7 +105,7 @@
                     <i class="fas fa-exclamation-triangle w-5"></i>
                     <span>Incident Types</span>
                 </a>
-                <a href="/dashboard/users" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-users', ''); ?>">
+                <a id="usersMenuDesktop" href="/dashboard/users" class="hidden nav-link items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 <?php echo $__env->yieldContent('nav-users', ''); ?>">
                     <i class="fas fa-users w-5"></i>
                     <span>Users</span>
                 </a>
@@ -97,13 +113,15 @@
 
             <div class="px-4 py-4 border-t border-gray-700">
                 <div class="flex items-center space-x-3 px-4 py-3">
-                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user text-sm"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-medium" id="userName"></p>
-                        <p class="text-xs text-gray-400">Inspector</p>
-                    </div>
+                    <a href="/dashboard/profile" class="flex items-center space-x-3 flex-1 min-w-0 hover:text-blue-200" title="Edit Profil">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium truncate" id="userName"></p>
+                            <p class="text-xs text-gray-400 truncate" id="userRole"></p>
+                        </div>
+                    </a>
                     <button onclick="logout()" class="text-gray-400 hover:text-white" title="Logout">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
@@ -127,15 +145,20 @@
                 <div id="mobileMenu" class="hidden px-4 pb-4 space-y-2">
                     <a href="/dashboard" class="block py-2 text-gray-600 hover:text-gray-900">Dashboard</a>
                     <a href="/dashboard/fire-hydrants" class="block py-2 text-gray-600 hover:text-gray-900">Fire Hydrants</a>
-                    <a href="/dashboard/fire-extinguishers" class="block py-2 text-gray-600 hover:text-gray-900">Fire Extinguishers</a>
+                    <a href="/dashboard/fire-extinguishers#inspection-list" class="block py-2 text-gray-600 hover:text-gray-900">Fire Extinguishers</a>
                     <a href="/dashboard/fire-alarms" class="block py-2 text-gray-600 hover:text-gray-900">Fire Alarms</a>
+                    <a href="/dashboard/es-ew-inspections" class="block py-2 text-gray-600 hover:text-gray-900">ES&amp;EW Inspection</a>
+                    <a href="/dashboard/inspections" class="block py-2 text-gray-600 hover:text-gray-900">Inspection</a>
+                    <a href="/dashboard/permit-matrix" class="block py-2 text-gray-600 hover:text-gray-900">Permit Matrix</a>
+                    <a href="/dashboard/safety-talk-trainings" class="block py-2 text-gray-600 hover:text-gray-900">Safety Talk / Training</a>
                     <div class="border-t border-gray-200 my-2"></div>
                     <p class="text-xs font-semibold text-gray-400 uppercase">Master Data</p>
                     <a href="/dashboard/points" class="block py-2 text-gray-600 hover:text-gray-900">Points</a>
                     <a href="/dashboard/fire-hydrant-locations" class="block py-2 text-gray-600 hover:text-gray-900">Hydrant Locations</a>
                     <a href="/dashboard/fire-extinguisher-locations" class="block py-2 text-gray-600 hover:text-gray-900">Extinguisher Locations</a>
                     <a href="/dashboard/incident-types" class="block py-2 text-gray-600 hover:text-gray-900">Incident Types</a>
-                    <a href="/dashboard/users" class="block py-2 text-gray-600 hover:text-gray-900">Users</a>
+                    <a id="usersMenuMobile" href="/dashboard/users" class="hidden py-2 text-gray-600 hover:text-gray-900">Users</a>
+                    <a href="/dashboard/profile" class="block py-2 text-blue-600 hover:text-blue-800"><i class="fas fa-user-pen mr-2"></i>Edit Profil</a>
                     <button onclick="logout()" class="text-red-600 hover:text-red-800 text-sm py-2">Logout</button>
                 </div>
             </header>
@@ -151,6 +174,41 @@
         function toggleMobileMenu() {
             document.getElementById('mobileMenu').classList.toggle('hidden');
         }
+
+        function logout() {
+            const token = localStorage.getItem('token');
+            const request = token
+                ? fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                    },
+                })
+                : Promise.resolve();
+
+            request.finally(() => {
+                localStorage.clear();
+                window.location.href = '/';
+            });
+        }
+
+        (function renderLoggedInUser() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const nameElement = document.getElementById('userName');
+            const roleElement = document.getElementById('userRole');
+            if (nameElement) nameElement.textContent = user.name || 'User';
+            if (roleElement) roleElement.textContent = String(user.role || '').replaceAll('_', ' ');
+
+            if (['super_admin', 'admin'].includes(user.role)) {
+                const desktopUsersMenu = document.getElementById('usersMenuDesktop');
+                const mobileUsersMenu = document.getElementById('usersMenuMobile');
+                desktopUsersMenu?.classList.remove('hidden');
+                desktopUsersMenu?.classList.add('flex');
+                mobileUsersMenu?.classList.remove('hidden');
+                mobileUsersMenu?.classList.add('block');
+            }
+        })();
     </script>
 </body>
 </html>

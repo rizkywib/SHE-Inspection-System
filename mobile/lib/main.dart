@@ -7,6 +7,7 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/inspection/fire_hydrant_screen.dart';
 import 'screens/inspection/fire_extinguisher_screen.dart';
+import 'screens/inspection/fire_extinguisher_create_screen.dart';
 import 'screens/inspection/fire_alarm_screen.dart';
 import 'screens/inspection/es_ew_screen.dart';
 import 'screens/inspection/checklist_screen.dart';
@@ -70,6 +71,9 @@ class MyApp extends StatelessWidget {
               break;
             case '/fire-extinguisher':
               page = const FireExtinguisherScreen();
+              break;
+            case '/fire-extinguisher-create':
+              page = const FireExtinguisherCreateScreen();
               break;
             case '/fire-alarm':
               page = const FireAlarmScreen();

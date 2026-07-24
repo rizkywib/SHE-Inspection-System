@@ -31,61 +31,69 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadInspections() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _inspections.isEmpty;
       _error = null;
     });
 
-    try {
-      final api = context.read<ApiService>();
-      final results = await Future.wait<List<_InspectionItem>>([
-        _loadType(
-          loader: api.getFireHydrants,
-          type: 'Fire Hydrant',
-          route: '/fire-hydrant',
-          detailPath: 'fire-hydrants',
-          color: const Color(0xFFDC2626),
-          icon: Icons.water_damage_outlined,
-        ),
-        _loadType(
-          loader: api.getFireExtinguishers,
-          type: 'Fire Extinguisher',
-          route: '/fire-extinguisher',
-          detailPath: 'fire-extinguishers',
-          color: const Color(0xFFEA580C),
-          icon: Icons.fire_extinguisher,
-        ),
-        _loadType(
-          loader: api.getFireAlarms,
-          type: 'Fire Alarm',
-          route: '/fire-alarm',
-          detailPath: 'fire-alarms',
-          color: const Color(0xFFD97706),
-          icon: Icons.notifications_active_outlined,
-        ),
-        _loadType(
-          loader: api.getEsEw,
-          type: 'ES/EW',
-          route: '/es-ew',
-          detailPath: 'es-ew',
-          color: const Color(0xFF059669),
-          icon: Icons.shower_outlined,
-        ),
-      ]);
+    final api = context.read<ApiService>();
+    final loaded = <_InspectionItem>[];
+    final loaders = [
+      _loadType(
+        loader: api.getFireHydrants,
+        type: 'Fire Hydrant',
+        route: '/fire-hydrant',
+        detailPath: 'fire-hydrants',
+        color: const Color(0xFFDC2626),
+        icon: Icons.water_damage_outlined,
+      ),
+      _loadType(
+        loader: api.getFireExtinguishers,
+        type: 'Fire Extinguisher',
+        route: '/fire-extinguisher',
+        detailPath: 'fire-extinguishers',
+        color: const Color(0xFFEA580C),
+        icon: Icons.fire_extinguisher,
+      ),
+      _loadType(
+        loader: api.getFireAlarms,
+        type: 'Fire Alarm',
+        route: '/fire-alarm',
+        detailPath: 'fire-alarms',
+        color: const Color(0xFFD97706),
+        icon: Icons.notifications_active_outlined,
+      ),
+      _loadType(
+        loader: api.getEsEw,
+        type: 'ES/EW',
+        route: '/es-ew',
+        detailPath: 'es-ew',
+        color: const Color(0xFF059669),
+        icon: Icons.shower_outlined,
+      ),
+      _loadType(
+        loader: api.getIncidents,
+        type: 'Inspection',
+        route: '/incident-form',
+        detailPath: 'incidents',
+        color: const Color(0xFF7C3AED),
+        icon: Icons.assignment_outlined,
+      ),
+    ];
 
-      final inspections = results.expand((items) => items).toList()
-        ..sort((a, b) => b.dateText.compareTo(a.dateText));
-
+    await Future.wait(loaders.map((future) async {
+      final items = await future;
+      loaded.addAll(items);
+      loaded.sort((a, b) => b.dateText.compareTo(a.dateText));
       if (!mounted) return;
       setState(() {
-        _inspections = inspections;
+        _inspections = List.of(loaded);
         _isLoading = false;
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _error = e.toString();
-      });
+    }));
+
+    if (!mounted) return;
+    if (loaded.isEmpty) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -132,9 +140,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final filtered = _filteredInspections;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Inspection Dashboard'),
+        title: const Text('Inspections'),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
@@ -152,41 +160,47 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _DashboardHeader(
-              total: _inspections.length,
-              completed: _countByStatus('completed'),
-              signed: _countByStatus('signed'),
-              open: _countOpen(),
-            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _searchController,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: 'Search reference, type, location, inspector',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                              icon: const Icon(Icons.close),
-                              tooltip: 'Clear search',
-                            ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
+                  SizedBox(
+                    height: 42,
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      textAlignVertical: TextAlignVertical.center,
+                      decoration: InputDecoration(
+                        hintText: 'Search inspections',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: _searchController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.close, size: 18),
+                                tooltip: 'Clear search',
+                              ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: EdgeInsets.zero,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -213,12 +227,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () =>
                               setState(() => _selectedStatus = 'signed'),
                         ),
+                        _StatusFilterChip(
+                          label: 'Open',
+                          selected: _selectedStatus == 'reported',
+                          onTap: () =>
+                              setState(() => _selectedStatus = 'reported'),
+                        ),
+                        _StatusFilterChip(
+                          label: 'Close',
+                          selected: _selectedStatus == 'closed',
+                          onTap: () =>
+                              setState(() => _selectedStatus = 'closed'),
+                        ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  _CompactListSummary(
+                    shown: filtered.length,
+                    total: _inspections.length,
+                    isLoading: _isLoading,
                   ),
                 ],
               ),
             ),
+            const Divider(height: 1),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -244,11 +277,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 )
                               : ListView.separated(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                                  padding: EdgeInsets.zero,
                                   itemCount: filtered.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 10),
+                                  separatorBuilder: (_, __) => const Divider(
+                                    height: 1,
+                                    indent: 56,
+                                  ),
                                   itemBuilder: (context, index) {
                                     final item = filtered[index];
                                     return _InspectionListTile(
@@ -263,16 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  int _countByStatus(String status) {
-    return _inspections.where((item) => item.status == status).length;
-  }
-
-  int _countOpen() {
-    return _inspections
-        .where((item) => item.status != 'completed' && item.status != 'signed')
-        .length;
   }
 
   Future<void> _showInspectionDetail(_InspectionItem item) async {
@@ -295,6 +319,8 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       builder: (context) {
         final items = _listFrom(detail['items']);
+        final images = _listFrom(detail['images']);
+        final isGeneralInspection = item.detailPath == 'incidents';
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.82,
@@ -345,10 +371,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     _DetailRow(label: 'Type', value: item.type),
                     _DetailRow(
                         label: 'Date',
-                        value: _dateOnly(detail['inspection_date'])),
-                    _DetailRow(label: 'Status', value: detail['status']),
+                        value: _dateOnly(detail['inspection_date'] ??
+                            detail['incident_date'])),
+                    if (isGeneralInspection &&
+                        _hasValue(detail['incident_time']))
+                      _DetailRow(
+                          label: 'Time',
+                          value: _timeOnly(detail['incident_time'])),
+                    _DetailRow(
+                        label: 'Status',
+                        value: _displayStatus(detail['status'])),
+                    if (isGeneralInspection &&
+                        _hasValue(detail['location_text']))
+                      _DetailRow(
+                          label: 'Location', value: detail['location_text']),
+                    if (isGeneralInspection &&
+                        _hasValue(_relationName(detail['incident_type'],
+                            detail['incident_type_id'])))
+                      _DetailRow(
+                          label: 'Inspection Type',
+                          value: _relationName(detail['incident_type'],
+                              detail['incident_type_id'])),
+                    if (isGeneralInspection &&
+                        _hasValue(_relationName(
+                            detail['reporter'], detail['reporter_id'])))
+                      _DetailRow(
+                          label: 'Inspector',
+                          value: _relationName(
+                              detail['reporter'], detail['reporter_id'])),
+                    if (isGeneralInspection && _hasValue(detail['description']))
+                      _DetailRow(
+                          label: 'Description', value: detail['description']),
                     if (_hasValue(_relationName(
-                        detail['location'], detail['location_id'])))
+                            detail['location'], detail['location_id'])) &&
+                        !isGeneralInspection)
                       _DetailRow(
                           label: 'Location',
                           value: _relationName(
@@ -386,24 +442,47 @@ class _HomeScreenState extends State<HomeScreen> {
                       _DetailRow(label: 'Notes', value: detail['notes']),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  'Items',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                if (items.isEmpty)
-                  const Text('No items')
-                else
-                  ...items.asMap().entries.map((entry) {
-                    return _InspectionDetailItem(
-                      index: entry.key + 1,
-                      item: _mapFrom(entry.value),
-                    );
-                  }),
+                if (isGeneralInspection && images.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'Image',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: images
+                        .map((image) => _SmallPhotoPreview(
+                              label: 'Inspection',
+                              path: _mapFrom(image)['image_path'],
+                            ))
+                        .toList(),
+                  ),
+                ],
+                if (!isGeneralInspection) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'Items',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  if (items.isEmpty)
+                    const Text('No items')
+                  else
+                    ...items.asMap().entries.map((entry) {
+                      return _InspectionDetailItem(
+                        index: entry.key + 1,
+                        item: _mapFrom(entry.value),
+                      );
+                    }),
+                ],
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () => Navigator.pop(context),
@@ -504,6 +583,18 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/checklist');
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.assignment_outlined),
+            title: const Text('Inspection'),
+            onTap: () async {
+              Navigator.pop(context);
+              final created =
+                  await Navigator.pushNamed(context, '/incident-form');
+              if (created == true && mounted) {
+                await _loadInspections();
+              }
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -522,89 +613,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({
+class _CompactListSummary extends StatelessWidget {
+  const _CompactListSummary({
+    required this.shown,
     required this.total,
-    required this.completed,
-    required this.signed,
-    required this.open,
+    required this.isLoading,
   });
 
+  final int shown;
   final int total;
-  final int completed;
-  final int signed;
-  final int open;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'All Inspections',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+    return Row(
+      children: [
+        Text(
+          '$shown of $total inspections',
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        if (isLoading) ...[
+          const SizedBox(width: 8),
+          const SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Review and continue inspection records from one place.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.black54,
-                ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(child: _MetricTile(label: 'Total', value: total)),
-              const SizedBox(width: 8),
-              Expanded(child: _MetricTile(label: 'Open', value: open)),
-              const SizedBox(width: 8),
-              Expanded(child: _MetricTile(label: 'Done', value: completed)),
-              const SizedBox(width: 8),
-              Expanded(child: _MetricTile(label: 'Signed', value: signed)),
-            ],
+          const SizedBox(width: 4),
+          const Text(
+            'Loading',
+            style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value});
-
-  final String label;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value.toString(),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -623,10 +664,13 @@ class _StatusFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 6),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        labelStyle: const TextStyle(fontSize: 12),
         onSelected: (_) => onTap(),
       ),
     );
@@ -643,25 +687,23 @@ class _InspectionListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: item.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(item.icon, color: item.color, size: 22),
+                child: Icon(item.icon, color: item.color, size: 18),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,54 +717,44 @@ class _InspectionListTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              fontSize: 15,
+                              fontSize: 13,
                             ),
                           ),
                         ),
-                        _StatusBadge(status: item.status),
+                        const SizedBox(width: 6),
+                        Text(
+                          item.dateText.isEmpty ? '-' : item.dateText,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 11,
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.type,
-                      style: TextStyle(
-                        color: item.color,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today_outlined,
-                            size: 14, color: Colors.black45),
-                        const SizedBox(width: 4),
-                        Text(item.dateText.isEmpty ? '-' : item.dateText),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.place_outlined,
-                            size: 15, color: Colors.black45),
-                        const SizedBox(width: 4),
+                        Text(
+                          item.type,
+                          style: TextStyle(
+                            color: item.color,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const Text(
+                          '  |  ',
+                          style: TextStyle(color: Colors.black26),
+                        ),
                         Expanded(
                           child: Text(
                             item.location.isEmpty ? '-' : item.location,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.person_outline,
-                            size: 15, color: Colors.black45),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.inspector.isEmpty ? '-' : item.inspector,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.black54),
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ],
@@ -730,8 +762,8 @@ class _InspectionListTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: Colors.black38),
+              const SizedBox(width: 8),
+              _StatusBadge(status: item.status),
             ],
           ),
         ),
@@ -750,20 +782,24 @@ class _StatusBadge extends StatelessWidget {
     final color = switch (status) {
       'completed' => const Color(0xFF15803D),
       'signed' => const Color(0xFF1D4ED8),
+      'reported' => const Color(0xFF15803D),
+      'closed' => const Color(0xFF475569),
       _ => const Color(0xFFB45309),
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        status.isEmpty ? 'new' : status,
+        _displayStatus(status),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -988,15 +1024,23 @@ class _InspectionItem {
     final reference =
         (data['reference_no'] ?? data['code'] ?? data['inspection_no'] ?? '')
             .toString();
-    final location = _relationName(data['location'], data['location_id']);
-    final inspector = _relationName(data['inspector'], data['inspector_id']);
+    final location = (data['location_text'] ?? '').toString().trim().isNotEmpty
+        ? data['location_text'].toString()
+        : _relationName(data['location'], data['location_id']);
+    final inspector = data['reporter'] != null
+        ? _relationName(data['reporter'], data['reporter_id'])
+        : _relationName(data['inspector'], data['inspector_id']);
+
+    final status = detailPath == 'fire-extinguishers'
+        ? 'new'
+        : (data['status'] ?? 'new').toString();
 
     return _InspectionItem(
       id: id,
       reference: reference.isEmpty ? '$type #$id' : reference,
       type: type,
-      status: (data['status'] ?? 'new').toString(),
-      dateText: _dateOnly(data['inspection_date']),
+      status: status,
+      dateText: _dateOnly(data['inspection_date'] ?? data['incident_date']),
       location: location,
       inspector: inspector,
       route: route,
@@ -1097,6 +1141,23 @@ String _dateTime(dynamic value) {
   final text = value.toString();
   if (text.isEmpty) return '';
   return text.replaceFirst('T', ' ').split('.').first;
+}
+
+String _timeOnly(dynamic value) {
+  if (value == null) return '';
+  final text = value.toString();
+  if (text.isEmpty) return '';
+  return text.length >= 5 ? text.substring(0, 5) : text;
+}
+
+String _displayStatus(dynamic value) {
+  final status = value?.toString().toLowerCase() ?? '';
+  return switch (status) {
+    'reported' => 'Open',
+    'closed' => 'Close',
+    '' => 'New',
+    _ => status[0].toUpperCase() + status.substring(1),
+  };
 }
 
 List<dynamic> _listFrom(dynamic value) {

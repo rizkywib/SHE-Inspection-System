@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:io';
@@ -64,6 +65,13 @@ class AuthService extends ChangeNotifier {
       return {
         'error':
             'Tidak bisa terhubung ke server. Pastikan backend berjalan dan adb reverse tcp:8000 tcp:8000 aktif.'
+      };
+    } on http.ClientException catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return {
+        'error':
+            'Tidak bisa terhubung ke server (${e.message}). Pastikan backend berjalan dan adb reverse tcp:8000 tcp:8000 aktif.'
       };
     } catch (e) {
       _isLoading = false;

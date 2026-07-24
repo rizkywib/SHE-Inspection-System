@@ -1,4 +1,6 @@
 *.env
+*.log
+.pem
 .env
 **/.env
 backend/she-api/.env

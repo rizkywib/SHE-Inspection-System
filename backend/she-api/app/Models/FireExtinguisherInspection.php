@@ -9,10 +9,10 @@ class FireExtinguisherInspection extends Model
     protected $table = 'fire_extinguisher_inspections';
 
     protected $fillable = [
-        'reference_no', 'location_id', 'area_id', 'qr_code_id',
-        'inspection_date', 'inspector_id', 'assigned_to',
+        'reference_no', 'location_id',
+        'inspection_date', 'inspector_id',
         'checkin_lat', 'checkin_lng', 'checked_in_at',
-        'signed_at', 'notes', 'status'
+        'signed_at', 'signed_by'
     ];
 
     protected $casts = [
@@ -31,13 +31,13 @@ class FireExtinguisherInspection extends Model
         return $this->belongsTo(User::class, 'inspector_id');
     }
 
-    public function location()
+    public function signer()
     {
-        return $this->belongsTo(Location::class);
+        return $this->belongsTo(User::class, 'signed_by');
     }
 
-    public function area()
+    public function location()
     {
-        return $this->belongsTo(Area::class);
+        return $this->belongsTo(FireExtinguisherLocation::class, 'location_id', 'id_location');
     }
 }
