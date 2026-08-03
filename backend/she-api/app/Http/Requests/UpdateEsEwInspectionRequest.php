@@ -10,7 +10,7 @@ class UpdateEsEwInspectionRequest extends StoreEsEwInspectionRequest
     {
         $rules = parent::rules();
         $rules['reference_no'] = [
-            'required',
+            'nullable',
             'string',
             'max:40',
             Rule::unique('es_ew_inspections', 'reference_no')->ignore($this->route('id')),

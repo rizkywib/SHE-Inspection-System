@@ -78,6 +78,13 @@
         top: 12px;
         z-index: 3;
     }
+    .qr-print-logo {
+        width: 48px;
+        height: 64px;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto 12px;
+    }
     @media print {
         body * { visibility: hidden; }
         #qrPrintArea, #qrPrintArea * { visibility: visible; }
@@ -243,6 +250,7 @@
                 </button>
             </div>
             <div id="qrPrintArea" class="p-6 text-center">
+                <img id="qrPrintLogo" src="/images/ecogreen-logo-print.png" alt="Ecogreen Oleochemicals" class="qr-print-logo">
                 <h4 id="qrPointName" class="text-xl font-bold text-gray-900 mb-4"></h4>
                 <img id="qrImage" alt="Point QR Code" class="mx-auto w-56 h-56 border border-gray-200 rounded-lg p-2 bg-white">
                 <p id="qrCodeText" class="mt-4 text-sm font-mono text-gray-700 break-all"></p>

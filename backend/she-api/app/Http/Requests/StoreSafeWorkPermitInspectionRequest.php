@@ -24,7 +24,7 @@ class StoreSafeWorkPermitInspectionRequest extends FormRequest
     {
         return [
             'permit_date' => ['required', 'date'],
-            'inspector_id' => ['required', 'integer', Rule::exists('permit_inspectors', 'id')->where('is_active', true)],
+            'inspector_id' => ['required', 'integer', Rule::exists('users', 'id')->where('is_active', true)],
             'permit_number' => ['required', 'string', 'max:255', 'unique:safe_work_permit_inspections,permit_number'],
             'permit_type_id' => ['required', 'integer', Rule::exists('permit_types', 'id')->where('is_active', true)],
             'supervision_area_id' => ['required', 'integer', Rule::exists('supervision_areas', 'id')->where('is_active', true)],

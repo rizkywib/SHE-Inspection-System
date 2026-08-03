@@ -37,7 +37,12 @@ class SafetyTalkTraining extends Model
 
     public function speaker(): BelongsTo
     {
-        return $this->belongsTo(SafetyTalkSpeaker::class, 'speaker_id');
+        return $this->belongsTo(User::class, 'speaker_id');
+    }
+
+    public function legacySpeaker(): BelongsTo
+    {
+        return $this->belongsTo(SafetyTalkSpeaker::class, 'legacy_speaker_id');
     }
 
     public function creator(): BelongsTo
@@ -74,7 +79,8 @@ class SafetyTalkTraining extends Model
 
         return $query->where(function (Builder $query) use ($search) {
             $query->where('topic', 'like', "%{$search}%")
-                ->orWhereHas('speaker', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"));
+                ->orWhereHas('speaker', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('legacySpeaker', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"));
         });
     }
 }

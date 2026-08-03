@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:8000/api
+http://eoblas10.ecogreenoleo.co.id:82/api
 ```
 
 ## Authentication

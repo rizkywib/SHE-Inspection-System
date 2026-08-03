@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import 'fire_hydrant_create_flow.dart';
 
 class FireHydrantScreen extends StatefulWidget {
   const FireHydrantScreen({super.key, this.initialId});
@@ -144,7 +145,7 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showInspectionForm(),
+        onPressed: _startNewInspection,
         child: const Icon(Icons.add),
       ),
       body: _isLoading
@@ -160,36 +161,21 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                         itemCount: _inspections.length,
                         itemBuilder: (context, index) {
                           final item = _mapFrom(_inspections[index]);
-                          return Card(
-                            child: ListTile(
-                              title: Text(
-                                (item['reference_no'] ?? 'No Reference')
-                                    .toString(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Text(_subtitle(item)),
-                              trailing: Wrap(
-                                spacing: 8,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Chip(
-                                    label: Text(
-                                      (item['status'] ?? '').toString(),
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () =>
-                                        _showInspectionForm(item: item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                    tooltip: 'Edit',
-                                  ),
-                                ],
-                              ),
-                              onTap: () => _showInspectionDetail(item),
-                              onLongPress: () => _confirmDelete(item),
+                          return _FireHydrantListCard(
+                            location: _relationName(
+                              item['location'],
+                              item['location_id'],
+                              'Location',
                             ),
+                            inspector: _relationName(
+                              item['inspector'],
+                              item['inspector_id'],
+                              'Inspector',
+                            ),
+                            inspectionDate:
+                                _dateOnly(item['inspection_date']) ?? '',
+                            onTap: () => _showInspectionDetail(item),
+                            onLongPress: () => _confirmDelete(item),
                           );
                         },
                       ),
@@ -202,20 +188,18 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     await _loadInspections();
   }
 
-  String _subtitle(Map<String, dynamic> item) {
-    final date = _dateOnly(item['inspection_date']) ?? '';
-    final location =
-        _relationName(item['location'], item['location_id'], 'Location');
-    final inspector =
-        _relationName(item['inspector'], item['inspector_id'], 'Inspector');
-    final itemCount =
-        (item['items'] is List) ? (item['items'] as List).length : 0;
-    return [
-      if (date.isNotEmpty) date,
-      if (location.isNotEmpty) location,
-      if (inspector.isNotEmpty) inspector,
-      '$itemCount item',
-    ].join(' - ');
+  Future<void> _startNewInspection() async {
+    final didSave = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const FireHydrantSetupScreen(),
+      ),
+    );
+
+    if (didSave == true && mounted) {
+      setState(() => _isLoading = true);
+      await _loadInspections();
+    }
   }
 
   Future<Map<String, dynamic>> _fetchDetail(Map<String, dynamic> item) async {
@@ -246,64 +230,11 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
               controller: controller,
               padding: const EdgeInsets.all(20),
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        detail['reference_no']?.toString() ??
-                            'Fire Hydrant Detail',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _showInspectionForm(item: detail);
-                      },
-                      icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Edit',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _DetailSection(
-                  title: 'Inspection Data',
-                  children: [
-                    _DetailRow(
-                        label: 'Date',
-                        value: _dateOnly(detail['inspection_date'])),
-                    _DetailRow(label: 'Status', value: detail['status']),
-                    _DetailRow(
-                      label: 'Location',
-                      value: _relationName(detail['location'],
-                          detail['location_id'], 'Location'),
-                    ),
-                    _DetailRow(
-                      label: 'Inspector',
-                      value: _relationName(detail['inspector'],
-                          detail['inspector_id'], 'Inspector'),
-                    ),
-                    _DetailRow(
-                        label: 'Checked In At',
-                        value: _dateTime(detail['checked_in_at'])),
-                    _DetailRow(
-                        label: 'Signed At',
-                        value: _dateTime(detail['signed_at'])),
-                    _DetailRow(label: 'Notes', value: detail['notes']),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Fire Hydrant Items',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
                 if (items.isEmpty)
                   const Text('No items')
                 else
-                  ...items.asMap().entries.map((entry) {
-                    final data = _mapFrom(entry.value);
-                    return _HydrantItemCard(index: entry.key + 1, item: data);
+                  ...items.map((value) {
+                    return _HydrantItemCard(item: _mapFrom(value));
                   }),
                 const SizedBox(height: 12),
                 Row(
@@ -719,12 +650,119 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     if (text.isEmpty) return null;
     return text.split('T').first.split(' ').first;
   }
+}
 
-  String? _dateTime(dynamic value) {
-    if (value == null) return null;
-    final text = value.toString();
-    if (text.isEmpty) return null;
-    return text.replaceFirst('T', ' ').split('.').first;
+class _FireHydrantListCard extends StatelessWidget {
+  const _FireHydrantListCard({
+    required this.location,
+    required this.inspector,
+    required this.inspectionDate,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final String location;
+  final String inspector;
+  final String inspectionDate;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Location',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                location.isEmpty ? '-' : location,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _FireHydrantListValue(
+                      label: 'Inspected By',
+                      value: inspector,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  _FireHydrantListValue(
+                    label: 'Inspection Date',
+                    value: inspectionDate,
+                    alignEnd: true,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FireHydrantListValue extends StatelessWidget {
+  const _FireHydrantListValue({
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value.isEmpty ? '-' : value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+          style: const TextStyle(
+            color: Color(0xFF334155),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1002,9 +1040,8 @@ class _ConditionChip extends StatelessWidget {
 }
 
 class _HydrantItemCard extends StatelessWidget {
-  const _HydrantItemCard({required this.index, required this.item});
+  const _HydrantItemCard({required this.item});
 
-  final int index;
   final Map<String, dynamic> item;
 
   @override
@@ -1016,8 +1053,6 @@ class _HydrantItemCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Item $index', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
             _DetailRow(label: 'Hydrant Number', value: item['hydrant_number']),
             _DetailRow(label: 'Name', value: item['name']),
             if (_hasValue(item['location_detail']))
@@ -1025,26 +1060,56 @@ class _HydrantItemCard extends StatelessWidget {
                   label: 'Location Detail', value: item['location_detail']),
             if (_hasValue(item['remark']))
               _DetailRow(label: 'Remark', value: item['remark']),
+            const SizedBox(height: 12),
+            const Text(
+              'Checklist',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF475569),
+              ),
+            ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _StatusPill(
-                    label: 'Hose', value: _truthy(item['hose_condition'])),
-                _StatusPill(
-                    label: 'Nozzle', value: _truthy(item['nozzle_condition'])),
-                _StatusPill(
-                    label: 'Coupling',
-                    value: _truthy(item['coupling_condition'])),
-                _StatusPill(
-                    label: 'Wrench', value: _truthy(item['wrench_condition'])),
-                _StatusPill(
-                    label: 'Valve', value: _truthy(item['valve_condition'])),
-                _StatusPill(
-                    label: 'Extra Coupling',
-                    value: _truthy(item['coupling_extra_condition'])),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 8) / 2;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _ConditionChecklistItem(
+                      width: itemWidth,
+                      label: 'Hose',
+                      value: _truthy(item['hose_condition']),
+                    ),
+                    _ConditionChecklistItem(
+                      width: itemWidth,
+                      label: 'Nozzle',
+                      value: _truthy(item['nozzle_condition']),
+                    ),
+                    _ConditionChecklistItem(
+                      width: itemWidth,
+                      label: 'Coupling',
+                      value: _truthy(item['coupling_condition']),
+                    ),
+                    _ConditionChecklistItem(
+                      width: itemWidth,
+                      label: 'Wrench',
+                      value: _truthy(item['wrench_condition']),
+                    ),
+                    _ConditionChecklistItem(
+                      width: itemWidth,
+                      label: 'Valve',
+                      value: _truthy(item['valve_condition']),
+                    ),
+                    _ConditionChecklistItem(
+                      width: itemWidth,
+                      label: 'Extra Coupling',
+                      value: _truthy(item['coupling_extra_condition']),
+                    ),
+                  ],
+                );
+              },
             ),
             if (item['photo_before'] != null ||
                 item['photo_after'] != null) ...[
@@ -1110,42 +1175,56 @@ class _SmallPhotoPreview extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.value});
+class _ConditionChecklistItem extends StatelessWidget {
+  const _ConditionChecklistItem({
+    required this.width,
+    required this.label,
+    required this.value,
+  });
 
+  final double width;
   final String label;
   final bool value;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(
-        value ? Icons.check_circle_outline : Icons.cancel_outlined,
-        size: 18,
-        color: value ? Colors.green : Colors.red,
-      ),
-      label: Text('$label: ${value ? 'OK' : 'Need Correction'}'),
-    );
-  }
-}
+    final color = value ? const Color(0xFF15803D) : const Color(0xFFDC2626);
+    final background =
+        value ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2);
 
-class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      label: label,
+      checked: value,
+      child: Container(
+        width: width,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.24)),
+        ),
+        child: Row(
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ...children,
+            Icon(
+              value
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              size: 21,
+              color: color,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF334155),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -98,7 +98,7 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    APP_ENV=local
    APP_KEY=base64:GENERATE_KEY_USING_PHP_ARTISAN_KEY_GENERATE
    APP_DEBUG=true
-   APP_URL=http://localhost:8000
+   APP_URL=http://eoblas10.ecogreenoleo.co.id:82
 
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
@@ -107,7 +107,7 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    DB_USERNAME=root
    DB_PASSWORD=
 
-   SANCTUM_STATEFUL_DOMAINS=localhost:8000
+   SANCTUM_STATEFUL_DOMAINS=eoblas10.ecogreenoleo.co.id:82
    ```
 
 4. **Generate Application Key**
@@ -134,7 +134,7 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
 
 7. **Jalankan Server**
    ```bash
-   php artisan serve --port=8000
+   php artisan serve --host=0.0.0.0 --port=82
    ```
    
    Atau menggunakan script yang disediakan:
@@ -143,11 +143,11 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    .\start-she-server.ps1
    ```
 
-Server akan berjalan di `http://localhost:8000`
+Server akan berjalan di `http://eoblas10.ecogreenoleo.co.id:82`
 
 ## API Documentation
 
-Base URL: `http://localhost:8000/api`
+Base URL: `http://eoblas10.ecogreenoleo.co.id:82/api`
 
 ### Autentikasi
 

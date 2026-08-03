@@ -46,7 +46,7 @@ async function init() {
     const data = (await response.json()).data;
     document.getElementById('detailCard').innerHTML = `
         <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            ${item('Pembicara', data.speaker?.name)}
+            ${item('Pembicara', data.speaker?.name || data.legacy_speaker?.name)}
             ${item('Tanggal Pelaksanaan', formatDate(data.implementation_date))}
             ${item('Topik / Materi', data.topic, true)}
             ${item('Peserta Ecogreen', data.ecogreen_participants)}

@@ -50,7 +50,7 @@ class StoreEsEwInspectionRequest extends FormRequest
         $rules = [
             'reference_no' => ['nullable', 'string', 'max:40', 'unique:es_ew_inspections,reference_no'],
             'inspection_date' => ['required', 'date'],
-            'area_id' => ['required', 'integer', Rule::exists('areas', 'id')->where('is_active', true)],
+            'area_id' => ['required', 'integer', Rule::exists('es_ew_areas', 'id')],
             'inspector_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('is_active', true)],
             'point_id' => ['required', 'integer', Rule::exists('point', 'id')->where('status', 1)],
             'items' => ['required', 'array', 'size:1'],

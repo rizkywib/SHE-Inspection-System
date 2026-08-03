@@ -25,7 +25,7 @@ class StoreSafetyTalkTrainingRequest extends FormRequest
             'speaker_id' => [
                 'required',
                 'integer',
-                Rule::exists('safety_talk_speakers', 'id')->where('is_active', true),
+                Rule::exists('users', 'id')->where('is_active', true),
             ],
             'implementation_date' => ['required', 'date'],
             'topic' => ['required', 'string', 'max:1000'],

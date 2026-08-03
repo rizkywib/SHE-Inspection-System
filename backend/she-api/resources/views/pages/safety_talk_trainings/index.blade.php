@@ -145,7 +145,7 @@ function renderTable(result) {
             return `<tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm">${result.from + index}</td>
                 <td class="px-4 py-3 text-sm whitespace-nowrap">${formatDate(row.implementation_date)}</td>
-                <td class="px-4 py-3 text-sm font-medium">${escapeHtml(row.speaker?.name)}</td>
+                <td class="px-4 py-3 text-sm font-medium">${escapeHtml(row.speaker?.name || row.legacy_speaker?.name)}</td>
                 <td class="px-4 py-3 text-sm min-w-[240px]">${escapeHtml(topic)}</td>
                 <td class="px-4 py-3 text-sm whitespace-nowrap">Area ${row.implementation_area}</td>
                 <td class="px-4 py-3 text-sm text-center">${row.ecogreen_participants}</td>

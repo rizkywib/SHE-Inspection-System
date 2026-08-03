@@ -281,7 +281,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   itemCount: filtered.length,
                                   separatorBuilder: (_, __) => const Divider(
                                     height: 1,
-                                    indent: 56,
+                                    indent: 12,
+                                    endIndent: 12,
                                   ),
                                   itemBuilder: (context, index) {
                                     final item = filtered[index];
@@ -534,14 +535,6 @@ class _HomeScreenState extends State<HomeScreen> {
             selected: true,
             onTap: () => Navigator.pop(context),
           ),
-          ListTile(
-            leading: const Icon(Icons.qr_code_scanner),
-            title: const Text('Scan QR'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/qr-scanner');
-            },
-          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.water_damage_outlined),
@@ -576,23 +569,11 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.checklist_outlined),
-            title: const Text('Checklist'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/checklist');
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.assignment_outlined),
             title: const Text('Inspection'),
-            onTap: () async {
+            onTap: () {
               Navigator.pop(context);
-              final created =
-                  await Navigator.pushNamed(context, '/incident-form');
-              if (created == true && mounted) {
-                await _loadInspections();
-              }
+              Navigator.pushNamed(context, '/incidents');
             },
           ),
           const Divider(),
@@ -690,80 +671,82 @@ class _InspectionListTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(item.icon, color: item.color, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.reference,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          item.dateText.isEmpty ? '-' : item.dateText,
-                          style: const TextStyle(
+                        const Text(
+                          'Inspector / Pelapor',
+                          style: TextStyle(
                             color: Colors.black54,
                             fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Text(
-                          item.type,
-                          style: TextStyle(
-                            color: item.color,
                             fontWeight: FontWeight.w600,
-                            fontSize: 11,
                           ),
                         ),
-                        const Text(
-                          '  |  ',
-                          style: TextStyle(color: Colors.black26),
-                        ),
-                        Expanded(
-                          child: Text(
-                            item.location.isEmpty ? '-' : item.location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 11,
-                            ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.inspector.isEmpty ? '-' : item.inspector,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Tanggal',
+                        style: TextStyle(
+                          color: Colors.black54,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        item.dateText.isEmpty ? '-' : item.dateText,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Remark',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 8),
-              _StatusBadge(status: item.status),
+              const SizedBox(height: 3),
+              Text(
+                item.remark.isEmpty ? '-' : item.remark,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF334155),
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
             ],
           ),
         ),
@@ -1005,6 +988,7 @@ class _InspectionItem {
     required this.dateText,
     required this.location,
     required this.inspector,
+    required this.remark,
     required this.route,
     required this.detailPath,
     required this.rawData,
@@ -1030,6 +1014,7 @@ class _InspectionItem {
     final inspector = data['reporter'] != null
         ? _relationName(data['reporter'], data['reporter_id'])
         : _relationName(data['inspector'], data['inspector_id']);
+    final remark = _remarkFrom(data);
 
     final status = detailPath == 'fire-extinguishers'
         ? 'new'
@@ -1043,6 +1028,7 @@ class _InspectionItem {
       dateText: _dateOnly(data['inspection_date'] ?? data['incident_date']),
       location: location,
       inspector: inspector,
+      remark: remark,
       route: route,
       detailPath: detailPath,
       rawData: data,
@@ -1058,6 +1044,7 @@ class _InspectionItem {
   final String dateText;
   final String location;
   final String inspector;
+  final String remark;
   final String route;
   final String detailPath;
   final Map<String, dynamic> rawData;
@@ -1073,6 +1060,7 @@ class _InspectionItem {
       dateText,
       location,
       inspector,
+      remark,
     ].join(' ').toLowerCase();
   }
 }
@@ -1163,6 +1151,26 @@ String _displayStatus(dynamic value) {
 List<dynamic> _listFrom(dynamic value) {
   if (value is List) return value;
   return <dynamic>[];
+}
+
+String _remarkFrom(Map<String, dynamic> data) {
+  for (final key in ['remark', 'remarks', 'description', 'notes']) {
+    final value = data[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  }
+
+  final remarks = <String>[];
+  for (final value in _listFrom(data['items'])) {
+    final item = _mapFrom(value);
+    for (final key in ['remark', 'remarks', 'description', 'notes']) {
+      final remark = item[key]?.toString().trim() ?? '';
+      if (remark.isNotEmpty && !remarks.contains(remark)) {
+        remarks.add(remark);
+        break;
+      }
+    }
+  }
+  return remarks.join(' • ');
 }
 
 String _formatKey(String key) {

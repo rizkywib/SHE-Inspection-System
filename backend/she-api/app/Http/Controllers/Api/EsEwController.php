@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEsEwInspectionRequest;
+use App\Http\Requests\StoreEsEwItemRequest;
 use App\Http\Requests\UpdateEsEwInspectionRequest;
-use App\Models\Area;
 use App\Models\EsEwInspection;
+use App\Models\EsEwArea;
 use App\Models\Point;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,7 +23,7 @@ class EsEwController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = EsEwInspection::query()
-            ->with(['inspector', 'area', 'items'])
+            ->with(['inspector', 'signer', 'area', 'items'])
             ->withCount('items')
             ->when($request->filled('search'), function (Builder $query) use ($request) {
                 $search = trim($request->string('search')->toString());
@@ -43,7 +44,7 @@ class EsEwController extends Controller
     public function masterData(): JsonResponse
     {
         return response()->json([
-            'areas' => Area::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'areas' => EsEwArea::orderBy('id')->get(['id', 'name']),
             'inspectors' => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'points' => Point::where('status', 1)->orderBy('name_point')->get(['id', 'name_point', 'ket1', 'ket2']),
         ]);
@@ -91,7 +92,7 @@ class EsEwController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $inspection = EsEwInspection::with(['inspector', 'location', 'area', 'items'])->findOrFail($id);
+        $inspection = EsEwInspection::with(['inspector', 'signer', 'location', 'area', 'items'])->findOrFail($id);
 
         return response()->json(['data' => $inspection]);
     }
@@ -100,6 +101,9 @@ class EsEwController extends Controller
     {
         $inspection = EsEwInspection::with('items')->findOrFail($id);
         $data = $request->validated();
+        if (blank($data['reference_no'] ?? null)) {
+            unset($data['reference_no']);
+        }
         $point = Point::findOrFail($data['point_id']);
         unset($data['point_id']);
         $items = $data['items'];
@@ -109,18 +113,21 @@ class EsEwController extends Controller
         $items[0]['location_detail'] = $point->ket2;
         $data['inspector_id'] = $data['inspector_id'] ?? $request->user()->id;
         $storedPaths = [];
-        $oldPaths = $inspection->items
-            ->flatMap(fn ($item) => [$item->photo_before, $item->photo_after])
+        $existingItem = $inspection->items->first();
+        $oldPaths = collect([$existingItem?->photo_before, $existingItem?->photo_after])
             ->filter()
             ->values()
             ->all();
 
         try {
             $items = $this->prepareItems($request, $items, $storedPaths, $inspection);
-            DB::transaction(function () use ($inspection, $data, $items) {
+            DB::transaction(function () use ($inspection, $existingItem, $data, $items) {
                 $inspection->update($data);
-                $inspection->items()->delete();
-                $inspection->items()->createMany($items);
+                if ($existingItem) {
+                    $existingItem->update($items[0]);
+                } else {
+                    $inspection->items()->create($items[0]);
+                }
             });
         } catch (Throwable $exception) {
             $this->deletePhotos($storedPaths);
@@ -139,6 +146,70 @@ class EsEwController extends Controller
             'message' => 'Inspeksi ES&EW berhasil diperbarui.',
             'data' => $inspection->fresh()->load(['inspector', 'location', 'area', 'items']),
         ]);
+    }
+
+    public function storeItem(StoreEsEwItemRequest $request, int $inspectionId): JsonResponse
+    {
+        $inspection = EsEwInspection::findOrFail($inspectionId);
+        $storedPaths = [];
+
+        try {
+            $itemData = $this->prepareItemData($request, $storedPaths);
+            $item = DB::transaction(fn () => $inspection->items()->create($itemData));
+        } catch (Throwable $exception) {
+            $this->deletePhotos($storedPaths);
+            report($exception);
+
+            return response()->json(['message' => 'Item ES&EW gagal disimpan. Silakan coba lagi.'], 500);
+        }
+
+        return response()->json([
+            'message' => 'Item ES&EW berhasil disimpan.',
+            'data' => $item,
+        ], 201);
+    }
+
+    public function updateItem(
+        StoreEsEwItemRequest $request,
+        int $inspectionId,
+        int $itemId
+    ): JsonResponse {
+        $inspection = EsEwInspection::findOrFail($inspectionId);
+        $item = $inspection->items()->findOrFail($itemId);
+        $oldPaths = collect([$item->photo_before, $item->photo_after])->filter()->all();
+        $storedPaths = [];
+
+        try {
+            $itemData = $this->prepareItemData($request, $storedPaths, $item);
+            DB::transaction(fn () => $item->update($itemData));
+        } catch (Throwable $exception) {
+            $this->deletePhotos($storedPaths);
+            report($exception);
+
+            return response()->json(['message' => 'Item ES&EW gagal diperbarui. Silakan coba lagi.'], 500);
+        }
+
+        $retainedPaths = collect([$itemData['photo_before'] ?? null, $itemData['photo_after'] ?? null])
+            ->filter()
+            ->all();
+        $this->deletePhotos(array_values(array_diff($oldPaths, $retainedPaths)));
+
+        return response()->json([
+            'message' => 'Item ES&EW berhasil diperbarui.',
+            'data' => $item->fresh(),
+        ]);
+    }
+
+    public function destroyItem(int $inspectionId, int $itemId): JsonResponse
+    {
+        $inspection = EsEwInspection::findOrFail($inspectionId);
+        $item = $inspection->items()->findOrFail($itemId);
+        $paths = collect([$item->photo_before, $item->photo_after])->filter()->all();
+
+        DB::transaction(fn () => $item->delete());
+        $this->deletePhotos($paths);
+
+        return response()->json(['message' => 'Item ES&EW berhasil dihapus.']);
     }
 
     public function destroy(int $id): JsonResponse
@@ -171,9 +242,30 @@ class EsEwController extends Controller
     public function sign(Request $request, int $id): JsonResponse
     {
         $inspection = EsEwInspection::findOrFail($id);
-        $inspection->update(['signed_at' => now(), 'status' => 'signed']);
+        $user = $request->user();
 
-        return response()->json(['data' => $inspection]);
+        if (empty($user->signature_path)) {
+            return response()->json([
+                'message' => 'User login belum memiliki tanda tangan yang terdaftar.',
+            ], 422);
+        }
+
+        if ($inspection->signed_by) {
+            return response()->json([
+                'message' => 'Inspeksi ini sudah ditandatangani.',
+            ], 409);
+        }
+
+        $inspection->update([
+            'signed_at' => now(),
+            'signed_by' => $user->id,
+            'status' => 'signed',
+        ]);
+
+        return response()->json([
+            'message' => 'Inspeksi ES&EW berhasil ditandatangani.',
+            'data' => $inspection->load('signer'),
+        ]);
     }
 
     private function generateReferenceNo(): string
@@ -212,6 +304,33 @@ class EsEwController extends Controller
         }
 
         return $items;
+    }
+
+    private function prepareItemData(
+        StoreEsEwItemRequest $request,
+        array &$storedPaths,
+        ?\App\Models\EsEwItem $existingItem = null
+    ): array {
+        $data = $request->validated();
+        $point = Point::findOrFail($data['point_id']);
+        unset($data['point_id'], $data['photo_before'], $data['photo_after']);
+
+        $data['name'] = $point->name_point;
+        $data['type'] = $point->ket1;
+        $data['location_detail'] = $point->ket2;
+
+        foreach (['photo_before', 'photo_after'] as $field) {
+            $file = $request->file($field);
+            if ($file) {
+                $path = $file->store('es-ew-inspections', 'public');
+                $data[$field] = 'storage/' . $path;
+                $storedPaths[] = $data[$field];
+            } elseif ($existingItem?->{$field}) {
+                $data[$field] = $existingItem->{$field};
+            }
+        }
+
+        return $data;
     }
 
     private function deletePhotos(array $paths): void

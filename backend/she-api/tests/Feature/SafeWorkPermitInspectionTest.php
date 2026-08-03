@@ -14,12 +14,17 @@ class SafeWorkPermitInspectionTest extends TestCase
 {
     use DatabaseTransactions;
 
+    private User $selectableInspector;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->seed(PermitMatrixMasterSeeder::class);
         $this->seed(PermitMatrixPermissionSeeder::class);
+        $this->selectableInspector = $this->makeUser('inspector', [
+            'name' => 'Active Permit Inspector ' . uniqid(),
+        ]);
     }
 
     public function test_unauthenticated_user_cannot_access_permit_matrix_api(): void
@@ -50,6 +55,33 @@ class SafeWorkPermitInspectionTest extends TestCase
             ->getJson('/api/safe-work-permit-inspections')
             ->assertOk()
             ->assertJsonStructure(['data', 'links', 'current_page', 'last_page', 'total']);
+    }
+
+    public function test_master_data_inspectors_are_loaded_from_active_users(): void
+    {
+        $inactiveUser = $this->makeUser('inspector', [
+            'name' => 'Inactive Permit Inspector ' . uniqid(),
+            'is_active' => false,
+        ]);
+        $legacyName = 'Legacy Permit Inspector ' . uniqid();
+        DB::table('permit_inspectors')->insert([
+            'name' => $legacyName,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs(
+            $this->permittedUser(['safe-work-permit-inspection.view']),
+            'sanctum'
+        )->getJson('/api/safe-work-permit-inspections/master-data')->assertOk();
+
+        $response->assertJsonFragment([
+            'id' => $this->selectableInspector->id,
+            'name' => $this->selectableInspector->name,
+        ]);
+        $response->assertJsonMissing(['id' => $inactiveUser->id, 'name' => $inactiveUser->name]);
+        $response->assertJsonMissing(['name' => $legacyName]);
     }
 
     public function test_super_admin_can_complete_full_crud_without_group_mapping(): void
@@ -92,6 +124,7 @@ class SafeWorkPermitInspectionTest extends TestCase
             ->postJson('/api/safe-work-permit-inspections', $payload)
             ->assertCreated()
             ->assertJsonPath('data.permit_number', 'SWP-001')
+            ->assertJsonPath('data.inspector.id', $this->selectableInspector->id)
             ->assertJsonPath('data.finding_status', 'Tidak Ada Temuan');
 
         $this->assertDatabaseHas('safe_work_permit_inspections', ['permit_number' => 'SWP-001']);
@@ -235,7 +268,7 @@ class SafeWorkPermitInspectionTest extends TestCase
     {
         return [
             'permit_date' => '2026-07-23',
-            'inspector_id' => DB::table('permit_inspectors')->where('is_active', true)->value('id'),
+            'inspector_id' => $this->selectableInspector->id,
             'permit_number' => $permitNumber,
             'permit_type_id' => DB::table('permit_types')->where('is_active', true)->value('id'),
             'supervision_area_id' => DB::table('supervision_areas')->where('is_active', true)->value('id'),
@@ -251,15 +284,15 @@ class SafeWorkPermitInspectionTest extends TestCase
         ];
     }
 
-    private function makeUser(string $role): User
+    private function makeUser(string $role, array $overrides = []): User
     {
-        return User::create([
+        return User::create(array_merge([
             'name' => 'Permit Matrix Test User',
             'username' => 'permit_test_' . $role . '_' . uniqid(),
             'password_hash' => password_hash('password', PASSWORD_BCRYPT),
             'role' => $role,
             'is_active' => true,
-        ]);
+        ], $overrides));
     }
 
     private function permittedUser(array $permissions): User

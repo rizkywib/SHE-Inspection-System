@@ -57,6 +57,21 @@ Route::middleware('web')->group(function () {
     Route::prefix('/dashboard/es-ew-inspections')->name('es-ew-inspections.')->group(function () {
         Route::get('/', fn () => view('pages.es_ew_inspections.index'))->name('index');
         Route::get('/create', fn () => view('pages.es_ew_inspections.create'))->name('create');
+        Route::get('/{id}/items/create', fn (int $id) => view('pages.es_ew_inspections.item_form', [
+            'inspectionId' => $id,
+            'itemId' => null,
+            'mode' => 'create',
+        ]))
+            ->whereNumber('id')
+            ->name('items.create');
+        Route::get('/{id}/items/{itemId}/edit', fn (int $id, int $itemId) => view('pages.es_ew_inspections.item_form', [
+            'inspectionId' => $id,
+            'itemId' => $itemId,
+            'mode' => 'edit',
+        ]))
+            ->whereNumber('id')
+            ->whereNumber('itemId')
+            ->name('items.edit');
         Route::get('/{id}', fn (int $id) => view('pages.es_ew_inspections.show', ['inspectionId' => $id]))
             ->whereNumber('id')
             ->name('show');
@@ -83,6 +98,14 @@ Route::middleware('web')->group(function () {
 
     Route::get('/dashboard/incident-types', function () {
         return view('pages.incident_types');
+    });
+
+    Route::get('/dashboard/es-ew-areas', function () {
+        return response()
+            ->view('pages.es_ew_areas')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     });
 
     Route::get('/dashboard/users', function () {

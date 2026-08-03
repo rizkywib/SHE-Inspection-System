@@ -33,7 +33,12 @@ class SafeWorkPermitInspection extends Model
 
     public function inspector(): BelongsTo
     {
-        return $this->belongsTo(PermitInspector::class, 'inspector_id');
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function legacyInspector(): BelongsTo
+    {
+        return $this->belongsTo(PermitInspector::class, 'legacy_inspector_id');
     }
 
     public function permitType(): BelongsTo
@@ -73,7 +78,8 @@ class SafeWorkPermitInspection extends Model
             $query->where('permit_number', 'like', "%{$search}%")
                 ->orWhere('section_equipment', 'like', "%{$search}%")
                 ->orWhere('contractor_name', 'like', "%{$search}%")
-                ->orWhereHas('inspector', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"));
+                ->orWhereHas('inspector', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('legacyInspector', fn (Builder $query) => $query->where('name', 'like', "%{$search}%"));
         });
     }
 }

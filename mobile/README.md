@@ -90,7 +90,7 @@ See [`backend/api-contract.md`](../she-api/api-contract.md) for full API documen
 
 Base URL:
 ```
-http://localhost:8000/api
+http://eoblas10.ecogreenoleo.co.id:82/api
 ```
 
 Authentication uses Bearer tokens:

@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSafeWorkPermitInspectionRequest;
 use App\Http\Requests\UpdateSafeWorkPermitInspectionRequest;
-use App\Models\PermitInspector;
 use App\Models\PermitMainArea;
 use App\Models\PermitSubArea;
 use App\Models\PermitType;
 use App\Models\SafeWorkPermitInspection;
 use App\Models\SupervisionArea;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +20,7 @@ class SafeWorkPermitInspectionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = SafeWorkPermitInspection::query()
-            ->with(['inspector', 'permitType', 'supervisionArea', 'mainArea', 'subArea'])
+            ->with(['inspector', 'legacyInspector', 'permitType', 'supervisionArea', 'mainArea', 'subArea'])
             ->search($request->string('search')->toString())
             ->when($request->filled('date_from'), fn (Builder $query) => $query->whereDate('permit_date', '>=', $request->date_from))
             ->when($request->filled('date_to'), fn (Builder $query) => $query->whereDate('permit_date', '<=', $request->date_to))
@@ -42,7 +42,7 @@ class SafeWorkPermitInspectionController extends Controller
     public function masterData(): JsonResponse
     {
         return response()->json([
-            'inspectors' => PermitInspector::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'inspectors' => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'permit_types' => PermitType::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'supervision_areas' => SupervisionArea::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'main_areas' => PermitMainArea::where('is_active', true)->orderBy('name')->get(['id', 'name']),
@@ -56,7 +56,7 @@ class SafeWorkPermitInspectionController extends Controller
 
         return response()->json([
             'message' => 'Data Permit Matrix berhasil disimpan.',
-            'data' => $inspection->load(['inspector', 'permitType', 'supervisionArea', 'mainArea', 'subArea']),
+            'data' => $inspection->load(['inspector', 'legacyInspector', 'permitType', 'supervisionArea', 'mainArea', 'subArea']),
         ], 201);
     }
 
@@ -64,6 +64,7 @@ class SafeWorkPermitInspectionController extends Controller
     {
         $inspection = SafeWorkPermitInspection::with([
             'inspector',
+            'legacyInspector',
             'permitType',
             'supervisionArea',
             'mainArea',
@@ -80,7 +81,7 @@ class SafeWorkPermitInspectionController extends Controller
 
         return response()->json([
             'message' => 'Data Permit Matrix berhasil diperbarui.',
-            'data' => $inspection->load(['inspector', 'permitType', 'supervisionArea', 'mainArea', 'subArea']),
+            'data' => $inspection->load(['inspector', 'legacyInspector', 'permitType', 'supervisionArea', 'mainArea', 'subArea']),
         ]);
     }
 

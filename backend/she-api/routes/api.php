@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\FireHydrantController;
 use App\Http\Controllers\Api\FireExtinguisherController;
 use App\Http\Controllers\Api\FireAlarmController;
 use App\Http\Controllers\Api\EsEwController;
+use App\Http\Controllers\Api\EsEwAreaController;
 use App\Http\Controllers\Api\ChecklistController;
 use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\MedicalReportController;
@@ -64,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('fire-hydrant-locations', FireHydrantLocationController::class);
     Route::apiResource('fire-extinguisher-locations', FireExtinguisherLocationController::class);
     Route::apiResource('areas', AreaController::class);
+    Route::apiResource('es-ew-areas', EsEwAreaController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::get('/incident-types', [IncidentTypeController::class, 'index']);
     Route::post('/incident-types', [IncidentTypeController::class, 'store']);
@@ -146,6 +148,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/es-ew/next-reference', [EsEwController::class, 'nextReference']);
     Route::get('/es-ew', [EsEwController::class, 'index']);
     Route::post('/es-ew', [EsEwController::class, 'store']);
+    Route::post('/es-ew/{inspectionId}/items', [EsEwController::class, 'storeItem'])->whereNumber('inspectionId');
+    Route::put('/es-ew/{inspectionId}/items/{itemId}', [EsEwController::class, 'updateItem'])
+        ->whereNumber('inspectionId')
+        ->whereNumber('itemId');
+    Route::delete('/es-ew/{inspectionId}/items/{itemId}', [EsEwController::class, 'destroyItem'])
+        ->whereNumber('inspectionId')
+        ->whereNumber('itemId');
     Route::get('/es-ew/{id}', [EsEwController::class, 'show']);
     Route::put('/es-ew/{id}', [EsEwController::class, 'update']);
     Route::delete('/es-ew/{id}', [EsEwController::class, 'destroy']);

@@ -7,12 +7,12 @@ import 'package:flutter/foundation.dart';
 class ApiService extends ChangeNotifier {
   late String baseUrl;
   static const Duration _requestTimeout = Duration(seconds: 15);
-  static const String _defaultBaseUrl = 'http://127.0.0.1:8000/api';
+  static const String _defaultBaseUrl =
+      'http://eoblas10.ecogreenoleo.co.id:82/api';
   static String? _resolvedBaseUrl;
 
   ApiService() {
-    // Default to localhost for USB debugging with:
-    // adb reverse tcp:8000 tcp:8000
+    // Default to the shared Ecogreen SHE server.
     baseUrl = _resolvedBaseUrl ??
         const String.fromEnvironment(
           'API_URL',
@@ -43,9 +43,6 @@ class ApiService extends ChangeNotifier {
       configured,
       baseUrl,
       _defaultBaseUrl,
-      'http://localhost:8000/api',
-      'http://[::1]:8000/api',
-      'http://10.0.2.2:8000/api',
     ];
     return candidates
         .map(_normalizeBaseUrl)

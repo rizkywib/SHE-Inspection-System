@@ -13,7 +13,7 @@ class EsEwInspection extends Model
         'reference_no', 'location_id', 'area_id', 'qr_code_id',
         'inspection_date', 'inspector_id', 'assigned_to',
         'checkin_lat', 'checkin_lng', 'checked_in_at',
-        'signed_at', 'notes', 'status'
+        'signed_at', 'signed_by', 'notes', 'status'
     ];
 
     protected $casts = [
@@ -32,6 +32,11 @@ class EsEwInspection extends Model
         return $this->belongsTo(User::class, 'inspector_id');
     }
 
+    public function signer()
+    {
+        return $this->belongsTo(User::class, 'signed_by');
+    }
+
     public function location()
     {
         return $this->belongsTo(Location::class);
@@ -39,6 +44,6 @@ class EsEwInspection extends Model
 
     public function area()
     {
-        return $this->belongsTo(Area::class);
+        return $this->belongsTo(EsEwArea::class);
     }
 }

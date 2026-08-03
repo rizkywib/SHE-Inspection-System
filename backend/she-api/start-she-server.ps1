@@ -32,9 +32,9 @@ if ((Test-Path $mysqlPath) -and !(Test-PortListening -Port 3306)) {
     Start-Sleep -Seconds 5
 }
 
-if ((Test-Path $phpPath) -and !(Test-PortListening -Port 8000)) {
+if ((Test-Path $phpPath) -and !(Test-PortListening -Port 82)) {
     Start-Process -FilePath $phpPath `
-        -ArgumentList @('artisan', 'serve', '--host=127.0.0.1', '--port=8000') `
+        -ArgumentList @('artisan', 'serve', '--host=0.0.0.0', '--port=82') `
         -WorkingDirectory $projectPath `
         -WindowStyle Hidden `
         -RedirectStandardOutput $serverLog `

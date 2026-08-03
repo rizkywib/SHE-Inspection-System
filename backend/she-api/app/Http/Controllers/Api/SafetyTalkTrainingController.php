@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSafetyTalkTrainingRequest;
 use App\Http\Requests\UpdateSafetyTalkTrainingRequest;
-use App\Models\SafetyTalkSpeaker;
 use App\Models\SafetyTalkTraining;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +19,7 @@ class SafetyTalkTrainingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = SafetyTalkTraining::query()
-            ->with(['speaker', 'creator'])
+            ->with(['speaker', 'legacySpeaker', 'creator'])
             ->search($request->string('search')->toString())
             ->when($request->filled('date_from'), fn (Builder $query) => $query->whereDate('implementation_date', '>=', $request->date_from))
             ->when($request->filled('date_to'), fn (Builder $query) => $query->whereDate('implementation_date', '<=', $request->date_to))
@@ -36,7 +36,7 @@ class SafetyTalkTrainingController extends Controller
     public function masterData(): JsonResponse
     {
         return response()->json([
-            'speakers' => SafetyTalkSpeaker::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'speakers' => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'areas' => SafetyTalkTraining::IMPLEMENTATION_AREAS,
         ]);
     }
@@ -64,13 +64,13 @@ class SafetyTalkTrainingController extends Controller
 
         return response()->json([
             'message' => 'Data Safety Talk berhasil disimpan.',
-            'data' => $training->load(['speaker', 'creator']),
+            'data' => $training->load(['speaker', 'legacySpeaker', 'creator']),
         ], 201);
     }
 
     public function show(int $id): JsonResponse
     {
-        $training = SafetyTalkTraining::with(['speaker', 'creator', 'updater'])->findOrFail($id);
+        $training = SafetyTalkTraining::with(['speaker', 'legacySpeaker', 'creator', 'updater'])->findOrFail($id);
 
         return response()->json(['data' => $training]);
     }
@@ -106,7 +106,7 @@ class SafetyTalkTrainingController extends Controller
 
         return response()->json([
             'message' => 'Data Safety Talk berhasil diperbarui.',
-            'data' => $training->fresh()->load(['speaker', 'creator', 'updater']),
+            'data' => $training->fresh()->load(['speaker', 'legacySpeaker', 'creator', 'updater']),
         ]);
     }
 

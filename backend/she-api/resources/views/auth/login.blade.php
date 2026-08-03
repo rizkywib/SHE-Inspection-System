@@ -11,9 +11,12 @@
     <main class="min-h-screen flex items-center justify-center px-4 py-10">
         <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
             <div>
-                <div class="mx-auto h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-hard-hat text-white text-2xl"></i>
-                </div>
+                <img
+                    id="loginBrandLogo"
+                    src="/images/ecogreen-logo-print.png"
+                    alt="Ecogreen Oleochemicals"
+                    class="mx-auto h-20 w-20 object-contain"
+                >
                 <h1 class="mt-6 text-center text-3xl font-extrabold text-gray-900">SHE Inspection System</h1>
                 <p class="mt-2 text-center text-sm text-gray-600">Sign in to your account</p>
             </div>
@@ -40,10 +43,6 @@
                     Sign in
                 </button>
             </form>
-
-            <div class="text-center">
-                <p class="text-xs text-gray-500">Demo credentials: admin@sheinspection.com / admin123</p>
-            </div>
         </div>
     </main>
 

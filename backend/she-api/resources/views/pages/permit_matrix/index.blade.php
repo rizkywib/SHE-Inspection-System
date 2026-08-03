@@ -181,7 +181,7 @@ function renderTable(result) {
                 <td class="px-4 py-3 text-sm">${result.from + index}</td>
                 <td class="px-4 py-3 text-sm whitespace-nowrap">${escapeHtml(row.permit_date)}</td>
                 <td class="px-4 py-3 text-sm font-medium">${escapeHtml(row.permit_number)}</td>
-                <td class="px-4 py-3 text-sm">${escapeHtml(row.inspector?.name)}</td>
+                <td class="px-4 py-3 text-sm">${escapeHtml(row.inspector?.name || row.legacy_inspector?.name)}</td>
                 <td class="px-4 py-3 text-sm">${escapeHtml(row.permit_type?.name)}</td>
                 <td class="px-4 py-3 text-sm">${escapeHtml(row.supervision_area?.code)}</td>
                 <td class="px-4 py-3 text-sm">${escapeHtml(row.main_area?.name)}</td>

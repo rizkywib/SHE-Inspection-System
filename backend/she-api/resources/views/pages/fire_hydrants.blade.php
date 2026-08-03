@@ -114,11 +114,7 @@
     #printContent { padding: 0 !important; }
     .print-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
     .print-brand { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
-    .print-logo { width: 30px; height: 30px; position: relative; display: inline-block; }
-    .print-logo span { position: absolute; display: block; background: #27930f; border-radius: 999px 999px 999px 4px; transform: rotate(-35deg); }
-    .print-logo span:nth-child(1) { width: 13px; height: 20px; left: 2px; top: 1px; }
-    .print-logo span:nth-child(2) { width: 12px; height: 18px; left: 15px; top: 0; }
-    .print-logo span:nth-child(3) { width: 10px; height: 16px; left: 8px; top: 14px; }
+    .print-company-logo { width: 38px; height: 50px; object-fit: contain; display: block; }
     .print-doc-code { font-size: 11px; text-align: right; }
     .print-meta { margin-bottom: 20px; font-size: 11px; }
     .print-meta div { margin: 4px 0; }
@@ -918,7 +914,7 @@ function formatSignatureDate(value) {
 }
 
 function printLogoHtml() {
-    return '<span class="print-logo"><span></span><span></span><span></span></span>';
+    return '<img src="/images/ecogreen-logo-print.png" class="print-company-logo" alt="Ecogreen Oleochemicals">';
 }
 
 function printSignatureHtml(path) {
@@ -1079,11 +1075,7 @@ function buildPrintPreviewDocument(detail) {
         .print-page { font-family: Arial, sans-serif; color: #000; padding: 0; margin: 0; width: 100%; font-size: 11px; line-height: 1.25; }
         .print-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
         .print-brand { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
-        .print-logo { width: 30px; height: 30px; position: relative; display: inline-block; }
-        .print-logo span { position: absolute; display: block; background: #27930f; border-radius: 999px 999px 999px 4px; transform: rotate(-35deg); }
-        .print-logo span:nth-child(1) { width: 13px; height: 20px; left: 2px; top: 1px; }
-        .print-logo span:nth-child(2) { width: 12px; height: 18px; left: 15px; top: 0; }
-        .print-logo span:nth-child(3) { width: 10px; height: 16px; left: 8px; top: 14px; }
+        .print-company-logo { width: 38px; height: 50px; object-fit: contain; display: block; }
         .print-doc-code { font-size: 11px; text-align: right; }
         .print-meta { margin-bottom: 20px; font-size: 11px; }
         .print-meta div { margin: 4px 0; }

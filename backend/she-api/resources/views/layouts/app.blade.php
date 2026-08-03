@@ -44,9 +44,8 @@
         <aside class="sidebar-gradient text-white w-64 hidden md:flex md:flex-col shadow-xl">
             <div class="px-6 py-6 border-b border-gray-700">
                 <div class="flex items-center space-x-3">
-                    <div class="bg-blue-500 rounded-lg p-2">
-                        <i class="fas fa-hard-hat text-white text-xl"></i>
-                    </div>
+                    <img id="sidebarBrandLogo" src="/images/ecogreen-logo-print.png" alt="Ecogreen Oleochemicals"
+                        class="h-14 w-12 flex-shrink-0 rounded-lg bg-white object-contain">
                     <div>
                         <h1 class="font-bold text-lg">SHE Inspection</h1>
                         <p class="text-xs text-gray-400">Management System</p>
@@ -105,6 +104,10 @@
                     <i class="fas fa-exclamation-triangle w-5"></i>
                     <span>Incident Types</span>
                 </a>
+                <a href="/dashboard/es-ew-areas" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-es-ew-areas', '')">
+                    <i class="fas fa-shower w-5"></i>
+                    <span>ES&EW Areas</span>
+                </a>
                 <a id="usersMenuDesktop" href="/dashboard/users" class="hidden nav-link items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-users', '')">
                     <i class="fas fa-users w-5"></i>
                     <span>Users</span>
@@ -135,7 +138,8 @@
             <header class="bg-white shadow md:hidden">
                 <div class="px-4 py-3 flex justify-between items-center">
                     <div class="flex items-center space-x-2">
-                        <i class="fas fa-hard-hat text-blue-600 text-xl"></i>
+                        <img id="mobileBrandLogo" src="/images/ecogreen-logo-print.png" alt="Ecogreen Oleochemicals"
+                            class="h-9 w-8 flex-shrink-0 rounded bg-white object-contain">
                         <span class="font-bold text-lg">SHE Inspection</span>
                     </div>
                     <button onclick="toggleMobileMenu()" class="text-gray-600">
@@ -157,6 +161,7 @@
                     <a href="/dashboard/fire-hydrant-locations" class="block py-2 text-gray-600 hover:text-gray-900">Hydrant Locations</a>
                     <a href="/dashboard/fire-extinguisher-locations" class="block py-2 text-gray-600 hover:text-gray-900">Extinguisher Locations</a>
                     <a href="/dashboard/incident-types" class="block py-2 text-gray-600 hover:text-gray-900">Incident Types</a>
+                    <a href="/dashboard/es-ew-areas" class="block py-2 text-gray-600 hover:text-gray-900">ES&EW Areas</a>
                     <a id="usersMenuMobile" href="/dashboard/users" class="hidden py-2 text-gray-600 hover:text-gray-900">Users</a>
                     <a href="/dashboard/profile" class="block py-2 text-blue-600 hover:text-blue-800"><i class="fas fa-user-pen mr-2"></i>Edit Profil</a>
                     <button onclick="logout()" class="text-red-600 hover:text-red-800 text-sm py-2">Logout</button>

@@ -63,7 +63,7 @@ async function loadDetail() {
         <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             ${row('Tanggal Permit', data.permit_date)}
             ${row('No. Permit', data.permit_number)}
-            ${row('Nama Inspector', data.inspector?.name)}
+            ${row('Nama Inspector', data.inspector?.name || data.legacy_inspector?.name)}
             ${row('Type Permit', data.permit_type?.name)}
             ${row('Area Pengawasan', data.supervision_area?.code)}
             ${row('Main Area', data.main_area?.name)}

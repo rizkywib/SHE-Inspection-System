@@ -24,9 +24,13 @@
     <form id="inspectionForm" class="space-y-6" enctype="multipart/form-data">
         <section class="bg-white rounded-xl shadow p-6">
             <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wide border-b pb-3 mb-4">Inspection Data</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">Reference No.</label><input id="reference_no" readonly class="w-full border rounded-lg px-3 py-2 bg-gray-100"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">Inspection Date <span class="text-red-600">*</span></label><input id="inspection_date" type="date" required class="w-full border rounded-lg px-3 py-2"></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Inspection Date</label>
+                    <input id="inspection_date" type="date" required
+                        @if ($mode === 'edit') readonly @endif
+                        class="w-full border rounded-lg px-3 py-2 {{ $mode === 'edit' ? 'bg-gray-100 cursor-not-allowed' : 'bg-white' }}">
+                </div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Area <span class="text-red-600">*</span></label><select id="area_id" required class="w-full border rounded-lg px-3 py-2"><option value="">Select Area</option></select></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Inspector</label><select id="inspector_id" class="w-full border rounded-lg px-3 py-2"><option value="">Current User</option></select></div>
             </div>
@@ -35,7 +39,7 @@
         <section class="bg-white rounded-xl shadow p-6">
             <div class="border-b pb-3 mb-4">
                 <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">ES&amp;EW Item</h2>
-                <p class="text-sm text-gray-500 mt-1">Setiap inspeksi hanya memiliki satu item.</p>
+                <p class="text-sm text-gray-500 mt-1">Item awal untuk inspection header ini.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -110,12 +114,11 @@ async function init(){
     renderConditions();
     if(mode==='create'){
         document.getElementById('inspection_date').value=new Date().toISOString().slice(0,10);
-        const ref=await fetch('/api/es-ew/next-reference',{headers});document.getElementById('reference_no').value=(await ref.json()).reference_no;
         return;
     }
     const response=await fetch(`/api/es-ew/${inspectionId}`,{headers});if(!response.ok)return message('Inspection tidak ditemukan.');
     const data=(await response.json()).data,item=data.items[0]||{};
-    ['reference_no','inspection_date','area_id','inspector_id'].forEach(field=>document.getElementById(field).value=data[field]??'');
+    ['inspection_date','area_id','inspector_id'].forEach(field=>document.getElementById(field).value=data[field]??'');
     const selectedPoint=points.find(point=>point.name_point===item.name&&String(point.ket1??'')===String(item.type??'')&&String(point.ket2??'')===String(item.location_detail??''))||points.find(point=>point.name_point===item.name);
     document.getElementById('point_id').value=selectedPoint?.id||'';
     document.getElementById('remark').value=item.remark||'';
@@ -126,7 +129,7 @@ bindPhotoPreview('photo_before');bindPhotoPreview('photo_after');
 document.getElementById('inspectionForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=document.getElementById('saveButton');button.disabled=true;button.classList.add('opacity-60');
     const form=new FormData();
-    ['reference_no','inspection_date','area_id','inspector_id','point_id'].forEach(field=>form.append(field,document.getElementById(field).value));
+    ['inspection_date','area_id','inspector_id','point_id'].forEach(field=>form.append(field,document.getElementById(field).value));
     form.append('items[0][remark]',document.getElementById('remark').value);
     conditionFields.forEach(condition=>form.append(`items[0][${condition.field}]`,document.querySelector(`[data-condition="${condition.field}"]:checked`).value));
     ['photo_before','photo_after'].forEach(field=>{const file=document.getElementById(field).files[0];if(file)form.append(`items[0][${field}]`,file);});

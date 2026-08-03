@@ -20,7 +20,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div class="xl:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input name="search" id="search" placeholder="Reference, inspector, atau name" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                <input name="search" id="search" placeholder="Area, inspector, atau name" class="w-full border border-gray-300 rounded-lg px-3 py-2">
             </div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Date From</label><input name="date_from" id="date_from" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2"></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Date To</label><input name="date_to" id="date_to" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2"></div>
@@ -35,11 +35,11 @@
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50"><tr>
-                    @foreach (['No.', 'Reference', 'Date', 'Name', 'Area', 'Inspector', 'Actions'] as $heading)
+                    @foreach (['No.', 'Area', 'Inspection Date', 'Inspected By', 'Actions'] as $heading)
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">{{ $heading }}</th>
                     @endforeach
                 </tr></thead>
-                <tbody id="tableBody" class="divide-y divide-gray-200"><tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">Loading...</td></tr></tbody>
+                <tbody id="tableBody" class="divide-y divide-gray-200"><tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading...</td></tr></tbody>
             </table>
         </div>
         <div id="pagination" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-t px-5 py-4"></div>
@@ -72,17 +72,37 @@ async function loadData(page=1) {
 }
 function render(result) {
     const body=document.getElementById('tableBody');
-    if(!result.data.length) body.innerHTML='<tr><td colspan="7" class="px-4 py-10 text-center text-gray-500"><i class="fas fa-inbox text-3xl block mb-3"></i>No ES&EW inspections found.</td></tr>';
+    if(!result.data.length) body.innerHTML='<tr><td colspan="5" class="px-4 py-10 text-center text-gray-500"><i class="fas fa-inbox text-3xl block mb-3"></i>No ES&EW inspections found.</td></tr>';
     else body.innerHTML=result.data.map((row,index)=>`<tr class="hover:bg-gray-50">
-        <td class="px-4 py-3 text-sm">${result.from+index}</td><td class="px-4 py-3 text-sm font-medium">${escapeHtml(row.reference_no)}</td>
-        <td class="px-4 py-3 text-sm whitespace-nowrap">${formatDate(row.inspection_date)}</td><td class="px-4 py-3 text-sm">${escapeHtml(row.items?.[0]?.name||'-')}</td>
-        <td class="px-4 py-3 text-sm">${escapeHtml(row.area?.name||'-')}</td><td class="px-4 py-3 text-sm">${escapeHtml(row.inspector?.name)}</td>
-        <td class="px-4 py-3"><div class="flex gap-3"><a href="/dashboard/es-ew-inspections/${row.id}" class="text-blue-600" title="View"><i class="fas fa-eye"></i></a><a href="/dashboard/es-ew-inspections/${row.id}/edit" class="text-amber-600" title="Edit"><i class="fas fa-edit"></i></a><button onclick="removeInspection(${row.id})" class="text-red-600" title="Delete"><i class="fas fa-trash"></i></button></div></td>
+        <td class="px-4 py-3 text-sm">${result.from+index}</td>
+        <td class="px-4 py-3 text-sm font-medium"><a href="/dashboard/es-ew-inspections/${encodeURIComponent(row.id)}" class="text-blue-600 hover:text-blue-800 hover:underline" title="Open item detail">${escapeHtml(row.area?.name||'-')}</a></td>
+        <td class="px-4 py-3 text-sm whitespace-nowrap">${formatDate(row.inspection_date)}</td>
+        <td class="px-4 py-3 text-sm">${escapeHtml(row.inspector?.name||'-')}</td>
+        <td class="px-4 py-3 text-sm whitespace-nowrap">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <a href="/dashboard/es-ew-inspections/${row.id}/edit" class="text-amber-600 hover:text-amber-800 font-medium" title="Edit">
+                    <i class="fas fa-edit mr-1"></i>Edit
+                </a>
+                <button onclick="exportInspection(${row.id})" class="text-green-600 hover:text-green-800 font-medium" title="Export this inspection">
+                    <i class="fas fa-file-excel mr-1"></i>Export
+                </button>
+                <button onclick="printInspection(${row.id})" class="text-purple-600 hover:text-purple-800 font-medium" title="Print this inspection">
+                    <i class="fas fa-print mr-1"></i>Print
+                </button>
+                <button onclick="signInspection(${row.id})" ${row.signed_by ? 'disabled' : ''} class="${row.signed_by ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'} font-medium" title="${row.signed_by ? `Signed by ${escapeHtml(row.signer?.name || '-')}` : 'Sign this inspection'}">
+                    <i class="fas fa-signature mr-1"></i>${row.signed_by ? 'Signed' : 'Signature'}
+                </button>
+                <button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800 font-medium" title="Delete">
+                    <i class="fas fa-trash mr-1"></i>Delete
+                </button>
+            </div>
+        </td>
     </tr>`).join('');
     document.getElementById('pagination').innerHTML=`<p class="text-sm text-gray-600">Showing ${result.from||0}–${result.to||0} of ${result.total}</p><div class="flex gap-2 items-center"><button ${result.current_page<=1?'disabled':''} onclick="goPage(${result.current_page-1})" class="px-3 py-2 border rounded disabled:opacity-40">Previous</button><span class="text-sm">Page ${result.current_page} / ${result.last_page}</span><button ${result.current_page>=result.last_page?'disabled':''} onclick="goPage(${result.current_page+1})" class="px-3 py-2 border rounded disabled:opacity-40">Next</button></div>`;
 }
 function goPage(page){params.set('page',page);window.location.search=params.toString();}
 async function removeInspection(id){if(!confirm('Delete this ES&EW inspection and all items?'))return;const response=await fetch(`/api/es-ew/${id}`,{method:'DELETE',headers});const data=await response.json();if(!response.ok)return message(data.message||'Delete failed.','error');message(data.message);loadData(params.get('page')||1);}
+@include('pages.es_ew_inspections._header_actions_script')
 document.getElementById('filterForm').addEventListener('submit',e=>{e.preventDefault();const query=new URLSearchParams(new FormData(e.currentTarget));[...query.entries()].forEach(([k,v])=>{if(!v)query.delete(k)});window.location.search=query.toString();});
 init().catch(()=>message('Terjadi kesalahan saat memuat halaman.','error'));
 </script>

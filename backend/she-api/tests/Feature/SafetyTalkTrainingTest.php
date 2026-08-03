@@ -15,11 +15,16 @@ class SafetyTalkTrainingTest extends TestCase
 {
     use DatabaseTransactions;
 
+    private User $selectableSpeaker;
+
     protected function setUp(): void
     {
         parent::setUp();
         Storage::fake('public');
         $this->seed(SafetyTalkSpeakerSeeder::class);
+        $this->selectableSpeaker = $this->makeUser('inspector', [
+            'name' => 'Active Safety Talk Speaker ' . uniqid(),
+        ]);
     }
 
     public function test_unauthenticated_user_cannot_access_safety_talk_api(): void
@@ -42,6 +47,32 @@ class SafetyTalkTrainingTest extends TestCase
             ->assertJsonStructure(['data', 'current_page', 'last_page', 'total']);
     }
 
+    public function test_master_data_speakers_are_loaded_from_active_users(): void
+    {
+        $inactiveUser = $this->makeUser('inspector', [
+            'name' => 'Inactive Safety Talk Speaker ' . uniqid(),
+            'is_active' => false,
+        ]);
+        $legacyName = 'Legacy Safety Talk Speaker ' . uniqid();
+        DB::table('safety_talk_speakers')->insert([
+            'name' => $legacyName,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->permittedUser(['view']), 'sanctum')
+            ->getJson('/api/safety-talk-trainings/master-data')
+            ->assertOk();
+
+        $response->assertJsonFragment([
+            'id' => $this->selectableSpeaker->id,
+            'name' => $this->selectableSpeaker->name,
+        ]);
+        $response->assertJsonMissing(['id' => $inactiveUser->id, 'name' => $inactiveUser->name]);
+        $response->assertJsonMissing(['name' => $legacyName]);
+    }
+
     public function test_user_without_permission_is_rejected(): void
     {
         $user = $this->makeUser('inspector');
@@ -57,6 +88,7 @@ class SafetyTalkTrainingTest extends TestCase
         $response = $this->actingAs($this->permittedUser(['create']), 'sanctum')
             ->post('/api/safety-talk-trainings', $this->validPayload(), ['Accept' => 'application/json'])
             ->assertCreated()
+            ->assertJsonPath('data.speaker.id', $this->selectableSpeaker->id)
             ->assertJsonPath('data.total_participants', 15);
 
         $path = $response->json('data.activity_photo_path');
@@ -218,7 +250,7 @@ class SafetyTalkTrainingTest extends TestCase
     private function validPayloadWithoutPhoto(): array
     {
         return [
-            'speaker_id' => DB::table('safety_talk_speakers')->where('is_active', true)->value('id'),
+            'speaker_id' => $this->selectableSpeaker->id,
             'implementation_date' => '2026-07-23',
             'topic' => 'Materi keselamatan kerja',
             'ecogreen_participants' => 5,
@@ -239,15 +271,15 @@ class SafetyTalkTrainingTest extends TestCase
         ], $overrides));
     }
 
-    private function makeUser(string $role): User
+    private function makeUser(string $role, array $overrides = []): User
     {
-        return User::create([
+        return User::create(array_merge([
             'name' => 'Safety Talk Test User',
             'username' => 'safety_talk_' . uniqid(),
             'password_hash' => password_hash('password123', PASSWORD_BCRYPT),
             'role' => $role,
             'is_active' => true,
-        ]);
+        ], $overrides));
     }
 
     private function permittedUser(array $actions): User
