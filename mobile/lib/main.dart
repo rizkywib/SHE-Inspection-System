@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
@@ -33,22 +34,14 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'SHE Inspection',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1A56DB),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-        ),
+        theme: AppTheme.light,
         initialRoute: '/splash',
         onGenerateRoute: (settings) {
           Widget page;
           String? idArg;
-          if (settings.arguments is String) idArg = settings.arguments as String;
+          if (settings.arguments is String) {
+            idArg = settings.arguments as String;
+          }
 
           switch (settings.name) {
             case '/splash':

@@ -1,0 +1,5 @@
+{
+    "gradle.autoDetect": "off",
+    "gradle.nestedProjects": false,
+    "java.gradle.buildServer.enabled": "off"
+}

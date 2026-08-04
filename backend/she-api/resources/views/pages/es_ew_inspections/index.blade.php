@@ -80,9 +80,6 @@ function render(result) {
         <td class="px-4 py-3 text-sm">${escapeHtml(row.inspector?.name||'-')}</td>
         <td class="px-4 py-3 text-sm whitespace-nowrap">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <a href="/dashboard/es-ew-inspections/${row.id}/edit" class="text-amber-600 hover:text-amber-800 font-medium" title="Edit">
-                    <i class="fas fa-edit mr-1"></i>Edit
-                </a>
                 <button onclick="exportInspection(${row.id})" class="text-green-600 hover:text-green-800 font-medium" title="Export this inspection">
                     <i class="fas fa-file-excel mr-1"></i>Export
                 </button>

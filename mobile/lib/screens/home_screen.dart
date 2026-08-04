@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: 'Fire Hydrant',
         route: '/fire-hydrant',
         detailPath: 'fire-hydrants',
-        color: const Color(0xFFDC2626),
+        color: const Color(0xFF145F3A),
         icon: Icons.water_damage_outlined,
       ),
       _loadType(
@@ -51,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: 'Fire Extinguisher',
         route: '/fire-extinguisher',
         detailPath: 'fire-extinguishers',
-        color: const Color(0xFFEA580C),
+        color: const Color(0xFF177245),
         icon: Icons.fire_extinguisher,
       ),
       _loadType(
@@ -59,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: 'Fire Alarm',
         route: '/fire-alarm',
         detailPath: 'fire-alarms',
-        color: const Color(0xFFD97706),
+        color: const Color(0xFF238653),
         icon: Icons.notifications_active_outlined,
       ),
       _loadType(
@@ -67,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: 'ES/EW',
         route: '/es-ew',
         detailPath: 'es-ew',
-        color: const Color(0xFF059669),
+        color: const Color(0xFF329566),
         icon: Icons.shower_outlined,
       ),
       _loadType(
@@ -75,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: 'Inspection',
         route: '/incident-form',
         detailPath: 'incidents',
-        color: const Color(0xFF7C3AED),
+        color: const Color(0xFF4AA878),
         icon: Icons.assignment_outlined,
       ),
     ];
@@ -140,21 +141,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final filtered = _filteredInspections;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Inspections'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            tooltip: 'Scan QR',
-            onPressed: () => Navigator.pushNamed(context, '/qr-scanner'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Profile',
-            onPressed: () => Navigator.pushNamed(context, '/profile'),
-          ),
-        ],
       ),
       drawer: _buildDrawer(context, user),
       body: SafeArea(
@@ -185,17 +173,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 tooltip: 'Clear search',
                               ),
                         filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
+                        fillColor: AppColors.surface,
                         contentPadding: EdgeInsets.zero,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: const BorderSide(color: AppColors.border),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: const BorderSide(color: AppColors.border),
                         ),
                       ),
                     ),
@@ -504,14 +490,19 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF0F172A)),
+            decoration: const BoxDecoration(color: AppColors.primaryDark),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 const CircleAvatar(
                   radius: 28,
-                  child: Icon(Icons.person_outline, size: 28),
+                  backgroundColor: AppColors.surfaceSoft,
+                  child: Icon(
+                    Icons.health_and_safety_outlined,
+                    size: 28,
+                    color: AppColors.primaryDark,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -667,7 +658,7 @@ class _InspectionListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -742,7 +733,7 @@ class _InspectionListTile extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFF334155),
+                  color: AppColors.textPrimary,
                   fontSize: 13,
                   height: 1.35,
                 ),
@@ -764,7 +755,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       'completed' => const Color(0xFF15803D),
-      'signed' => const Color(0xFF1D4ED8),
+      'signed' => AppColors.primary,
       'reported' => const Color(0xFF15803D),
       'closed' => const Color(0xFF475569),
       _ => const Color(0xFFB45309),
@@ -801,9 +792,9 @@ class _DetailSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.surfaceSoft,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -873,7 +864,7 @@ class _InspectionDetailItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -930,7 +921,7 @@ class _SmallPhotoPreview extends StatelessWidget {
           child: Container(
             width: 72,
             height: 72,
-            color: const Color(0xFFE2E8F0),
+            color: AppColors.surfaceSoft,
             child: url == null
                 ? const Icon(Icons.image_not_supported_outlined,
                     color: Colors.black45)

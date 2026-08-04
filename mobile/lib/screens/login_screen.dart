@@ -63,9 +63,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -75,18 +75,25 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.health_and_safety,
-                    size: 80,
-                    color: Color(0xFF1A56DB),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.health_and_safety,
+                      size: 58,
+                      color: colors.primary,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'SHE Inspection',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A56DB),
+                      color: colors.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -94,11 +101,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Sign in to your account',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.grey[600],
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 40),
-                    TextFormField(
+                  TextFormField(
                     controller: _emailController,
                     decoration: InputDecoration(
                       labelText: 'Username',
@@ -150,13 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: auth.isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A56DB),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                       child: auth.isLoading
                           ? const SizedBox(
                               height: 20,

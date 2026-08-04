@@ -317,11 +317,8 @@ class ApiService extends ChangeNotifier {
 
   // Fire Extinguisher
   Future<List<dynamic>> getFireExtinguishers() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/fire-extinguishers'),
-      headers: headers,
-    );
-    return jsonDecode(response.body)['data'] ?? [];
+    final response = await _getWithFallback('/fire-extinguishers');
+    return _dataList(response);
   }
 
   Future<List<dynamic>> getFireExtinguisherLocations() async {
@@ -340,39 +337,40 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> createFireExtinguisher(
       Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/fire-extinguishers'),
-      headers: headers,
-      body: jsonEncode(data),
-    );
+    final response = await _postJsonWithFallback('/fire-extinguishers', data);
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
     return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> updateFireExtinguisher(
       int id, Map<String, dynamic> data) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/fire-extinguishers/$id'),
-      headers: headers,
-      body: jsonEncode(data),
-    );
+    final response =
+        await _putJsonWithFallback('/fire-extinguishers/$id', data);
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
     return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> deleteFireExtinguisher(int id) async {
-    final response = await http.delete(
-      Uri.parse('$baseUrl/fire-extinguishers/$id'),
-      headers: headers,
-    );
+    final response = await _deleteWithFallback('/fire-extinguishers/$id');
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
     return jsonDecode(response.body);
   }
 
   Future<Map<String, dynamic>> checkinFireExtinguisher(
       int id, double lat, double lng) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/fire-extinguishers/$id/checkin'),
-      headers: headers,
-      body: jsonEncode({'checkin_lat': lat, 'checkin_lng': lng}),
+    final response = await _postJsonWithFallback(
+      '/fire-extinguishers/$id/checkin',
+      {'checkin_lat': lat, 'checkin_lng': lng},
     );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
     return jsonDecode(response.body);
   }
 

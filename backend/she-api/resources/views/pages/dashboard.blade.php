@@ -112,7 +112,7 @@
                         <span>Inspection</span>
                     </div>
                 </div>
-                <div id="incidentTypeChart" class="max-h-[520px] overflow-y-auto px-5 py-6 md:px-6" role="img" aria-label="Chart jumlah inspection berdasarkan Incident Type">
+                <div id="incidentTypeChart" class="px-5 py-6 md:px-6" aria-label="Diagram lingkaran jumlah inspection berdasarkan Incident Type">
                     <div class="space-y-5 animate-pulse" aria-hidden="true">
                         <div class="h-12 rounded-xl bg-slate-100"></div>
                         <div class="h-12 rounded-xl bg-slate-100"></div>
@@ -207,30 +207,66 @@ function renderIncidentTypeChart(summary) {
     const chart = document.getElementById('incidentTypeChart');
     const types = Array.isArray(summary.types) ? summary.types : [];
     const total = Number(summary.total || 0);
-    const maximum = Math.max(...types.map(item => Number(item.total || 0)), 1);
-    const colors = ['#2563eb', '#0891b2', '#059669', '#7c3aed', '#ea580c', '#db2777'];
+    const displayedTotal = types.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    const colors = [
+        '#2563eb', '#0891b2', '#059669', '#7c3aed', '#ea580c',
+        '#db2777', '#d97706', '#4f46e5', '#0d9488', '#dc2626',
+    ];
 
     document.getElementById('chartTotalCount').textContent = formatNumber(total);
 
-    if (types.length === 0) {
-        chart.innerHTML = emptyState('Belum ada data inspection untuk ditampilkan pada chart.');
+    if (types.length === 0 || displayedTotal <= 0) {
+        chart.innerHTML = emptyState('Belum ada data inspection untuk ditampilkan pada diagram lingkaran.');
         return;
     }
 
-    chart.innerHTML = `<div class="space-y-5">${types.map((item, index) => {
+    let currentAngle = 0;
+    const slices = types.map((item, index) => {
         const count = Number(item.total || 0);
-        const percentage = Math.max((count / maximum) * 100, count > 0 ? 3 : 0);
-        return `
-            <div>
-                <div class="mb-2 flex items-start justify-between gap-4">
-                    <p class="text-sm font-medium leading-5 text-slate-700">${escapeHtml(item.name)}</p>
-                    <p class="shrink-0 text-sm font-bold text-slate-900">${formatNumber(count)}</p>
-                </div>
-                <div class="h-3 overflow-hidden rounded-full bg-slate-100">
-                    <div class="h-full rounded-full" style="width:${percentage.toFixed(2)}%;background:${colors[index % colors.length]}" aria-hidden="true"></div>
-                </div>
-            </div>`;
-    }).join('')}</div>`;
+        const percentage = (count / displayedTotal) * 100;
+        const startAngle = currentAngle;
+        currentAngle += (count / displayedTotal) * 360;
+
+        return {
+            name: item.name,
+            count,
+            percentage,
+            color: colors[index % colors.length],
+            startAngle,
+            endAngle: currentAngle,
+        };
+    });
+
+    const gradient = slices
+        .map(slice => `${slice.color} ${slice.startAngle.toFixed(2)}deg ${slice.endAngle.toFixed(2)}deg`)
+        .join(', ');
+    const accessibleSummary = slices
+        .map(slice => `${slice.name}: ${formatNumber(slice.count)} inspection (${formatPercentage(slice.percentage)})`)
+        .join(', ');
+
+    chart.innerHTML = `
+        <div class="grid items-center gap-8 lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)]">
+            <div class="mx-auto w-full max-w-xs">
+                <div
+                    class="aspect-square w-full rounded-full border-4 border-white shadow-lg ring-1 ring-slate-200"
+                    style="background:conic-gradient(${gradient})"
+                    role="img"
+                    aria-label="${escapeHtml(accessibleSummary)}"
+                ></div>
+            </div>
+            <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1" aria-label="Legenda diagram lingkaran">
+                ${slices.map(slice => `
+                    <li class="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
+                        <span class="h-3.5 w-3.5 shrink-0 rounded-full" style="background:${slice.color}" aria-hidden="true"></span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-medium text-slate-700" title="${escapeHtml(slice.name)}">${escapeHtml(slice.name)}</p>
+                            <p class="mt-0.5 text-xs text-slate-500">${formatPercentage(slice.percentage)} dari total</p>
+                        </div>
+                        <span class="shrink-0 text-sm font-bold text-slate-900">${formatNumber(slice.count)}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>`;
 }
 
 function renderRecentInspections(inspections) {
@@ -279,6 +315,10 @@ function emptyState(message) {
 
 function formatNumber(value) {
     return new Intl.NumberFormat('id-ID').format(Number(value || 0));
+}
+
+function formatPercentage(value) {
+    return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(Number(value || 0))}%`;
 }
 
 function formatInspectionDate(date, time) {

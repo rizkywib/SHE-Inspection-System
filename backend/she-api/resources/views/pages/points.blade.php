@@ -217,7 +217,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coordinates</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keterangan</th>
@@ -857,9 +857,9 @@ function renderTable() {
     if (totalItems === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No points found</td></tr>';
     } else {
-        tbody.innerHTML = pageItems.map(loc => `
+        tbody.innerHTML = pageItems.map((loc, index) => `
             <tr class="hover:bg-gray-50 transition">
-                <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(loc.id)}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">${start + index + 1}</td>
                 <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(loc.name_point)}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">${hasCoordinates(loc) ? `${escapeHtml(loc.lat)}, ${escapeHtml(loc.lng)}` : '-'}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">

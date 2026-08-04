@@ -5,6 +5,8 @@ import 'package:she_inspection_mobile/main.dart';
 import 'package:she_inspection_mobile/screens/home_screen.dart';
 import 'package:she_inspection_mobile/screens/incident/incident_form_screen.dart';
 import 'package:she_inspection_mobile/screens/incident/incident_list_screen.dart';
+import 'package:she_inspection_mobile/screens/inspection/fire_extinguisher_create_screen.dart';
+import 'package:she_inspection_mobile/screens/inspection/fire_extinguisher_screen.dart';
 import 'package:she_inspection_mobile/screens/inspection/fire_hydrant_create_flow.dart';
 import 'package:she_inspection_mobile/screens/inspection/fire_hydrant_screen.dart';
 import 'package:she_inspection_mobile/services/api_service.dart';
@@ -202,6 +204,117 @@ void main() {
     expect(find.text('NO'), findsNWidgets(6));
     expect(find.text('Notes'), findsNothing);
   });
+
+  testWidgets('Fire Extinguisher List membuka detail dengan aksi Edit',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final api = _FakeFireExtinguisherApiService();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ApiService>.value(value: api),
+          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        ],
+        child: const MaterialApp(home: FireExtinguisherScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('FE-TEST-001'), findsOneWidget);
+    expect(find.text('8 - Area APAR'), findsOneWidget);
+    expect(find.text('2026-07-23'), findsOneWidget);
+
+    await tester.tap(find.text('8 - Area APAR'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('APAR-101'), findsOneWidget);
+    expect(find.text('DC - SP - 9 Kg'), findsOneWidget);
+    expect(find.text('Pressure'), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit Fire Extinguisher'), findsOneWidget);
+    expect(find.text('Reference Number'), findsOneWidget);
+    expect(find.text('APAR Number'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(api.updateCalls, 1);
+
+    await tester.longPress(find.text('8 - Area APAR'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete Fire Extinguisher?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+    expect(api.deleteCalls, 1);
+  });
+
+  testWidgets('Form awal Fire Extinguisher mempertahankan Scan QR di awal',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<ApiService>.value(
+        value: _FakeFireExtinguisherApiService(),
+        child: const MaterialApp(home: FireExtinguisherCreateScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inspection Date'), findsOneWidget);
+    expect(find.text('Location'), findsOneWidget);
+    expect(find.text('Scan QR Code'), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<int>), findsOneWidget);
+
+    await tester.tap(find.text('Scan QR Code'));
+    await tester.pump();
+    expect(find.text('Pilih lokasi APAR terlebih dahulu.'), findsOneWidget);
+  });
+
+  testWidgets('QR Fire Extinguisher mengisi detail APAR otomatis',
+      (WidgetTester tester) async {
+    final api = _FakeFireExtinguisherApiService();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ApiService>.value(value: api),
+          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        ],
+        child: const MaterialApp(
+          home: FireExtinguisherQrFormScreen(
+            inspectionDate: '2026-07-23',
+            locationId: 8,
+            locationName: 'Area APAR',
+            scannedQr: 'POINT-101-TEST',
+            point: {
+              'id': 101,
+              'name_point': 'APAR-101',
+              'ket1': 'DC - SP - 9 Kg',
+              'ket2': 'Gedung A dekat pintu utama',
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fire Extinguisher Detail'), findsOneWidget);
+    expect(find.text('QR Scanned'), findsOneWidget);
+    expect(find.text('APAR-101'), findsOneWidget);
+    expect(find.text('DC - SP - 9 Kg'), findsOneWidget);
+    expect(find.text('Gedung A dekat pintu utama'), findsOneWidget);
+    expect(find.text('YES'), findsNWidgets(3));
+    expect(find.text('NO'), findsNWidgets(3));
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(api.createCalls, 1);
+  });
 }
 
 class _FakeApiService extends ApiService {
@@ -274,4 +387,77 @@ class _FakeApiService extends ApiService {
   Future<List<dynamic>> getIncidentTypes() async => [
         {'id': 1, 'name': 'Unsafe Condition', 'is_active': true},
       ];
+}
+
+class _FakeFireExtinguisherApiService extends _FakeApiService {
+  int createCalls = 0;
+  int updateCalls = 0;
+  int deleteCalls = 0;
+
+  @override
+  Future<List<dynamic>> getFireExtinguishers() async => [
+        {
+          'id': 3,
+          'reference_no': 'FE-TEST-001',
+          'inspection_date': '2026-07-23',
+          'location_id': 8,
+          'inspector_id': 2,
+          'location': {'id_location': 8, 'name': 'Area APAR'},
+          'inspector': {'id': 2, 'name': 'APAR Inspector'},
+          'items': [
+            {
+              'id': 3,
+              'name': 'APAR-101',
+              'type': 'DC - SP - 9 Kg',
+              'location_detail': 'Gedung A dekat pintu utama',
+              'pressure_condition': true,
+              'seal_condition': true,
+              'nozzle_condition': false,
+              'remark': 'Periksa nozzle',
+            },
+          ],
+        },
+      ];
+
+  @override
+  Future<Map<String, dynamic>> getFireExtinguisher(int id) async {
+    final inspections = await getFireExtinguishers();
+    return Map<String, dynamic>.from(inspections.first as Map);
+  }
+
+  @override
+  Future<List<dynamic>> getPoints() async => [
+        {
+          'id': 101,
+          'name_point': 'APAR-101',
+          'ket1': 'DC - SP - 9 Kg',
+          'ket2': 'Gedung A dekat pintu utama',
+          'qr_code': 'POINT-101-TEST',
+        },
+      ];
+
+  @override
+  Future<List<dynamic>> getFireExtinguisherLocations() async => [
+        {'id_location': 8, 'name': 'Area APAR'},
+      ];
+
+  @override
+  Future<Map<String, dynamic>> createFireExtinguisher(
+      Map<String, dynamic> data) async {
+    createCalls++;
+    return {'data': data};
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateFireExtinguisher(
+      int id, Map<String, dynamic> data) async {
+    updateCalls++;
+    return {'data': data};
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteFireExtinguisher(int id) async {
+    deleteCalls++;
+    return {'message': 'Deleted'};
+  }
 }
