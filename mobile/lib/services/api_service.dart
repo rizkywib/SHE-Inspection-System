@@ -147,6 +147,30 @@ class ApiService extends ChangeNotifier {
     });
   }
 
+  Future<http.Response> _postMultipartFilesWithFallback(
+    String path,
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) {
+    return _requestWithFallback((candidate) async {
+      final request = http.MultipartRequest('POST', _apiUri(candidate, path));
+      request.headers.addAll({
+        'Accept': 'application/json',
+        if (_token != null) 'Authorization': 'Bearer $_token',
+      });
+      request.fields.addAll(fields);
+      for (final entry in files.entries) {
+        final file = entry.value;
+        if (file != null) {
+          request.files.add(
+            await http.MultipartFile.fromPath(entry.key, file.path),
+          );
+        }
+      }
+      return http.Response.fromStream(await request.send());
+    });
+  }
+
   List<dynamic> _dataList(http.Response response) {
     if (response.statusCode >= 400) {
       throw Exception(_errorMessage(response));
@@ -385,11 +409,202 @@ class ApiService extends ChangeNotifier {
 
   // ES/EW
   Future<List<dynamic>> getEsEw() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/es-ew'),
-      headers: headers,
+    final response = await _getWithFallback('/es-ew');
+    return _dataList(response);
+  }
+
+  Future<Map<String, dynamic>> getEsEwInspection(int id) async {
+    final response = await _getWithFallback('/es-ew/$id');
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    final body = jsonDecode(response.body);
+    return Map<String, dynamic>.from(body['data'] ?? {});
+  }
+
+  Future<Map<String, dynamic>> getEsEwMasterData() async {
+    final response = await _getWithFallback('/es-ew/master-data');
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> createEsEw(
+    Map<String, String> fields, {
+    File? eyeWashPhoto,
+    File? emergencyShowerPhoto,
+  }) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/es-ew',
+      fields,
+      {
+        'items[0][photo_before]': eyeWashPhoto,
+        'items[0][photo_after]': emergencyShowerPhoto,
+      },
     );
-    return jsonDecode(response.body)['data'] ?? [];
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> updateEsEw(
+    int id,
+    Map<String, String> fields, {
+    File? eyeWashPhoto,
+    File? emergencyShowerPhoto,
+  }) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/es-ew/$id',
+      {...fields, '_method': 'PUT'},
+      {
+        'items[0][photo_before]': eyeWashPhoto,
+        'items[0][photo_after]': emergencyShowerPhoto,
+      },
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> deleteEsEw(int id) async {
+    final response = await _deleteWithFallback('/es-ew/$id');
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  // Permit Matrix / Safe Work Permit Inspection
+  Future<List<dynamic>> getPermitMatrix() async {
+    final response = await _getWithFallback(
+      '/safe-work-permit-inspections?per_page=100',
+    );
+    return _dataList(response);
+  }
+
+  Future<Map<String, dynamic>> getPermitMatrixInspection(int id) async {
+    final response =
+        await _getWithFallback('/safe-work-permit-inspections/$id');
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    final body = jsonDecode(response.body);
+    return Map<String, dynamic>.from(body['data'] ?? {});
+  }
+
+  Future<Map<String, dynamic>> getPermitMatrixMasterData() async {
+    final response = await _getWithFallback(
+      '/safe-work-permit-inspections/master-data',
+    );
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> createPermitMatrix(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _postJsonWithFallback(
+      '/safe-work-permit-inspections',
+      data,
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> updatePermitMatrix(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _putJsonWithFallback(
+      '/safe-work-permit-inspections/$id',
+      data,
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> deletePermitMatrix(int id) async {
+    final response =
+        await _deleteWithFallback('/safe-work-permit-inspections/$id');
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  // Safety Talk / Training On Site
+  Future<List<dynamic>> getSafetyTalkTrainings() async {
+    final response = await _getWithFallback(
+      '/safety-talk-trainings?per_page=100',
+    );
+    return _dataList(response);
+  }
+
+  Future<Map<String, dynamic>> getSafetyTalkTraining(int id) async {
+    final response = await _getWithFallback('/safety-talk-trainings/$id');
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    final body = jsonDecode(response.body);
+    return Map<String, dynamic>.from(body['data'] ?? {});
+  }
+
+  Future<Map<String, dynamic>> getSafetyTalkMasterData() async {
+    final response = await _getWithFallback(
+      '/safety-talk-trainings/master-data',
+    );
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> createSafetyTalkTraining(
+    Map<String, String> fields,
+    File activityPhoto,
+  ) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/safety-talk-trainings',
+      fields,
+      {'activity_photo': activityPhoto},
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> updateSafetyTalkTraining(
+    int id,
+    Map<String, String> fields, {
+    File? activityPhoto,
+  }) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/safety-talk-trainings/$id',
+      {...fields, '_method': 'PUT'},
+      {'activity_photo': activityPhoto},
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> deleteSafetyTalkTraining(int id) async {
+    final response = await _deleteWithFallback('/safety-talk-trainings/$id');
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
   // Incidents

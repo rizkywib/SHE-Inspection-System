@@ -134,6 +134,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
+  int get _followUpCount => _inspections
+      .where((item) => item.status == 'new' || item.status == 'reported')
+      .length;
+
+  int get _completedCount => _inspections
+      .where((item) =>
+          item.status == 'completed' ||
+          item.status == 'signed' ||
+          item.status == 'closed')
+      .length;
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -142,145 +153,263 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inspections'),
+        title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh dashboard',
+            onPressed: _loadInspections,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
       drawer: _buildDrawer(context, user),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: 42,
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (_) => setState(() {}),
-                      textAlignVertical: TextAlignVertical.center,
-                      decoration: InputDecoration(
-                        hintText: 'Search inspections',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchController.text.isEmpty
-                            ? null
-                            : IconButton(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                                icon: const Icon(Icons.close, size: 18),
-                                tooltip: 'Clear search',
+        child: RefreshIndicator(
+          onRefresh: _loadInspections,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _WelcomeCard(userName: user?['name']?.toString()),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SummaryCard(
+                              label: 'Total Data',
+                              value: _inspections.length,
+                              icon: Icons.folder_copy_outlined,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _SummaryCard(
+                              label: 'Tindak Lanjut',
+                              value: _followUpCount,
+                              icon: Icons.pending_actions_outlined,
+                              color: const Color(0xFFB66A13),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _SummaryCard(
+                              label: 'Selesai',
+                              value: _completedCount,
+                              icon: Icons.task_alt_outlined,
+                              color: const Color(0xFF238653),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+                      const _SectionHeading(
+                        title: 'Akses Cepat',
+                        subtitle: 'Buka modul inspeksi dengan satu sentuhan',
+                      ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns = constraints.maxWidth >= 600 ? 7 : 4;
+                          return GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: columns,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 0.86,
+                            children: [
+                              _QuickAction(
+                                label: 'Hydrant',
+                                icon: Icons.water_damage_outlined,
+                                color: const Color(0xFF145F3A),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/fire-hydrant',
+                                ),
                               ),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        contentPadding: EdgeInsets.zero,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.border),
+                              _QuickAction(
+                                label: 'APAR',
+                                icon: Icons.fire_extinguisher,
+                                color: const Color(0xFF177245),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/fire-extinguisher',
+                                ),
+                              ),
+                              _QuickAction(
+                                label: 'Fire Alarm',
+                                icon: Icons.notifications_active_outlined,
+                                color: const Color(0xFF238653),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/fire-alarm',
+                                ),
+                              ),
+                              _QuickAction(
+                                label: 'ES/EW',
+                                icon: Icons.shower_outlined,
+                                color: const Color(0xFF329566),
+                                onTap: () =>
+                                    Navigator.pushNamed(context, '/es-ew'),
+                              ),
+                              _QuickAction(
+                                label: 'Permit',
+                                icon: Icons.fact_check_outlined,
+                                color: const Color(0xFF3B7B5C),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/permit-matrix',
+                                ),
+                              ),
+                              _QuickAction(
+                                label: 'Safety Talk',
+                                icon: Icons.record_voice_over_outlined,
+                                color: const Color(0xFF4A8969),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/safety-talk-training',
+                                ),
+                              ),
+                              _QuickAction(
+                                label: 'Inspection',
+                                icon: Icons.assignment_outlined,
+                                color: const Color(0xFF58A978),
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/incidents',
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      const _SectionHeading(
+                        title: 'Aktivitas Terbaru',
+                        subtitle: 'Ringkasan inspeksi dari seluruh modul',
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 46,
+                        child: TextField(
+                          key: const ValueKey('dashboard_search'),
+                          controller: _searchController,
+                          onChanged: (_) => setState(() {}),
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: InputDecoration(
+                            hintText: 'Cari inspector atau remark',
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: _searchController.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.close, size: 18),
+                                    tooltip: 'Hapus pencarian',
+                                  ),
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _StatusFilterChip(
+                              label: 'Semua',
+                              selected: _selectedStatus == 'all',
+                              onTap: () =>
+                                  setState(() => _selectedStatus = 'all'),
+                            ),
+                            _StatusFilterChip(
+                              label: 'Baru',
+                              selected: _selectedStatus == 'new',
+                              onTap: () =>
+                                  setState(() => _selectedStatus = 'new'),
+                            ),
+                            _StatusFilterChip(
+                              label: 'Selesai',
+                              selected: _selectedStatus == 'completed',
+                              onTap: () => setState(
+                                () => _selectedStatus = 'completed',
+                              ),
+                            ),
+                            _StatusFilterChip(
+                              label: 'Signed',
+                              selected: _selectedStatus == 'signed',
+                              onTap: () =>
+                                  setState(() => _selectedStatus = 'signed'),
+                            ),
+                            _StatusFilterChip(
+                              label: 'Open',
+                              selected: _selectedStatus == 'reported',
+                              onTap: () => setState(
+                                () => _selectedStatus = 'reported',
+                              ),
+                            ),
+                            _StatusFilterChip(
+                              label: 'Close',
+                              selected: _selectedStatus == 'closed',
+                              onTap: () =>
+                                  setState(() => _selectedStatus = 'closed'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _CompactListSummary(
+                        shown: filtered.length,
+                        total: _inspections.length,
+                        isLoading: _isLoading,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _StatusFilterChip(
-                          label: 'All',
-                          selected: _selectedStatus == 'all',
-                          onTap: () => setState(() => _selectedStatus = 'all'),
-                        ),
-                        _StatusFilterChip(
-                          label: 'New',
-                          selected: _selectedStatus == 'new',
-                          onTap: () => setState(() => _selectedStatus = 'new'),
-                        ),
-                        _StatusFilterChip(
-                          label: 'Completed',
-                          selected: _selectedStatus == 'completed',
-                          onTap: () =>
-                              setState(() => _selectedStatus = 'completed'),
-                        ),
-                        _StatusFilterChip(
-                          label: 'Signed',
-                          selected: _selectedStatus == 'signed',
-                          onTap: () =>
-                              setState(() => _selectedStatus = 'signed'),
-                        ),
-                        _StatusFilterChip(
-                          label: 'Open',
-                          selected: _selectedStatus == 'reported',
-                          onTap: () =>
-                              setState(() => _selectedStatus = 'reported'),
-                        ),
-                        _StatusFilterChip(
-                          label: 'Close',
-                          selected: _selectedStatus == 'closed',
-                          onTap: () =>
-                              setState(() => _selectedStatus = 'closed'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  _CompactListSummary(
-                    shown: filtered.length,
-                    total: _inspections.length,
-                    isLoading: _isLoading,
-                  ),
-                ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? _ErrorState(message: _error!, onRetry: _loadInspections)
-                      : RefreshIndicator(
-                          onRefresh: _loadInspections,
-                          child: filtered.isEmpty
-                              ? ListView(
-                                  padding: const EdgeInsets.all(24),
-                                  children: const [
-                                    SizedBox(height: 96),
-                                    Icon(Icons.assignment_outlined,
-                                        size: 56, color: Colors.black38),
-                                    SizedBox(height: 12),
-                                    Center(
-                                      child: Text(
-                                        'No inspections found',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : ListView.separated(
-                                  padding: EdgeInsets.zero,
-                                  itemCount: filtered.length,
-                                  separatorBuilder: (_, __) => const Divider(
-                                    height: 1,
-                                    indent: 12,
-                                    endIndent: 12,
-                                  ),
-                                  itemBuilder: (context, index) {
-                                    final item = filtered[index];
-                                    return _InspectionListTile(
-                                      item: item,
-                                      onTap: () => _showInspectionDetail(item),
-                                    );
-                                  },
-                                ),
-                        ),
-            ),
-          ],
+              if (_isLoading && _inspections.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _ErrorState(
+                    message: _error!,
+                    onRetry: _loadInspections,
+                  ),
+                )
+              else if (filtered.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _EmptyDashboardState(),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverList.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final item = filtered[index];
+                      return _InspectionListTile(
+                        item: item,
+                        onTap: () => _showInspectionDetail(item),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -560,6 +689,22 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.fact_check_outlined),
+            title: const Text('Permit Matrix'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/permit-matrix');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.record_voice_over_outlined),
+            title: const Text('Safety Talk/Training'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/safety-talk-training');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.assignment_outlined),
             title: const Text('Inspection'),
             onTap: () {
@@ -585,6 +730,263 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _WelcomeCard extends StatelessWidget {
+  const _WelcomeCard({this.userName});
+
+  final String? userName;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = userName?.trim();
+    final displayName = name == null || name.isEmpty
+        ? 'SHE Inspection'
+        : name.split(RegExp(r'\s+')).first;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primaryDark,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_greetingFor(DateTime.now().hour)}, $displayName',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Pantau aktivitas keselamatan kerja hari ini.',
+                  style: TextStyle(color: Colors.white70, height: 1.35),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 15,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      _todayLabel(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.health_and_safety_outlined,
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 112),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            '$value',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+          ),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              height: 1.15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.black54,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 21),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyDashboardState extends StatelessWidget {
+  const _EmptyDashboardState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 72),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off_outlined, size: 50, color: Colors.black38),
+          SizedBox(height: 12),
+          Text(
+            'Aktivitas tidak ditemukan',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Coba ubah kata pencarian atau filter status.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black54),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CompactListSummary extends StatelessWidget {
   const _CompactListSummary({
     required this.shown,
@@ -601,7 +1003,7 @@ class _CompactListSummary extends StatelessWidget {
     return Row(
       children: [
         Text(
-          '$shown of $total inspections',
+          '$shown dari $total aktivitas',
           style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
         if (isLoading) ...[
@@ -636,13 +1038,17 @@ class _StatusFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.only(right: 7),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
         visualDensity: VisualDensity.compact,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        labelStyle: const TextStyle(fontSize: 12),
+        labelStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          color: selected ? AppColors.primaryDark : Colors.black54,
+        ),
         onSelected: (_) => onTap(),
       ),
     );
@@ -657,91 +1063,150 @@ class _InspectionListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 0,
       color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: item.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(item.icon, color: item.color, size: 20),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Inspector / Pelapor',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                        Text(
+                          item.type,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          item.inspector.isEmpty ? '-' : item.inspector,
+                          item.dateText.isEmpty ? '-' : item.dateText,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Tanggal',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        item.dateText.isEmpty ? '-' : item.dateText,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  _StatusBadge(status: item.status),
+                  const SizedBox(width: 3),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: Colors.black38,
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              const Text(
-                'Remark',
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 11),
+                child: Divider(),
               ),
-              const SizedBox(height: 3),
-              Text(
-                item.remark.isEmpty ? '-' : item.remark,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                  height: 1.35,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _ActivityField(
+                      label: 'Inspector / Pelapor',
+                      value: item.inspector,
+                      icon: Icons.person_outline,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ActivityField(
+                      label: 'Remark',
+                      value: item.remark,
+                      icon: Icons.notes_outlined,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ActivityField extends StatelessWidget {
+  const _ActivityField({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.black45),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value.isEmpty ? '-' : value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1178,4 +1643,40 @@ String _formatValue(dynamic value) {
     return value == 1 ? 'Yes' : 'No';
   }
   return value.toString();
+}
+
+String _greetingFor(int hour) {
+  if (hour < 11) return 'Selamat pagi';
+  if (hour < 15) return 'Selamat siang';
+  if (hour < 18) return 'Selamat sore';
+  return 'Selamat malam';
+}
+
+String _todayLabel() {
+  const days = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  const months = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+  final today = DateTime.now();
+  return '${days[today.weekday - 1]}, ${today.day} '
+      '${months[today.month - 1]} ${today.year}';
 }

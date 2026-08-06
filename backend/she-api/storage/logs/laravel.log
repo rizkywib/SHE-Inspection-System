@@ -9605,3 +9605,29 @@
 #20 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/artisan(11): Illuminate/Foundation/Console/Kernel->handle(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
 #21 {main}
 "} 
+[2026-08-05 14:43:53] local.ERROR: Writing to C:/Users/rizkywib/AppData/Roaming/PsySH/psysh_history is not allowed. {"exception":"[object] (ErrorException(code: 0): Writing to C:/Users/rizkywib/AppData/Roaming/PsySH/psysh_history is not allowed. at D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/ConfigPaths.php:480)
+[stacktrace]
+#0 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(258): Illuminate/Foundation/Bootstrap/HandleExceptions->handleError(1024, 'Writing to C:/U...', 'D://2.ANDROID//3....', 480)
+#1 [internal function]: Illuminate/Foundation/Bootstrap/HandleExceptions->Illuminate/Foundation/Bootstrap/{closure}(1024, 'Writing to C:/U...', 'D://2.ANDROID//3....', 480)
+#2 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/ConfigPaths.php(480): trigger_error('Writing to C:/U...', 1024)
+#3 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/Configuration.php(1068): Psy/ConfigPaths::touchFileWithMkdir('C:/Users/rizkyw...')
+#4 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/Configuration.php(1106): Psy/Configuration->setHistoryFile('C:/Users/rizkyw...')
+#5 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/Configuration.php(1285): Psy/Configuration->getHistoryFile()
+#6 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/Shell.php(192): Psy/Configuration->getReadline()
+#7 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/psy/psysh/src/Shell.php(2213): Psy/Shell->boot()
+#8 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/tinker/src/Console/TinkerCommand.php(77): Psy/Shell->execute('dump(DB::table(...')
+#9 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel/Tinker/Console/TinkerCommand->handle()
+#10 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate/Container/BoundMethod::Illuminate/Container/{closure}()
+#11 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(95): Illuminate/Container/Util::unwrapIfClosure(Object(Closure))
+#12 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate/Container/BoundMethod::callBoundMethod(Object(Illuminate/Foundation/Application), Array, Object(Closure))
+#13 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Container/Container.php(696): Illuminate/Container/BoundMethod::call(Object(Illuminate/Foundation/Application), Array, Array, NULL)
+#14 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Console/Command.php(213): Illuminate/Container/Container->call(Array)
+#15 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/symfony/console/Command/Command.php(341): Illuminate/Console/Command->execute(Object(Symfony/Component/Console/Input/ArgvInput), Object(Illuminate/Console/OutputStyle))
+#16 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Console/Command.php(182): Symfony/Component/Console/Command/Command->run(Object(Symfony/Component/Console/Input/ArgvInput), Object(Illuminate/Console/OutputStyle))
+#17 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/symfony/console/Application.php(1117): Illuminate/Console/Command->run(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#18 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/symfony/console/Application.php(356): Symfony/Component/Console/Application->doRunCommand(Object(Laravel/Tinker/Console/TinkerCommand), Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#19 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/symfony/console/Application.php(195): Symfony/Component/Console/Application->doRun(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#20 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony/Component/Console/Application->run(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#21 D:/2.ANDROID/3.FlutterVSCode/projects/SHE Inspection System/backend/she-api/artisan(11): Illuminate/Foundation/Console/Kernel->handle(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#22 {main}
+"} 

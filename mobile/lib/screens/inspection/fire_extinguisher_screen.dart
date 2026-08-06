@@ -664,8 +664,6 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                         itemBuilder: (context, index) {
                           final inspection = _mapFrom(_inspections[index]);
                           return _ExtinguisherListCard(
-                            reference:
-                                inspection['reference_no']?.toString() ?? '',
                             location: _relationName(
                               inspection['location'],
                               inspection['location_id'],
@@ -690,7 +688,6 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
 
 class _ExtinguisherListCard extends StatelessWidget {
   const _ExtinguisherListCard({
-    required this.reference,
     required this.location,
     required this.inspector,
     required this.inspectionDate,
@@ -698,7 +695,6 @@ class _ExtinguisherListCard extends StatelessWidget {
     required this.onLongPress,
   });
 
-  final String reference;
   final String location;
   final String inspector;
   final String inspectionDate;
@@ -718,15 +714,6 @@ class _ExtinguisherListCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                reference.isEmpty ? 'Fire Extinguisher' : reference,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
               const Text(
                 'Location',
                 style: TextStyle(
