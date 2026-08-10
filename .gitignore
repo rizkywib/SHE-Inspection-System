@@ -16,9 +16,11 @@ composer-setup.php
 **/.dart_tool/
 **/build/
 **/.gradle/
+**/.gradle.*/
 **/.idea/
 **/.vscode/
 platform-tools/
+she-inspection-system/
 *.apk
 *.aab
 *.zip
