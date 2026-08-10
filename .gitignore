@@ -1,6 +1,6 @@
 *.env
 *.log
-.pem
+*.pem
 .env
 **/.env
 backend/she-api/.env
@@ -9,3 +9,29 @@ backend/she-api/storage/framework/sessions/*
 backend/she-api/storage/framework/views/*
 backend/she-api/public/images/*
 /flutter/
+composer-setup.php
+
+# Local and generated dependencies/artifacts
+**/vendor/
+**/.dart_tool/
+**/build/
+**/.gradle/
+**/.idea/
+**/.vscode/
+platform-tools/
+*.apk
+*.aab
+*.zip
+
+# Runtime and local server output
+/*.log
+server*.log
+backend/she-api/storage/framework/cache/*
+backend/she-api/storage/framework/testing/*
+backend/she-api/bootstrap/cache/*
+
+# Local database and certificate material
+*.sql
+*.key
+*.p12
+*.jks

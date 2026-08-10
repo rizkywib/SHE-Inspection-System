@@ -4,155 +4,170 @@
 @section('nav-dashboard', 'active')
 
 @section('content')
-<div class="p-4 md:p-8">
-    <div class="max-w-7xl mx-auto space-y-7">
-        <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">SHE Overview</p>
-                <h1 class="mt-2 text-3xl font-bold text-slate-900">Dashboard</h1>
-                <p class="mt-1 text-slate-500">Ringkasan inspection dan aktivitas keselamatan terbaru.</p>
+<div class="min-h-full bg-[#f5f8f6] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+    <div class="mx-auto max-w-7xl space-y-6">
+        <section class="relative overflow-hidden rounded-3xl bg-[#0e5735] px-5 py-6 text-white shadow-xl shadow-emerald-950/10 sm:px-8 sm:py-8" aria-labelledby="dashboardTitle">
+            <div class="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border-[28px] border-white/10"></div>
+            <div class="pointer-events-none absolute -bottom-28 right-28 h-48 w-48 rounded-full border-[20px] border-emerald-300/10"></div>
+            <div class="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-2xl">
+                    <div class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10"><i class="fas fa-shield-heart"></i></span>
+                        SHE Overview
+                    </div>
+                    <h1 id="dashboardTitle" class="text-3xl font-bold tracking-tight sm:text-4xl">
+                        Selamat datang, <span id="dashboardUserName">User</span>
+                    </h1>
+                    <p class="mt-3 max-w-xl text-sm leading-6 text-emerald-50/80 sm:text-base">
+                        Pantau kondisi keselamatan kerja dan tindak lanjut inspection dari satu tempat.
+                    </p>
+                    <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-emerald-100/80">
+                        <span><i class="far fa-calendar mr-2"></i><span id="dashboardToday">-</span></span>
+                        <span><i class="fas fa-user-shield mr-2"></i><span id="dashboardUserRole">-</span></span>
+                        <span><i class="fas fa-sync-alt mr-2"></i><span id="dashboardUpdatedAt">Memuat data terbaru...</span></span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button id="refreshDashboardButton" type="button" onclick="loadDashboard()"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/60">
+                        <i id="refreshDashboardIcon" class="fas fa-rotate-right"></i>
+                        <span>Perbarui</span>
+                    </button>
+                    <a href="/dashboard/inspections" class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#0e5735] shadow-sm hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-white/60">
+                        <i class="fas fa-plus"></i>
+                        Inspection Baru
+                    </a>
+                </div>
             </div>
-            <p id="dashboardUpdatedAt" class="text-xs text-slate-400">Memuat data terbaru...</p>
-        </header>
+        </section>
 
-        <div id="dashboardError" class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"></div>
+        <div id="dashboardError" class="hidden flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between" role="alert">
+            <span id="dashboardErrorMessage"></span>
+            <button type="button" onclick="loadDashboard()" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-red-100 px-3 py-2 font-semibold text-red-700 hover:bg-red-200">
+                <i class="fas fa-rotate-right"></i> Coba lagi
+            </button>
+        </div>
 
         <section aria-labelledby="summaryHeading">
-            <h2 id="summaryHeading" class="sr-only">Ringkasan data inspection</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                <article class="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Total Inspection</p>
-                            <p id="totalInspectionCount" class="mt-2 text-3xl font-bold text-slate-900">0</p>
-                            <p class="mt-1 text-xs text-slate-400">Menu Inspection</p>
-                        </div>
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                            <i class="fas fa-clipboard-check"></i>
-                        </span>
-                    </div>
+            <div class="mb-3 flex items-end justify-between gap-4">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#177245]">Ringkasan utama</p>
+                    <h2 id="summaryHeading" class="mt-1 text-xl font-bold text-slate-900">Kondisi SHE hari ini</h2>
+                </div>
+                <span class="hidden text-xs text-slate-400 sm:block">Data dari seluruh modul</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                <article class="stat-card group rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-emerald-50 text-[#177245]"><i class="fas fa-clipboard-check"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">All</span></div>
+                    <p class="mt-5 text-2xl font-extrabold text-slate-900" id="totalInspectionCount">0</p>
+                    <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Total inspection</p>
                 </article>
-
-                <article class="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Inspection Open</p>
-                            <p id="openInspectionCount" class="mt-2 text-3xl font-bold text-slate-900">0</p>
-                            <p class="mt-1 text-xs text-slate-400">Memerlukan tindak lanjut</p>
-                        </div>
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
-                            <i class="fas fa-hourglass-half"></i>
-                        </span>
-                    </div>
+                <article class="stat-card group rounded-2xl border border-amber-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-amber-50 text-amber-600"><i class="fas fa-hourglass-half"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-amber-600">Action</span></div>
+                    <p class="mt-5 text-2xl font-extrabold text-slate-900" id="openInspectionCount">0</p>
+                    <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Perlu tindak lanjut</p>
                 </article>
-
-                <article class="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Fire Hydrant</p>
-                            <p id="hydrantCount" class="mt-2 text-3xl font-bold text-slate-900">0</p>
-                            <p class="mt-1 text-xs text-slate-400">Inspection tersimpan</p>
-                        </div>
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm">
-                            <i class="fas fa-fire-extinguisher"></i>
-                        </span>
-                    </div>
+                <article class="stat-card group rounded-2xl border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-sky-50 text-sky-600"><i class="fas fa-faucet-drip"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Asset</span></div>
+                    <p class="mt-5 text-2xl font-extrabold text-slate-900" id="hydrantCount">0</p>
+                    <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Fire hydrant</p>
                 </article>
-
-                <article class="rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50 to-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Fire Extinguisher</p>
-                            <p id="extinguisherCount" class="mt-2 text-3xl font-bold text-slate-900">0</p>
-                            <p class="mt-1 text-xs text-slate-400">Inspection tersimpan</p>
-                        </div>
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-500 text-white shadow-sm">
-                            <i class="fas fa-fire"></i>
-                        </span>
-                    </div>
+                <article class="stat-card group rounded-2xl border border-rose-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-rose-50 text-rose-600"><i class="fas fa-fire-extinguisher"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Asset</span></div>
+                    <p class="mt-5 text-2xl font-extrabold text-slate-900" id="extinguisherCount">0</p>
+                    <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Fire extinguisher</p>
                 </article>
-
-                <article class="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Inspection Points</p>
-                            <p id="pointCount" class="mt-2 text-3xl font-bold text-slate-900">0</p>
-                            <p class="mt-1 text-xs text-slate-400">Point aktif</p>
-                        </div>
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
-                            <i class="fas fa-location-dot"></i>
-                        </span>
-                    </div>
+                <article class="stat-card group rounded-2xl border border-violet-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-violet-50 text-violet-600"><i class="fas fa-location-dot"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Master</span></div>
+                    <p class="mt-5 text-2xl font-extrabold text-slate-900" id="pointCount">0</p>
+                    <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Active points</p>
                 </article>
-
-                <article class="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Active Inspectors</p>
-                            <p id="inspectorCount" class="mt-2 text-3xl font-bold text-slate-900">0</p>
-                            <p class="mt-1 text-xs text-slate-400">User role inspector</p>
-                        </div>
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
-                            <i class="fas fa-user-shield"></i>
-                        </span>
-                    </div>
+                <article class="stat-card group rounded-2xl border border-teal-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-teal-50 text-teal-600"><i class="fas fa-user-shield"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">People</span></div>
+                    <p class="mt-5 text-2xl font-extrabold text-slate-900" id="inspectorCount">0</p>
+                    <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Active inspectors</p>
                 </article>
             </div>
         </section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <section class="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-labelledby="chartHeading">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 px-5 py-5 md:px-6">
-                    <div>
-                        <h2 id="chartHeading" class="text-lg font-bold text-slate-900">Inspection Berdasarkan Incident Type</h2>
-                        <p class="mt-1 text-sm text-slate-500">Distribusi jumlah data dari menu Inspection.</p>
-                    </div>
-                    <div class="inline-flex items-center gap-2 self-start rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
-                        <span id="chartTotalCount">0</span>
-                        <span>Inspection</span>
-                    </div>
+        <section aria-labelledby="quickActionsHeading">
+            <div class="mb-3">
+                <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#177245]">Akses cepat</p>
+                <h2 id="quickActionsHeading" class="mt-1 text-xl font-bold text-slate-900">Mulai dari sini</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <a href="/dashboard/inspections" class="quick-action border-blue-100 bg-blue-50/60 hover:border-blue-300 hover:bg-blue-50">
+                    <span class="bg-blue-600 text-white"><i class="fas fa-clipboard-check"></i></span><span><strong>Inspection</strong><small>Buat laporan baru</small></span><i class="fas fa-arrow-right ml-auto text-xs text-blue-500"></i>
+                </a>
+                <a href="/dashboard/fire-hydrants" class="quick-action border-sky-100 bg-sky-50/60 hover:border-sky-300 hover:bg-sky-50">
+                    <span class="bg-sky-600 text-white"><i class="fas fa-faucet-drip"></i></span><span><strong>Fire Hydrant</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-sky-500"></i>
+                </a>
+                <a href="/dashboard/fire-extinguishers#inspection-list" class="quick-action border-rose-100 bg-rose-50/60 hover:border-rose-300 hover:bg-rose-50">
+                    <span class="bg-rose-500 text-white"><i class="fas fa-fire-extinguisher"></i></span><span><strong>APAR</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-rose-500"></i>
+                </a>
+                <a href="/dashboard/permit-matrix" class="quick-action border-amber-100 bg-amber-50/60 hover:border-amber-300 hover:bg-amber-50">
+                    <span class="bg-amber-500 text-white"><i class="fas fa-file-signature"></i></span><span><strong>Permit Matrix</strong><small>Lihat permit kerja</small></span><i class="fas fa-arrow-right ml-auto text-xs text-amber-500"></i>
+                </a>
+            </div>
+        </section>
+
+        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
+            <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-labelledby="chartHeading">
+                <div class="flex flex-col gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-[#177245]">Distribusi data</p><h2 id="chartHeading" class="mt-1 text-lg font-bold text-slate-900">Inspection berdasarkan tipe</h2><p class="mt-1 text-sm text-slate-500">Perbandingan laporan menurut incident type.</p></div>
+                    <div class="rounded-xl bg-emerald-50 px-3 py-2 text-right"><p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Total laporan</p><p id="chartTotalCount" class="text-xl font-extrabold text-[#177245]">0</p></div>
                 </div>
-                <div id="incidentTypeChart" class="px-5 py-6 md:px-6" aria-label="Diagram lingkaran jumlah inspection berdasarkan Incident Type">
-                    <div class="space-y-5 animate-pulse" aria-hidden="true">
-                        <div class="h-12 rounded-xl bg-slate-100"></div>
-                        <div class="h-12 rounded-xl bg-slate-100"></div>
-                        <div class="h-12 rounded-xl bg-slate-100"></div>
-                    </div>
+                <div id="incidentTypeChart" class="px-5 py-6 sm:px-8" aria-label="Diagram jumlah inspection berdasarkan tipe">
+                    <div class="space-y-4 animate-pulse" aria-hidden="true"><div class="mx-auto h-52 w-52 rounded-full bg-slate-100"></div><div class="h-10 rounded-xl bg-slate-100"></div></div>
                 </div>
             </section>
 
-            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-labelledby="recentHeading">
-                <div class="border-b border-slate-100 px-5 py-5">
-                    <h2 id="recentHeading" class="text-lg font-bold text-slate-900">Inspection Terbaru</h2>
-                    <p class="mt-1 text-sm text-slate-500">Enam aktivitas terakhir.</p>
+            <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-labelledby="recentHeading">
+                <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-5">
+                    <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-[#177245]">Aktivitas</p><h2 id="recentHeading" class="mt-1 text-lg font-bold text-slate-900">Inspection terbaru</h2><p class="mt-1 text-sm text-slate-500">Enam laporan terakhir.</p></div>
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><i class="fas fa-clock-rotate-left"></i></span>
                 </div>
-                <div id="recentInspections" class="divide-y divide-slate-100">
-                    <p class="px-5 py-10 text-center text-sm text-slate-400">Memuat inspection...</p>
-                </div>
-                <a href="/dashboard/inspections" class="flex items-center justify-center gap-2 border-t border-slate-100 px-5 py-4 text-sm font-semibold text-blue-600 hover:bg-blue-50">
-                    Lihat Semua Inspection
-                    <i class="fas fa-arrow-right text-xs"></i>
-                </a>
+                <div id="recentInspections" class="divide-y divide-slate-100"><p class="px-5 py-10 text-center text-sm text-slate-400">Memuat inspection...</p></div>
+                <a href="/dashboard/inspections" class="flex items-center justify-center gap-2 border-t border-slate-100 px-5 py-4 text-sm font-bold text-[#177245] hover:bg-emerald-50">Lihat semua inspection <i class="fas fa-arrow-right text-xs"></i></a>
             </section>
         </div>
     </div>
 </div>
 
+<style>
+    .stat-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15, 81, 48, .09); }
+    .stat-icon { display: inline-flex; height: 2.5rem; width: 2.5rem; align-items: center; justify-content: center; border-radius: .8rem; font-size: 1rem; }
+    .quick-action { display: flex; min-height: 5.25rem; align-items: center; gap: .7rem; border-width: 1px; border-radius: 1rem; padding: .8rem; transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+    .quick-action:hover { transform: translateY(-2px); }
+    .quick-action > span:first-child { display: inline-flex; height: 2.35rem; width: 2.35rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: .7rem; font-size: .9rem; }
+    .quick-action strong, .quick-action small { display: block; }
+    .quick-action strong { color: #19382b; font-size: .78rem; line-height: 1.2; }
+    .quick-action small { margin-top: .25rem; color: #64748b; font-size: .68rem; line-height: 1.2; }
+    @media (prefers-reduced-motion: reduce) { .stat-card, .quick-action { transition: none; } .stat-card:hover, .quick-action:hover { transform: none; } }
+</style>
+
 <script>
 const dashboardToken = localStorage.getItem('token');
+const dashboardUser = JSON.parse(localStorage.getItem('user') || '{}');
 
 if (!dashboardToken) {
     window.location.href = '/';
 } else {
+    renderDashboardUser();
     loadDashboard();
+}
+
+function renderDashboardUser() {
+    const name = String(dashboardUser.name || dashboardUser.username || 'User').trim();
+    document.getElementById('dashboardUserName').textContent = name.split(/\s+/)[0];
+    document.getElementById('dashboardUserRole').textContent = String(dashboardUser.role || 'User').replaceAll('_', ' ');
+    document.getElementById('dashboardToday').textContent = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
 }
 
 async function dashboardRequest(path) {
     const response = await fetch(`/api/dashboard/${path}`, {
-        headers: {
-            'Authorization': `Bearer ${dashboardToken}`,
-            'Accept': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${dashboardToken}`, 'Accept': 'application/json' },
     });
 
     if (response.status === 401) {
@@ -167,24 +182,35 @@ async function dashboardRequest(path) {
 }
 
 async function loadDashboard() {
+    const button = document.getElementById('refreshDashboardButton');
+    const icon = document.getElementById('refreshDashboardIcon');
+    const error = document.getElementById('dashboardError');
+    button.disabled = true;
+    button.classList.add('cursor-wait', 'opacity-80');
+    icon.classList.add('fa-spin');
+    error.classList.add('hidden');
+
     try {
         const [stats, recent, summary] = await Promise.all([
             dashboardRequest('stats'),
             dashboardRequest('recent-inspections'),
             dashboardRequest('incident-summary'),
         ]);
-
-        renderStats(stats);
-        renderIncidentTypeChart(summary);
+        renderStats(stats || {});
+        renderIncidentTypeChart(summary || {});
         renderRecentInspections(recent);
         document.getElementById('dashboardUpdatedAt').textContent = `Diperbarui ${formatDateTime(new Date())}`;
-    } catch (error) {
-        const alert = document.getElementById('dashboardError');
-        alert.textContent = error.message || 'Data dashboard gagal dimuat.';
-        alert.classList.remove('hidden');
+    } catch (requestError) {
+        document.getElementById('dashboardErrorMessage').textContent = requestError.message || 'Data dashboard gagal dimuat.';
+        error.classList.remove('hidden');
+        error.classList.add('flex');
         document.getElementById('dashboardUpdatedAt').textContent = 'Data belum dapat diperbarui';
-        document.getElementById('incidentTypeChart').innerHTML = emptyState('Chart belum dapat dimuat.');
+        document.getElementById('incidentTypeChart').innerHTML = emptyState('Diagram belum dapat dimuat.');
         document.getElementById('recentInspections').innerHTML = emptyState('Inspection terbaru belum dapat dimuat.');
+    } finally {
+        button.disabled = false;
+        button.classList.remove('cursor-wait', 'opacity-80');
+        icon.classList.remove('fa-spin');
     }
 }
 
@@ -197,10 +223,7 @@ function renderStats(stats) {
         pointCount: stats.inspection_points,
         inspectorCount: stats.active_inspectors,
     };
-
-    Object.entries(mappings).forEach(([id, value]) => {
-        document.getElementById(id).textContent = formatNumber(value);
-    });
+    Object.entries(mappings).forEach(([id, value]) => { document.getElementById(id).textContent = formatNumber(value); });
 }
 
 function renderIncidentTypeChart(summary) {
@@ -208,15 +231,11 @@ function renderIncidentTypeChart(summary) {
     const types = Array.isArray(summary.types) ? summary.types : [];
     const total = Number(summary.total || 0);
     const displayedTotal = types.reduce((sum, item) => sum + Number(item.total || 0), 0);
-    const colors = [
-        '#2563eb', '#0891b2', '#059669', '#7c3aed', '#ea580c',
-        '#db2777', '#d97706', '#4f46e5', '#0d9488', '#dc2626',
-    ];
-
+    const colors = ['#177245', '#2563eb', '#0891b2', '#7c3aed', '#ea580c', '#db2777', '#d97706', '#0d9488'];
     document.getElementById('chartTotalCount').textContent = formatNumber(total);
 
-    if (types.length === 0 || displayedTotal <= 0) {
-        chart.innerHTML = emptyState('Belum ada data inspection untuk ditampilkan pada diagram lingkaran.');
+    if (!types.length || displayedTotal <= 0) {
+        chart.innerHTML = emptyState('Belum ada data inspection untuk ditampilkan.');
         return;
     }
 
@@ -226,45 +245,19 @@ function renderIncidentTypeChart(summary) {
         const percentage = (count / displayedTotal) * 100;
         const startAngle = currentAngle;
         currentAngle += (count / displayedTotal) * 360;
-
-        return {
-            name: item.name,
-            count,
-            percentage,
-            color: colors[index % colors.length],
-            startAngle,
-            endAngle: currentAngle,
-        };
+        return { name: item.name, count, percentage, color: colors[index % colors.length], startAngle, endAngle: currentAngle };
     });
-
-    const gradient = slices
-        .map(slice => `${slice.color} ${slice.startAngle.toFixed(2)}deg ${slice.endAngle.toFixed(2)}deg`)
-        .join(', ');
-    const accessibleSummary = slices
-        .map(slice => `${slice.name}: ${formatNumber(slice.count)} inspection (${formatPercentage(slice.percentage)})`)
-        .join(', ');
+    const gradient = slices.map(slice => `${slice.color} ${slice.startAngle.toFixed(2)}deg ${slice.endAngle.toFixed(2)}deg`).join(', ');
+    const accessibleSummary = slices.map(slice => `${slice.name}: ${formatNumber(slice.count)} inspection (${formatPercentage(slice.percentage)})`).join(', ');
 
     chart.innerHTML = `
-        <div class="grid items-center gap-8 lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)]">
-            <div class="mx-auto w-full max-w-xs">
-                <div
-                    class="aspect-square w-full rounded-full border-4 border-white shadow-lg ring-1 ring-slate-200"
-                    style="background:conic-gradient(${gradient})"
-                    role="img"
-                    aria-label="${escapeHtml(accessibleSummary)}"
-                ></div>
+        <div class="grid items-center gap-7 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
+            <div class="relative mx-auto aspect-square w-full max-w-[250px]">
+                <div class="absolute inset-0 rounded-full shadow-inner ring-1 ring-slate-200" style="background:conic-gradient(${gradient})" role="img" aria-label="${escapeHtml(accessibleSummary)}"></div>
+                <div class="absolute inset-[22%] flex flex-col items-center justify-center rounded-full bg-white text-center shadow-sm"><span class="text-2xl font-extrabold text-slate-900">${formatNumber(total)}</span><span class="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Inspection</span></div>
             </div>
-            <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1" aria-label="Legenda diagram lingkaran">
-                ${slices.map(slice => `
-                    <li class="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3">
-                        <span class="h-3.5 w-3.5 shrink-0 rounded-full" style="background:${slice.color}" aria-hidden="true"></span>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-medium text-slate-700" title="${escapeHtml(slice.name)}">${escapeHtml(slice.name)}</p>
-                            <p class="mt-0.5 text-xs text-slate-500">${formatPercentage(slice.percentage)} dari total</p>
-                        </div>
-                        <span class="shrink-0 text-sm font-bold text-slate-900">${formatNumber(slice.count)}</span>
-                    </li>
-                `).join('')}
+            <ul class="grid gap-2.5 sm:grid-cols-2 md:grid-cols-1" aria-label="Legenda diagram inspection">
+                ${slices.map(slice => `<li class="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5"><span class="h-3 w-3 shrink-0 rounded-full" style="background:${slice.color}" aria-hidden="true"></span><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-slate-700" title="${escapeHtml(slice.name)}">${escapeHtml(slice.name)}</p><p class="text-xs text-slate-400">${formatPercentage(slice.percentage)}</p></div><span class="text-sm font-extrabold text-slate-900">${formatNumber(slice.count)}</span></li>`).join('')}
             </ul>
         </div>`;
 }
@@ -272,86 +265,29 @@ function renderIncidentTypeChart(summary) {
 function renderRecentInspections(inspections) {
     const container = document.getElementById('recentInspections');
     const rows = Array.isArray(inspections) ? inspections : [];
-
-    if (rows.length === 0) {
-        container.innerHTML = emptyState('Belum ada data inspection.');
-        return;
-    }
-
+    if (!rows.length) { container.innerHTML = emptyState('Belum ada data inspection.'); return; }
     container.innerHTML = rows.map(item => `
-        <a href="/dashboard/inspections" class="block px-5 py-4 hover:bg-slate-50">
-            <div class="flex items-start gap-3">
-                <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                    <i class="fas fa-clipboard-check text-sm"></i>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <div class="flex items-start justify-between gap-2">
-                        <p class="truncate text-sm font-semibold text-slate-800">${escapeHtml(item.incident_type?.name || 'Inspection')}</p>
-                        ${statusBadge(item.status)}
-                    </div>
-                    <p class="mt-1 truncate text-xs text-slate-500">${escapeHtml(item.location_text || 'Lokasi belum diisi')}</p>
-                    <p class="mt-1 text-xs text-slate-400">${escapeHtml(formatInspectionDate(item.incident_date, item.incident_time))}</p>
-                </div>
-            </div>
-        </a>
-    `).join('');
+        <a href="/dashboard/inspections" class="block px-5 py-3.5 hover:bg-emerald-50/50">
+            <div class="flex items-start gap-3"><span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#177245]"><i class="fas fa-clipboard-check text-sm"></i></span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><p class="truncate text-sm font-bold text-slate-800">${escapeHtml(item.incident_type?.name || 'Inspection')}</p>${statusBadge(item.status)}</div><p class="mt-1 truncate text-xs text-slate-500"><i class="fas fa-location-dot mr-1 text-slate-400"></i>${escapeHtml(item.location_text || 'Lokasi belum diisi')}</p><p class="mt-1 text-xs text-slate-400">${escapeHtml(formatInspectionDate(item.incident_date, item.incident_time))}</p></div></div>
+        </a>`).join('');
 }
 
 function statusBadge(status) {
     const isClosed = ['close', 'closed'].includes(String(status || '').toLowerCase());
-    const label = isClosed ? 'Closed' : 'Open';
-    const classes = isClosed
-        ? 'bg-emerald-50 text-emerald-700'
-        : 'bg-amber-50 text-amber-700';
-    return `<span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${classes}">${label}</span>`;
+    return `<span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${isClosed ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${isClosed ? 'Closed' : 'Open'}</span>`;
 }
 
-function emptyState(message) {
-    return `<div class="px-5 py-10 text-center">
-        <i class="far fa-chart-bar mb-3 block text-3xl text-slate-300"></i>
-        <p class="text-sm text-slate-500">${escapeHtml(message)}</p>
-    </div>`;
-}
-
-function formatNumber(value) {
-    return new Intl.NumberFormat('id-ID').format(Number(value || 0));
-}
-
-function formatPercentage(value) {
-    return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(Number(value || 0))}%`;
-}
-
+function emptyState(message) { return `<div class="px-5 py-10 text-center"><i class="far fa-chart-bar mb-3 block text-3xl text-slate-300"></i><p class="text-sm text-slate-500">${escapeHtml(message)}</p></div>`; }
+function formatNumber(value) { return new Intl.NumberFormat('id-ID').format(Number(value || 0)); }
+function formatPercentage(value) { return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(Number(value || 0))}%`; }
 function formatInspectionDate(date, time) {
     if (!date) return '-';
-    const rawDate = String(date).slice(0, 10);
-    const rawTime = time ? String(time).slice(0, 5) : '';
+    const rawDate = String(date).slice(0, 10); const rawTime = time ? String(time).slice(0, 5) : '';
     const parsed = new Date(`${rawDate}T${rawTime || '00:00'}:00`);
     if (Number.isNaN(parsed.getTime())) return rawDate;
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        ...(rawTime ? { hour: '2-digit', minute: '2-digit' } : {}),
-    }).format(parsed);
+    return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', ...(rawTime ? { hour: '2-digit', minute: '2-digit' } : {}) }).format(parsed);
 }
-
-function formatDateTime(value) {
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(value);
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+function formatDateTime(value) { return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(value); }
+function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 </script>
 @endsection

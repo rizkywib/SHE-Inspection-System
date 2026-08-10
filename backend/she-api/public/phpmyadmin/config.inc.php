@@ -4,8 +4,8 @@
  * Generated: <?php echo date('Y-m-d'); ?>
  */
 
-// Server configuration
-$cfg['blowfish_secret'] = 'SHE_Inspection_System_2026_phpmyadmin_secret_key_change_this';
+// Set PMA_BLOWFISH_SECRET in the server environment; never commit the value.
+$cfg['blowfish_secret'] = getenv('PMA_BLOWFISH_SECRET') ?: '';
 
 // Servers configuration
 $i = 0;
@@ -15,10 +15,7 @@ $i++;
 $cfg['Servers'][$i]['host']          = 'localhost';
 $cfg['Servers'][$i]['port']          = '3306';
 $cfg['Servers'][$i]['socket']        = '';
-$cfg['Servers'][$i]['auth_type']     = 'config';
-$cfg['Servers'][$i]['user']          = 'root';
-$cfg['Servers'][$i]['password']      = '';
-$cfg['Servers'][$i]['AllowNoPassword'] = true;
+$cfg['Servers'][$i]['auth_type']     = 'cookie';
 
 // phpMyAdmin configuration storage
 $cfg['Servers'][$i]['pmadb']         = 'phpmyadmin';
