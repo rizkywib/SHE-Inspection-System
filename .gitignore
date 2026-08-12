@@ -8,6 +8,7 @@ backend/she-api/storage/logs/*.log
 backend/she-api/storage/framework/sessions/*
 backend/she-api/storage/framework/views/*
 backend/she-api/public/images/*
+!backend/she-api/public/images/ecogreen-logo-print.png
 /flutter/
 composer-setup.php
 
