@@ -79,8 +79,14 @@ class PointController extends Controller
 
     private function generateQrCode(Point $point): void
     {
+        $parts = array_values(array_filter([
+            trim((string) $point->name_point),
+            trim((string) $point->ket1),
+            trim((string) $point->ket2),
+        ], fn ($value) => $value !== ''));
+
         $point->forceFill([
-            'qr_code' => 'POINT-' . $point->id . '-' . strtoupper(Str::random(10)),
+            'qr_code' => 'POINT-' . $point->id . '-' . strtoupper(implode('-', $parts)),
             'qr_generated_at' => now(),
         ])->save();
     }
