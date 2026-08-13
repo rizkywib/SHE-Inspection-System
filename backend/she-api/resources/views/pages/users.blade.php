@@ -180,6 +180,18 @@ function imageUrl(path) {
     return `/${value.replace(/^\/+/, '').replace(/^public\//, '')}`;
 }
 
+function signatureBadgeHtml(path) {
+    if (!path) {
+        return '<span class="text-sm text-gray-400">Tidak ada</span>';
+    }
+
+    return `
+        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+            <i class="fas fa-check mr-1"></i>Ada
+        </span>
+    `;
+}
+
 function signaturePreviewHtml(path) {
     const url = imageUrl(path);
     if (!url) {
@@ -251,7 +263,7 @@ function renderTable() {
                 <td class="px-6 py-4 text-sm">
                     <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${u.role==='super_admin'?'bg-purple-100 text-purple-800':u.role==='admin'?'bg-blue-100 text-blue-800':u.role==='inspector'?'bg-green-100 text-green-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}">${escapeHtml(u.role)}</span>
                 </td>
-                <td class="px-6 py-4 text-sm">${signaturePreviewHtml(u.signature_path)}</td>
+                <td class="px-6 py-4 text-sm">${signatureBadgeHtml(u.signature_path)}</td>
                 <td class="px-6 py-4 text-sm">
                     <button onclick="editItem(${u.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
                         <i class="fas fa-edit mr-1"></i>Edit
