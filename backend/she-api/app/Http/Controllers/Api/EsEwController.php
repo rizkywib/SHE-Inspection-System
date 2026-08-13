@@ -38,7 +38,7 @@ class EsEwController extends Controller
             ->orderByDesc('inspection_date')
             ->orderByDesc('id');
 
-        return response()->json($query->paginate(15)->withQueryString());
+        return response()->json($query->paginate($request->integer('per_page', 15) ?: 15)->withQueryString());
     }
 
     public function masterData(): JsonResponse

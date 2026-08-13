@@ -24,6 +24,16 @@
             </div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Date From</label><input name="date_from" id="date_from" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2"></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Date To</label><input name="date_to" id="date_to" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2"></div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Show</label>
+                <select name="per_page" id="per_page" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="10">10</option>
+                    <option value="15" selected>15</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
         </div>
         <div class="flex gap-3 mt-4">
             <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg"><i class="fas fa-search mr-2"></i>Apply</button>

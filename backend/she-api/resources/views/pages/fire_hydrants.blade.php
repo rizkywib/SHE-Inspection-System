@@ -143,6 +143,23 @@
     </div>
 </div>
 
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
+    <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">Show</label>
+        <select id="pageSize" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <span class="text-sm text-gray-500">entries</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">Search:</label>
+        <input id="searchFilter" type="text" placeholder="Search location, inspector, date..." class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+    </div>
+</div>
+
 <div class="bg-white rounded-xl shadow-lg overflow-hidden no-print">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -159,6 +176,14 @@
                     <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div id="paginationControls" class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div id="paginationInfo" class="text-sm text-gray-600"></div>
+            <div class="flex items-center gap-2">
+                <button id="prevPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <span id="pageNumbers" class="text-sm text-gray-700"></span>
+                <button id="nextPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
         </div>
     </div>
 </div>
@@ -280,6 +305,9 @@ let users = [];
 let hydrants = [];
 let pointHydrants = [];
 let referenceDataPromise;
+let currentPage = 1;
+let pageSize = 25;
+let searchFilter = '';
 
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
@@ -615,34 +643,70 @@ async function loadHydrants() {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const json = await res.json();
-    const tbody = document.getElementById('hydrantTable');
     hydrants = Array.isArray(json.data) ? json.data : [];
-    if (hydrants.length === 0) {
+    renderTable();
+}
+
+function matchesFilters(h) {
+    const search = searchFilter.toLowerCase().trim();
+    if (!search) return true;
+    return String(h.id).includes(search) ||
+        (h.location ? h.location.name : (h.location_id || '')).toLowerCase().includes(search) ||
+        (h.inspector ? h.inspector.name : (h.inspector_id || '')).toLowerCase().includes(search) ||
+        (formatDateOnly(h.inspection_date) || '').includes(search) ||
+        (h.reference_no || '').toLowerCase().includes(search);
+}
+
+function renderTable() {
+    const tbody = document.getElementById('hydrantTable');
+
+    const filtered = hydrants.filter(matchesFilters);
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, totalItems);
+    const pageItems = filtered.slice(start, end);
+
+    if (totalItems === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
-        return;
+    } else {
+        tbody.innerHTML = pageItems.map((h, index) => `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 text-sm text-gray-900 text-center">${start + index + 1}</td>
+                <td class="px-6 py-4 text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-medium" onclick="event.stopPropagation(); window.location.href='/dashboard/fire-hydrant-checklist?location_id=${h.location_id || 'null'}&inspection_id=${h.id}'">${escapeHtml(h.location ? (h.location.name) : (h.location_id || '-'))}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(h.inspection_date))}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(h.inspector ? h.inspector.name : (h.inspector_id || '-'))}</td>
+                <td class="px-6 py-4 text-sm">
+                    <button onclick="exportItem(${h.id})" class="text-green-600 hover:text-green-800 mr-3 font-medium">
+                        <i class="fas fa-file-excel mr-1"></i>Export
+                    </button>
+                    <button onclick="printItem(${h.id})" class="text-purple-600 hover:text-purple-800 mr-3 font-medium">
+                        <i class="fas fa-print mr-1"></i>Print
+                    </button>
+                    <button onclick="signItem(${h.id})" ${h.signed_by ? 'disabled' : ''} class="mr-3 font-medium ${h.signed_by ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'}" title="${h.signed_by ? 'Signed by ' + escapeHtml(h.signer?.name || '-') : 'Sign this inspection'}">
+                        <i class="fas fa-signature mr-1"></i>${h.signed_by ? 'Signed' : 'Signature'}
+                    </button>
+                    <button onclick="deleteItem(${h.id})" class="text-red-600 hover:text-red-800 font-medium">
+                        <i class="fas fa-trash mr-1"></i>Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
     }
-    tbody.innerHTML = hydrants.map((h, index) => `
-        <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900 text-center">${index + 1}</td>
-            <td class="px-6 py-4 text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-medium" onclick="event.stopPropagation(); window.location.href='/dashboard/fire-hydrant-checklist?location_id=${h.location_id || 'null'}&inspection_id=${h.id}'">${escapeHtml(h.location ? (h.location.name) : (h.location_id || '-'))}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(h.inspection_date))}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(h.inspector ? h.inspector.name : (h.inspector_id || '-'))}</td>
-            <td class="px-6 py-4 text-sm">
-                <button onclick="exportItem(${h.id})" class="text-green-600 hover:text-green-800 mr-3 font-medium">
-                    <i class="fas fa-file-excel mr-1"></i>Export
-                </button>
-                <button onclick="printItem(${h.id})" class="text-purple-600 hover:text-purple-800 mr-3 font-medium">
-                    <i class="fas fa-print mr-1"></i>Print
-                </button>
-                <button onclick="signItem(${h.id})" ${h.signed_by ? 'disabled' : ''} class="mr-3 font-medium ${h.signed_by ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'}" title="${h.signed_by ? 'Signed by ' + escapeHtml(h.signer?.name || '-') : 'Sign this inspection'}">
-                    <i class="fas fa-signature mr-1"></i>${h.signed_by ? 'Signed' : 'Signature'}
-                </button>
-                <button onclick="deleteItem(${h.id})" class="text-red-600 hover:text-red-800 font-medium">
-                    <i class="fas fa-trash mr-1"></i>Delete
-                </button>
-            </td>
-        </tr>
-    `).join('');
+
+    const info = document.getElementById('paginationInfo');
+    if (totalItems === 0) {
+        info.textContent = 'Showing 0 to 0 of 0 entries';
+    } else {
+        info.textContent = `Showing ${start + 1} to ${end} of ${totalItems} entries`;
+    }
+
+    document.getElementById('pageNumbers').textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
 }
 
 async function openForm(options = {}) {
@@ -1274,6 +1338,34 @@ if (urlParams.has('location_id')) {
     document.getElementById('location_id').value = urlParams.get('location_id');
     openForm({ generateReference: true });
 }
+
+document.getElementById('pageSize').addEventListener('change', function() {
+    pageSize = parseInt(this.value);
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('searchFilter').addEventListener('input', function() {
+    searchFilter = this.value;
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('prevPage').addEventListener('click', function() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', function() {
+    const totalItems = hydrants.filter(matchesFilters).length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+    }
+});
 
 loadHydrants();
 </script>
