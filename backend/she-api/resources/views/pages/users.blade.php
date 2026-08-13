@@ -15,6 +15,8 @@
         </button>
     </div>
 
+    <div id="messageBox" class="hidden mb-6 rounded-lg border px-4 py-3" role="alert"></div>
+
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium text-gray-700">Show</label>
@@ -151,6 +153,16 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function showMessage(text, type = 'success') {
+    const box = document.getElementById('messageBox');
+    box.textContent = text;
+    box.className = type === 'success'
+        ? 'mb-6 rounded-lg border border-green-200 bg-green-50 text-green-800 px-4 py-3'
+        : 'mb-6 rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-3';
+    box.classList.remove('hidden');
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function imageUrl(path) {
     if (!path) return '';
     const value = String(path);
@@ -263,6 +275,7 @@ function openForm() {
     document.getElementById('userForm').reset();
     document.getElementById('user_id').value = '';
     document.getElementById('signaturePreview').innerHTML = signaturePreviewHtml('');
+    document.getElementById('messageBox').classList.add('hidden');
 }
 function closeForm() { document.getElementById('formCard').classList.add('hidden'); }
 
@@ -316,28 +329,43 @@ document.getElementById('userForm').addEventListener('submit', async e => {
     if (id) formData.append('_method', 'PUT');
 
     const url = id ? `${API_URL}/users/${id}` : `${API_URL}/users`;
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-        body: formData
-    });
-    if (!res.ok) {
-        const error = await res.json().catch(() => null);
-        const message = error?.message || Object.values(error?.errors || {}).flat()[0] || 'Save failed';
-        alert(message);
-        return;
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+            body: formData
+        });
+        if (!res.ok) {
+            const error = await res.json().catch(() => null);
+            const message = error?.message || Object.values(error?.errors || {}).flat()[0] || 'Save failed';
+            showMessage(message, 'error');
+            return;
+        }
+        closeForm();
+        await loadUsers();
+        showMessage(id ? 'User berhasil diperbarui.' : 'User berhasil disimpan.', 'success');
+    } catch (error) {
+        showMessage(error.message || 'Save failed.', 'error');
     }
-    closeForm();
-    loadUsers();
 });
 
 async function deleteItem(id) {
     if (!confirm('Delete this user?')) return;
-    const res = await fetch(`${API_URL}/users/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    if (res.ok) loadUsers();
+    try {
+        const res = await fetch(`${API_URL}/users/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+            await loadUsers();
+            showMessage('User berhasil dihapus.', 'success');
+        } else {
+            const error = await res.json().catch(() => null);
+            showMessage(error?.message || 'Delete failed.', 'error');
+        }
+    } catch (error) {
+        showMessage(error.message || 'Delete failed.', 'error');
+    }
 }
 
 function logout() {
