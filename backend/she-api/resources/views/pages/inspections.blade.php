@@ -19,6 +19,23 @@
 
         <div id="messageBox" class="hidden mb-6 rounded-lg border px-4 py-3" role="alert"></div>
 
+        <div id="filterBar" class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-white rounded-xl shadow border border-gray-100 px-5 py-4">
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-medium text-gray-700">Show</label>
+                <select id="pageSize" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="text-sm text-gray-500">entries</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-medium text-gray-700">Search:</label>
+                <input id="searchFilter" type="text" placeholder="Search lokasi, tipe, keterangan, status..." class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+            </div>
+        </div>
+
         <section id="inspectionList" class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -41,6 +58,14 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <div id="paginationControls" class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div id="paginationInfo" class="text-sm text-gray-600"></div>
+                <div class="flex items-center gap-2">
+                    <button id="prevPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                    <span id="pageNumbers" class="text-sm text-gray-700"></span>
+                    <button id="nextPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                </div>
             </div>
         </section>
 
@@ -164,6 +189,10 @@ const imageInput = document.getElementById('image');
 const imagePreview = document.getElementById('imagePreview');
 const uploadPlaceholder = document.getElementById('uploadPlaceholder');
 const selectedFile = document.getElementById('selectedFile');
+let inspectionsData = [];
+let currentPage = 1;
+let pageSize = 25;
+let searchFilter = '';
 
 if (!token) {
     window.location.href = '/';
@@ -261,19 +290,53 @@ async function loadInspections() {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(apiError(payload, 'Data inspection gagal dimuat.'));
 
-        const inspections = Array.isArray(payload.data) ? payload.data : [];
-        if (inspections.length === 0) {
-            table.innerHTML = `
-                <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                        <i class="far fa-clipboard text-4xl text-gray-300 mb-3 block"></i>
-                        Belum ada data inspection
-                    </td>
-                </tr>`;
-            return;
-        }
+        inspectionsData = Array.isArray(payload.data) ? payload.data : [];
+        renderTable();
+    } catch (error) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-10 text-center text-red-600">
+                    ${escapeHtml(error.message || 'Data inspection gagal dimuat.')}
+                    <button type="button" onclick="loadInspections()" class="block mx-auto mt-3 text-blue-600 hover:underline">Coba Lagi</button>
+                </td>
+            </tr>`;
+    }
+}
 
-        table.innerHTML = inspections.map(item => {
+function matchesFilters(item) {
+    const search = searchFilter.toLowerCase().trim();
+    if (!search) return true;
+    return String(item.id).includes(search) ||
+        (item.location_text || '').toLowerCase().includes(search) ||
+        (item.incident_type?.name || '').toLowerCase().includes(search) ||
+        (item.description || '').toLowerCase().includes(search) ||
+        (item.status || '').toLowerCase().includes(search) ||
+        (item.reference_no || '').toLowerCase().includes(search);
+}
+
+function renderTable() {
+    const table = document.getElementById('inspectionTable');
+
+    const filtered = inspectionsData.filter(matchesFilters);
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, totalItems);
+    const pageItems = filtered.slice(start, end);
+
+    if (totalItems === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                    <i class="far fa-clipboard text-4xl text-gray-300 mb-3 block"></i>
+                    Belum ada data inspection
+                </td>
+            </tr>`;
+    } else {
+        table.innerHTML = pageItems.map(item => {
             const image = Array.isArray(item.images) && item.images.length > 0
                 ? mediaUrl(item.images[0].image_path)
                 : null;
@@ -307,15 +370,18 @@ async function loadInspections() {
                     </td>
                 </tr>`;
         }).join('');
-    } catch (error) {
-        table.innerHTML = `
-            <tr>
-                <td colspan="7" class="px-6 py-10 text-center text-red-600">
-                    ${escapeHtml(error.message || 'Data inspection gagal dimuat.')}
-                    <button type="button" onclick="loadInspections()" class="block mx-auto mt-3 text-blue-600 hover:underline">Coba Lagi</button>
-                </td>
-            </tr>`;
     }
+
+    const info = document.getElementById('paginationInfo');
+    if (totalItems === 0) {
+        info.textContent = 'Showing 0 to 0 of 0 entries';
+    } else {
+        info.textContent = `Showing ${start + 1} to ${end} of ${totalItems} entries`;
+    }
+
+    document.getElementById('pageNumbers').textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
 }
 
 async function getInspection(id) {
@@ -541,6 +607,34 @@ function logout() {
 setCurrentDateTime();
 loadIncidentTypes();
 loadInspections();
+
+document.getElementById('pageSize').addEventListener('change', function() {
+    pageSize = parseInt(this.value);
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('searchFilter').addEventListener('input', function() {
+    searchFilter = this.value;
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('prevPage').addEventListener('click', function() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', function() {
+    const totalItems = inspectionsData.filter(matchesFilters).length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+    }
+});
 
 const query = new URLSearchParams(window.location.search);
 if (query.get('saved') === '1') {
