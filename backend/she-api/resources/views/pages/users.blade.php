@@ -15,6 +15,36 @@
         </button>
     </div>
 
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">Show</label>
+            <select id="pageSize" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="text-sm text-gray-500">entries</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">Role:</label>
+            <select id="roleFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">All Roles</option>
+                <option value="inspector">Inspector</option>
+                <option value="admin">Admin</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="she_section_head">SHE Section Head</option>
+                <option value="user_dept_head">User Dept Head</option>
+                <option value="viewer">Viewer</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">Search:</label>
+            <input id="searchFilter" type="text" placeholder="Search name, username, phone..." class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+        </div>
+    </div>
+
     <div id="formCard" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
         <h2 id="formTitle" class="text-xl font-bold text-gray-900 mb-4">Create User</h2>
         <form id="userForm" class="space-y-4">
@@ -88,6 +118,14 @@
                 </tbody>
             </table>
         </div>
+        <div id="paginationControls" class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div id="paginationInfo" class="text-sm text-gray-600"></div>
+            <div class="flex items-center gap-2">
+                <button id="prevPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <span id="pageNumbers" class="text-sm text-gray-700"></span>
+                <button id="nextPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -96,6 +134,10 @@ const API_URL = '/api';
 let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || '{}');
 let users = [];
+let currentPage = 1;
+let pageSize = 25;
+let searchFilter = '';
+let roleFilter = '';
 
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
@@ -150,32 +192,69 @@ async function loadUsers() {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const json = await res.json();
-    const tbody = document.getElementById('userTable');
     users = Array.isArray(json.data) ? json.data : [];
-    if (users.length === 0) {
+    renderTable();
+}
+
+function matchesFilters(u) {
+    const search = searchFilter.toLowerCase().trim();
+    if (roleFilter && u.role !== roleFilter) return false;
+    if (!search) return true;
+    return String(u.id).includes(search) ||
+        (u.name || '').toLowerCase().includes(search) ||
+        (u.username || '').toLowerCase().includes(search) ||
+        (u.phone || '').toLowerCase().includes(search) ||
+        (u.role || '').toLowerCase().includes(search);
+}
+
+function renderTable() {
+    const tbody = document.getElementById('userTable');
+
+    const filtered = users.filter(matchesFilters);
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, totalItems);
+    const pageItems = filtered.slice(start, end);
+
+    if (totalItems === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No users found</td></tr>';
-        return;
+    } else {
+        tbody.innerHTML = pageItems.map((u, index) => `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 text-sm text-gray-900">${start + index + 1}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(u.name)}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(u.username)}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">${escapeHtml(u.phone || '-')}</td>
+                <td class="px-6 py-4 text-sm">
+                    <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${u.role==='super_admin'?'bg-purple-100 text-purple-800':u.role==='admin'?'bg-blue-100 text-blue-800':u.role==='inspector'?'bg-green-100 text-green-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}">${escapeHtml(u.role)}</span>
+                </td>
+                <td class="px-6 py-4 text-sm">${signaturePreviewHtml(u.signature_path)}</td>
+                <td class="px-6 py-4 text-sm">
+                    <button onclick="editItem(${u.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
+                        <i class="fas fa-edit mr-1"></i>Edit
+                    </button>
+                    <button onclick="deleteItem(${u.id})" class="text-red-600 hover:text-red-800 font-medium">
+                        <i class="fas fa-trash mr-1"></i>Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
     }
-    tbody.innerHTML = users.map((u, index) => `
-        <tr class="hover:bg-gray-50 transition">
-            <td class="px-6 py-4 text-sm text-gray-900">${index + 1}</td>
-            <td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(u.name)}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(u.username)}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">${escapeHtml(u.phone || '-')}</td>
-            <td class="px-6 py-4 text-sm">
-                <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${u.role==='super_admin'?'bg-purple-100 text-purple-800':u.role==='admin'?'bg-blue-100 text-blue-800':u.role==='inspector'?'bg-green-100 text-green-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}">${escapeHtml(u.role)}</span>
-            </td>
-            <td class="px-6 py-4 text-sm">${signaturePreviewHtml(u.signature_path)}</td>
-            <td class="px-6 py-4 text-sm">
-                <button onclick="editItem(${u.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium">
-                    <i class="fas fa-edit mr-1"></i>Edit
-                </button>
-                <button onclick="deleteItem(${u.id})" class="text-red-600 hover:text-red-800 font-medium">
-                    <i class="fas fa-trash mr-1"></i>Delete
-                </button>
-            </td>
-        </tr>
-    `).join('');
+
+    const info = document.getElementById('paginationInfo');
+    if (totalItems === 0) {
+        info.textContent = 'Showing 0 to 0 of 0 entries';
+    } else {
+        info.textContent = `Showing ${start + 1} to ${end} of ${totalItems} entries`;
+    }
+
+    document.getElementById('pageNumbers').textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
 }
 
 function openForm() {
@@ -265,6 +344,40 @@ function logout() {
     fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } })
         .finally(() => { localStorage.clear(); window.location.href='/'; });
 }
+
+document.getElementById('pageSize').addEventListener('change', function() {
+    pageSize = parseInt(this.value);
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('searchFilter').addEventListener('input', function() {
+    searchFilter = this.value;
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('roleFilter').addEventListener('change', function() {
+    roleFilter = this.value;
+    currentPage = 1;
+    renderTable();
+});
+
+document.getElementById('prevPage').addEventListener('click', function() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', function() {
+    const totalItems = users.filter(matchesFilters).length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+    }
+});
 
 loadUsers();
 </script>
