@@ -16,17 +16,15 @@
     </div>
 
     <div id="messageBox" class="hidden mb-5 rounded-lg border px-4 py-3"></div>
-    <form id="filterForm" class="bg-white rounded-xl shadow p-5 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div class="xl:col-span-2">
+    <div class="bg-white rounded-xl shadow p-5 mb-6">
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-[220px]">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input name="search" id="search" placeholder="Area, inspector, atau name" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                <input id="search" placeholder="Area, inspector, atau name" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             </div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Date From</label><input name="date_from" id="date_from" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Date To</label><input name="date_to" id="date_to" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2"></div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Show</label>
-                <select name="per_page" id="per_page" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                <select id="per_page" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="10">10</option>
                     <option value="15" selected>15</option>
                     <option value="25">25</option>
@@ -35,11 +33,7 @@
                 </select>
             </div>
         </div>
-        <div class="flex gap-3 mt-4">
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg"><i class="fas fa-search mr-2"></i>Apply</button>
-            <a href="/dashboard/es-ew-inspections" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2 rounded-lg">Reset</a>
-        </div>
-    </form>
+    </div>
 
     <div class="bg-white rounded-xl shadow overflow-hidden">
         <div class="overflow-x-auto">
@@ -72,7 +66,8 @@ async function init() {
     if(masterResponse.status===401){localStorage.clear();return window.location.href='/';}
     if(!masterResponse.ok)return message('Master data gagal dimuat.','error');
     const master=await masterResponse.json();
-    [...document.getElementById('filterForm').elements].forEach(el=>{if(el.name&&params.has(el.name))el.value=params.get(el.name);});
+    if(params.has('search'))document.getElementById('search').value=params.get('search');
+    if(params.has('per_page'))document.getElementById('per_page').value=params.get('per_page');
     loadData(params.get('page')||1);
 }
 async function loadData(page=1) {
@@ -110,7 +105,17 @@ function render(result) {
 function goPage(page){params.set('page',page);window.location.search=params.toString();}
 async function removeInspection(id){if(!confirm('Delete this ES&EW inspection and all items?'))return;const response=await fetch(`/api/es-ew/${id}`,{method:'DELETE',headers});const data=await response.json();if(!response.ok)return message(data.message||'Delete failed.','error');message(data.message);loadData(params.get('page')||1);}
 @include('pages.es_ew_inspections._header_actions_script')
-document.getElementById('filterForm').addEventListener('submit',e=>{e.preventDefault();const query=new URLSearchParams(new FormData(e.currentTarget));[...query.entries()].forEach(([k,v])=>{if(!v)query.delete(k)});window.location.search=query.toString();});
+let searchTimer;
+document.getElementById('search').addEventListener('input',function(){
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{
+        if(this.value.trim())params.set('search',this.value.trim());else params.delete('search');
+        params.delete('page');window.location.search=params.toString();
+    },500);
+});
+document.getElementById('per_page').addEventListener('change',function(){
+    params.set('per_page',this.value);params.delete('page');window.location.search=params.toString();
+});
 init().catch(()=>message('Terjadi kesalahan saat memuat halaman.','error'));
 </script>
 @endsection
