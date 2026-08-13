@@ -47,58 +47,65 @@
         </div>
     </div>
 
-    <div id="formCard" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
-        <h2 id="formTitle" class="text-xl font-bold text-gray-900 mb-4">Create User</h2>
-        <form id="userForm" class="space-y-4">
-            <input type="hidden" id="user_id">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input id="name" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input id="username" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">No Telepon</label>
-                    <input id="phone" type="tel" maxlength="30" placeholder="Contoh: 081234567890" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <div class="relative">
-                        <input id="password" type="password" class="w-full border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <button type="button" onclick="togglePassword()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
-                            <i id="passwordIcon" class="fas fa-eye"></i>
-                        </button>
+    <div id="formCard" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 p-4 items-center justify-center" onclick="if(event.target===this)closeForm()">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+                <h2 id="formTitle" class="text-xl font-bold text-gray-900">Create User</h2>
+                <button type="button" onclick="closeForm()" class="text-gray-400 hover:text-gray-700" aria-label="Tutup">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="userForm" class="p-6 space-y-4">
+                <input type="hidden" id="user_id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input id="name" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input id="username" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">No Telepon</label>
+                        <input id="phone" type="tel" maxlength="30" placeholder="Contoh: 081234567890" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <div class="relative">
+                            <input id="password" type="password" class="w-full border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <button type="button" onclick="togglePassword()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                                <i id="passwordIcon" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <select id="role" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="inspector">Inspector</option>
+                            <option value="admin">Admin</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="super_admin">Super Admin</option>
+                            <option value="she_section_head">SHE Section Head</option>
+                            <option value="user_dept_head">User Dept Head</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tanda Tangan</label>
+                        <input id="signature" type="file" accept="image/*" onchange="previewSelectedSignature(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <div id="signaturePreview" class="mt-3 text-sm text-gray-400">Belum ada tanda tangan</div>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                    <select id="role" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="inspector">Inspector</option>
-                        <option value="admin">Admin</option>
-                        <option value="supervisor">Supervisor</option>
-                        <option value="super_admin">Super Admin</option>
-                        <option value="she_section_head">SHE Section Head</option>
-                        <option value="user_dept_head">User Dept Head</option>
-                    </select>
+                <div class="flex items-center space-x-3 pt-4 border-t border-gray-200">
+                    <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-save mr-2"></i>Save
+                    </button>
+                    <button type="button" onclick="closeForm()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition">
+                        Cancel
+                    </button>
                 </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanda Tangan</label>
-                    <input id="signature" type="file" accept="image/*" onchange="previewSelectedSignature(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <div id="signaturePreview" class="mt-3 text-sm text-gray-400">Belum ada tanda tangan</div>
-                </div>
-            </div>
-            <div class="flex items-center space-x-3 pt-2">
-                <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
-                    <i class="fas fa-save mr-2"></i>Save
-                </button>
-                <button type="button" onclick="closeForm()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition">
-                    Cancel
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -270,14 +277,20 @@ function renderTable() {
 }
 
 function openForm() {
-    document.getElementById('formCard').classList.remove('hidden');
+    const card = document.getElementById('formCard');
+    card.classList.remove('hidden');
+    card.classList.add('flex');
     document.getElementById('formTitle').textContent = 'Create User';
     document.getElementById('userForm').reset();
     document.getElementById('user_id').value = '';
     document.getElementById('signaturePreview').innerHTML = signaturePreviewHtml('');
     document.getElementById('messageBox').classList.add('hidden');
 }
-function closeForm() { document.getElementById('formCard').classList.add('hidden'); }
+function closeForm() {
+    const card = document.getElementById('formCard');
+    card.classList.add('hidden');
+    card.classList.remove('flex');
+}
 
 function togglePassword() {
     const passwordInput = document.getElementById('password');
