@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
@@ -450,12 +452,15 @@ class FireExtinguisherQrFormScreen extends StatefulWidget {
 
 class _FireExtinguisherQrFormScreenState
     extends State<FireExtinguisherQrFormScreen> {
+  final ImagePicker _picker = ImagePicker();
   late final TextEditingController _remarkController;
   late final TextEditingController _expiryDateController;
   bool _pressureCondition = true;
   bool _sealCondition = true;
   bool _nozzleCondition = true;
   bool _isSaving = false;
+  File? _photoBefore;
+  File? _photoAfter;
 
   String get _assetName =>
       (widget.point['name_point'] ?? widget.point['id'] ?? '').toString();
@@ -490,6 +495,22 @@ class _FireExtinguisherQrFormScreenState
     }
   }
 
+  Future<void> _pickPhoto(bool isBefore) async {
+    final selected = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 75,
+      maxWidth: 1600,
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      if (isBefore) {
+        _photoBefore = File(selected.path);
+      } else {
+        _photoAfter = File(selected.path);
+      }
+    });
+  }
+
   Future<void> _save() async {
     final pointId = _asInt(widget.point['id']);
     if (pointId == null || _assetName.trim().isEmpty) {
@@ -505,23 +526,25 @@ class _FireExtinguisherQrFormScreenState
     setState(() => _isSaving = true);
     final currentUser = _asMap(context.read<AuthService>().user);
     final inspectorId = _asInt(currentUser['id']);
-    final payload = <String, dynamic>{
+    final fields = <String, String>{
       'inspection_date': widget.inspectionDate,
-      'location_id': widget.locationId,
-      if (inspectorId != null) 'inspector_id': inspectorId,
-      'point_id': pointId,
-      'item': {
-        'pressure_condition': _pressureCondition,
-        'seal_condition': _sealCondition,
-        'nozzle_condition': _nozzleCondition,
-        'remark': _nullIfEmpty(_remarkController.text),
-        'expiry_date': _nullIfEmpty(_expiryDateController.text),
-      },
+      'location_id': widget.locationId.toString(),
+      if (inspectorId != null) 'inspector_id': inspectorId.toString(),
+      'point_id': pointId.toString(),
+      'item[pressure_condition]': _pressureCondition ? '1' : '0',
+      'item[seal_condition]': _sealCondition ? '1' : '0',
+      'item[nozzle_condition]': _nozzleCondition ? '1' : '0',
+      'item[remark]': _nullIfEmpty(_remarkController.text) ?? '',
+      'item[expiry_date]': _nullIfEmpty(_expiryDateController.text) ?? '',
     };
 
     try {
       final response =
-          await context.read<ApiService>().createFireExtinguisher(payload);
+          await context.read<ApiService>().createFireExtinguisherWithPhotos(
+                fields,
+                photoBefore: _photoBefore,
+                photoAfter: _photoAfter,
+              );
       if (!mounted) return;
       if (response.containsKey('error')) {
         setState(() => _isSaving = false);
@@ -659,6 +682,27 @@ class _FireExtinguisherQrFormScreenState
                       minLines: 2,
                       maxLines: 4,
                       decoration: const InputDecoration(labelText: 'Remark'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _FormSection(
+                title: 'Photos',
+                child: Column(
+                  children: [
+                    _PhotoPicker(
+                      label: 'Foto Sebelum (Before)',
+                      file: _photoBefore,
+                      onPick: () => _pickPhoto(true),
+                      onClear: () => setState(() => _photoBefore = null),
+                    ),
+                    const SizedBox(height: 12),
+                    _PhotoPicker(
+                      label: 'Foto Sesudah (After)',
+                      file: _photoAfter,
+                      onPick: () => _pickPhoto(false),
+                      onClear: () => setState(() => _photoAfter = null),
                     ),
                   ],
                 ),
@@ -843,6 +887,70 @@ class _ConditionYesNo extends StatelessWidget {
             selected: {value},
             showSelectedIcon: false,
             onSelectionChanged: (selection) => onChanged(selection.first),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhotoPicker extends StatelessWidget {
+  const _PhotoPicker({
+    required this.label,
+    required this.file,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String label;
+  final File? file;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (file != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                file!,
+                height: 130,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPick,
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: Text(file == null ? 'Take Photo' : 'Retake'),
+                ),
+              ),
+              if (file != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove photo',
+                ),
+              ],
+            ],
           ),
         ],
       ),

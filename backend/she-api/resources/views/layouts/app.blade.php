@@ -108,6 +108,10 @@
                     <i class="fas fa-shower w-5"></i>
                     <span>ES&EW Areas</span>
                 </a>
+                <a href="/dashboard/supervision-areas" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-supervision-areas', '')">
+                    <i class="fas fa-eye w-5"></i>
+                    <span>Area Pengawasan</span>
+                </a>
                 <a id="usersMenuDesktop" href="/dashboard/users" class="hidden nav-link items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-users', '')">
                     <i class="fas fa-users w-5"></i>
                     <span>Users</span>
@@ -162,6 +166,7 @@
                     <a href="/dashboard/fire-extinguisher-locations" class="block py-2 text-gray-600 hover:text-gray-900">Extinguisher Locations</a>
                     <a href="/dashboard/incident-types" class="block py-2 text-gray-600 hover:text-gray-900">Incident Types</a>
                     <a href="/dashboard/es-ew-areas" class="block py-2 text-gray-600 hover:text-gray-900">ES&EW Areas</a>
+                    <a href="/dashboard/supervision-areas" class="block py-2 text-gray-600 hover:text-gray-900">Area Pengawasan</a>
                     <a id="usersMenuMobile" href="/dashboard/users" class="hidden py-2 text-gray-600 hover:text-gray-900">Users</a>
                     <a href="/dashboard/profile" class="block py-2 text-blue-600 hover:text-blue-800"><i class="fas fa-user-pen mr-2"></i>Edit Profil</a>
                     <button onclick="logout()" class="text-red-600 hover:text-red-800 text-sm py-2">Logout</button>

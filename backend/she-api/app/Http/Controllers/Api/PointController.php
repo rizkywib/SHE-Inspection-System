@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Point;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class PointController extends Controller
@@ -60,11 +59,13 @@ class PointController extends Controller
         }
 
         $data = $validator->validated();
-        $nameChanged = $point->name_point !== $data['name_point'];
+        $contentChanged = $point->name_point !== $data['name_point']
+            || ($point->ket1 ?? '') !== ($data['ket1'] ?? '')
+            || ($point->ket2 ?? '') !== ($data['ket2'] ?? '');
 
         $point->update($data);
 
-        if ($nameChanged || empty($point->qr_code)) {
+        if ($contentChanged || empty($point->qr_code)) {
             $this->generateQrCode($point);
         }
 
@@ -86,7 +87,7 @@ class PointController extends Controller
         ], fn ($value) => $value !== ''));
 
         $point->forceFill([
-            'qr_code' => 'POINT-' . $point->id . '-' . strtoupper(implode('-', $parts)),
+            'qr_code' => implode("\n", $parts),
             'qr_generated_at' => now(),
         ])->save();
     }

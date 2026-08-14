@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
@@ -269,6 +272,8 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
     bool pressureCondition = _truthy(item?['pressure_condition']);
     bool sealCondition = _truthy(item?['seal_condition']);
     bool nozzleCondition = _truthy(item?['nozzle_condition']);
+    File? newPhotoBefore;
+    File? newPhotoAfter;
     var didSave = false;
 
     await showModalBottomSheet(
@@ -484,6 +489,45 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                       maxLines: 4,
                       decoration: const InputDecoration(labelText: 'Remark'),
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Photos',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    _EditPhotoPicker(
+                      label: 'Foto Sebelum (Before)',
+                      existingPath: item?['photo_before']?.toString(),
+                      file: newPhotoBefore,
+                      onPick: () async {
+                        final selected = await ImagePicker().pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 75,
+                          maxWidth: 1600,
+                        );
+                        if (selected == null) return;
+                        setSheetState(() => newPhotoBefore = File(selected.path));
+                      },
+                      onClear: () =>
+                          setSheetState(() => newPhotoBefore = null),
+                    ),
+                    const SizedBox(height: 12),
+                    _EditPhotoPicker(
+                      label: 'Foto Sesudah (After)',
+                      existingPath: item?['photo_after']?.toString(),
+                      file: newPhotoAfter,
+                      onPick: () async {
+                        final selected = await ImagePicker().pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 75,
+                          maxWidth: 1600,
+                        );
+                        if (selected == null) return;
+                        setSheetState(() => newPhotoAfter = File(selected.path));
+                      },
+                      onClear: () =>
+                          setSheetState(() => newPhotoAfter = null),
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -515,29 +559,47 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                                 return;
                               }
 
-                              final payload = <String, dynamic>{
-                                'reference_no': referenceController.text.trim(),
+                              final fields = <String, String>{
+                                'reference_no':
+                                    referenceController.text.trim(),
                                 'inspection_date': dateController.text,
-                                'location_id': locationId,
+                                'location_id': locationId.toString(),
                                 if (inspectorId != null)
-                                  'inspector_id': inspectorId,
-                                'point_id': pointId,
-                                'item': {
-                                  'pressure_condition': pressureCondition,
-                                  'seal_condition': sealCondition,
-                                  'nozzle_condition': nozzleCondition,
-                                  'remark': _nullIfEmpty(remarkController.text),
-                                  'expiry_date':
-                                      _nullIfEmpty(expiryController.text),
-                                },
+                                  'inspector_id': inspectorId.toString(),
+                                'point_id': pointId.toString(),
+                                'item[pressure_condition]':
+                                    pressureCondition ? '1' : '0',
+                                'item[seal_condition]': sealCondition ? '1' : '0',
+                                'item[nozzle_condition]':
+                                    nozzleCondition ? '1' : '0',
+                                'item[remark]':
+                                    _nullIfEmpty(remarkController.text) ?? '',
+                                'item[expiry_date]':
+                                    _nullIfEmpty(expiryController.text) ?? '',
                               };
-                              final saved =
-                                  await _saveInspection(inspection, payload);
+                              final id = _intValue(inspection['id']);
+                              if (id == null) return;
+                              final response = await context
+                                  .read<ApiService>()
+                                  .updateFireExtinguisherWithPhotos(
+                                    id,
+                                    fields,
+                                    photoBefore: newPhotoBefore,
+                                    photoAfter: newPhotoAfter,
+                                  );
                               if (!context.mounted) return;
-                              if (saved) {
-                                didSave = true;
-                                Navigator.pop(sheetContext);
+                              if (response.containsKey('error')) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text(response['error'].toString()),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
                               }
+                              didSave = true;
+                              Navigator.pop(sheetContext);
                             },
                             icon: const Icon(Icons.save_outlined),
                             label: const Text('Save'),
@@ -566,25 +628,6 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
       setState(() => _isLoading = true);
       await _loadInspections();
     }
-  }
-
-  Future<bool> _saveInspection(
-      Map<String, dynamic> inspection, Map<String, dynamic> payload) async {
-    final id = _intValue(inspection['id']);
-    if (id == null) return false;
-    final response =
-        await context.read<ApiService>().updateFireExtinguisher(id, payload);
-    if (!mounted) return false;
-    if (response.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response['error'].toString()),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-    return true;
   }
 
   Future<void> _confirmDelete(Map<String, dynamic> inspection) async {
@@ -869,6 +912,95 @@ class _ExtinguisherItemCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EditPhotoPicker extends StatelessWidget {
+  const _EditPhotoPicker({
+    required this.label,
+    required this.existingPath,
+    required this.file,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String label;
+  final String? existingPath;
+  final File? file;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (file != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                file!,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ] else if (_hasValue(existingPath)) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _networkPhoto(context, existingPath!),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPick,
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: Text(file == null ? 'Take Photo' : 'Retake'),
+                ),
+              ),
+              if (file != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove new photo',
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _networkPhoto(BuildContext context, String path) {
+    final url = _mediaUrl(context, path);
+    return Container(
+      height: 120,
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: url == null
+          ? const Icon(Icons.image_not_supported_outlined)
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.broken_image_outlined),
+            ),
     );
   }
 }

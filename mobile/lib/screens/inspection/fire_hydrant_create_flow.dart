@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
@@ -443,6 +445,7 @@ class FireHydrantCreateScreen extends StatefulWidget {
 }
 
 class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
+  final ImagePicker _picker = ImagePicker();
   late final TextEditingController _remarkController;
   bool _hoseCondition = true;
   bool _nozzleCondition = true;
@@ -451,6 +454,8 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
   bool _valveCondition = true;
   bool _couplingExtraCondition = true;
   bool _isSaving = false;
+  File? _photoBefore;
+  File? _photoAfter;
 
   String get _hydrantNumber =>
       (widget.point['name_point'] ?? widget.point['id'] ?? '').toString();
@@ -474,6 +479,22 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto(bool isBefore) async {
+    final selected = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 75,
+      maxWidth: 1600,
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      if (isBefore) {
+        _photoBefore = File(selected.path);
+      } else {
+        _photoAfter = File(selected.path);
+      }
+    });
+  }
+
   Future<void> _save() async {
     if (_hydrantNumber.trim().isEmpty || _hydrantName.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -488,29 +509,33 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
     setState(() => _isSaving = true);
     final currentUser = _asMap(context.read<AuthService>().user);
     final inspectorId = _asInt(currentUser['id']);
-    final payload = <String, dynamic>{
+    final fields = <String, String>{
       'inspection_date': widget.inspectionDate,
-      'location_id': widget.locationId,
-      if (inspectorId != null) 'inspector_id': inspectorId,
-      'items': [
-        {
-          'hydrant_number': _hydrantNumber,
-          'name': _hydrantName,
-          'location_detail': _nullIfEmpty(_locationDetail),
-          'hose_condition': _hoseCondition,
-          'nozzle_condition': _nozzleCondition,
-          'coupling_condition': _couplingCondition,
-          'wrench_condition': _wrenchCondition,
-          'valve_condition': _valveCondition,
-          'coupling_extra_condition': _couplingExtraCondition,
-          'remark': _nullIfEmpty(_remarkController.text),
-        },
-      ],
+      'location_id': widget.locationId.toString(),
+      if (inspectorId != null) 'inspector_id': inspectorId.toString(),
+      'items[0][hydrant_number]': _hydrantNumber,
+      'items[0][name]': _hydrantName,
+      'items[0][location_detail]': _nullIfEmpty(_locationDetail) ?? '',
+      'items[0][hose_condition]': _hoseCondition ? '1' : '0',
+      'items[0][nozzle_condition]': _nozzleCondition ? '1' : '0',
+      'items[0][coupling_condition]': _couplingCondition ? '1' : '0',
+      'items[0][wrench_condition]': _wrenchCondition ? '1' : '0',
+      'items[0][valve_condition]': _valveCondition ? '1' : '0',
+      'items[0][coupling_extra_condition]':
+          _couplingExtraCondition ? '1' : '0',
+      'items[0][remark]': _nullIfEmpty(_remarkController.text) ?? '',
+    };
+    final files = <String, File?>{
+      'items[0][photo_before]': _photoBefore,
+      'items[0][photo_after]': _photoAfter,
     };
 
     try {
       final response =
-          await context.read<ApiService>().createFireHydrant(payload);
+          await context.read<ApiService>().createFireHydrantWithPhotos(
+                fields,
+                files,
+              );
       if (!mounted) return;
 
       if (response.containsKey('error')) {
@@ -663,6 +688,27 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
                         labelText: 'Remark',
                         border: OutlineInputBorder(),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _FormSection(
+                title: 'Photos',
+                child: Column(
+                  children: [
+                    _PhotoPicker(
+                      label: 'Foto Sebelum (Before)',
+                      file: _photoBefore,
+                      onPick: () => _pickPhoto(true),
+                      onClear: () => setState(() => _photoBefore = null),
+                    ),
+                    const SizedBox(height: 12),
+                    _PhotoPicker(
+                      label: 'Foto Sesudah (After)',
+                      file: _photoAfter,
+                      onPick: () => _pickPhoto(false),
+                      onClear: () => setState(() => _photoAfter = null),
                     ),
                   ],
                 ),
@@ -855,6 +901,70 @@ class _ConditionYesNo extends StatelessWidget {
             selected: {value},
             showSelectedIcon: false,
             onSelectionChanged: (selection) => onChanged(selection.first),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhotoPicker extends StatelessWidget {
+  const _PhotoPicker({
+    required this.label,
+    required this.file,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String label;
+  final File? file;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (file != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                file!,
+                height: 130,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPick,
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: Text(file == null ? 'Take Photo' : 'Retake'),
+                ),
+              ),
+              if (file != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove photo',
+                ),
+              ],
+            ],
           ),
         ],
       ),

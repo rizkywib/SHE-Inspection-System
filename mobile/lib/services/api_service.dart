@@ -7,8 +7,7 @@ import 'package:flutter/foundation.dart';
 class ApiService extends ChangeNotifier {
   late String baseUrl;
   static const Duration _requestTimeout = Duration(seconds: 15);
-  static const String _defaultBaseUrl =
-      'http://eoblas10.ecogreenoleo.co.id:82/api';
+  static const String _defaultBaseUrl = 'http://172.16.16.51:83/api';
   static String? _resolvedBaseUrl;
 
   ApiService() {
@@ -312,6 +311,21 @@ class ApiService extends ChangeNotifier {
     return jsonDecode(response.body);
   }
 
+  Future<Map<String, dynamic>> createFireHydrantWithPhotos(
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/fire-hydrants',
+      fields,
+      files,
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
   Future<Map<String, dynamic>> updateFireHydrant(
       int id, Map<String, dynamic> data) async {
     final response = await _putJsonWithFallback('/fire-hydrants/$id', data);
@@ -319,6 +333,22 @@ class ApiService extends ChangeNotifier {
       return {'error': _errorMessage(response)};
     }
     return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateFireHydrantWithPhotos(
+    int id,
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/fire-hydrants/$id',
+      {...fields, '_method': 'PUT'},
+      files,
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
   Future<Map<String, dynamic>> deleteFireHydrant(int id) async {
@@ -368,6 +398,25 @@ class ApiService extends ChangeNotifier {
     return jsonDecode(response.body);
   }
 
+  Future<Map<String, dynamic>> createFireExtinguisherWithPhotos(
+    Map<String, String> fields, {
+    File? photoBefore,
+    File? photoAfter,
+  }) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/fire-extinguishers',
+      fields,
+      {
+        'item[photo_before]': photoBefore,
+        'item[photo_after]': photoAfter,
+      },
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
   Future<Map<String, dynamic>> updateFireExtinguisher(
       int id, Map<String, dynamic> data) async {
     final response =
@@ -376,6 +425,26 @@ class ApiService extends ChangeNotifier {
       return {'error': _errorMessage(response)};
     }
     return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateFireExtinguisherWithPhotos(
+    int id,
+    Map<String, String> fields, {
+    File? photoBefore,
+    File? photoAfter,
+  }) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/fire-extinguishers/$id',
+      {...fields, '_method': 'PUT'},
+      {
+        'item[photo_before]': photoBefore,
+        'item[photo_after]': photoAfter,
+      },
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
   Future<Map<String, dynamic>> deleteFireExtinguisher(int id) async {
@@ -649,6 +718,95 @@ class ApiService extends ChangeNotifier {
     var response = await request.send();
     var responseData = await response.stream.bytesToString();
     return jsonDecode(responseData);
+  }
+
+  // Master data: Fire Hydrant Locations
+  Future<Map<String, dynamic>> createFireHydrantLocation(
+      Map<String, dynamic> data) async {
+    final response =
+        await _postJsonWithFallback('/fire-hydrant-locations', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateFireHydrantLocation(
+      int id, Map<String, dynamic> data) async {
+    final response =
+        await _putJsonWithFallback('/fire-hydrant-locations/$id', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> deleteFireHydrantLocation(int id) async {
+    final response = await _deleteWithFallback('/fire-hydrant-locations/$id');
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  // Master data: Incident Types
+  Future<Map<String, dynamic>> createIncidentType(
+      Map<String, dynamic> data) async {
+    final response = await _postJsonWithFallback('/incident-types', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateIncidentType(
+      int id, Map<String, dynamic> data) async {
+    final response = await _putJsonWithFallback('/incident-types/$id', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> deleteIncidentType(int id) async {
+    final response = await _deleteWithFallback('/incident-types/$id');
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  // Master data: ES&EW Areas
+  Future<List<dynamic>> getEsEwAreas() async {
+    final response = await _getWithFallback('/es-ew-areas');
+    return _dataList(response);
+  }
+
+  Future<Map<String, dynamic>> createEsEwArea(Map<String, dynamic> data) async {
+    final response = await _postJsonWithFallback('/es-ew-areas', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateEsEwArea(
+      int id, Map<String, dynamic> data) async {
+    final response = await _putJsonWithFallback('/es-ew-areas/$id', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> deleteEsEwArea(int id) async {
+    final response = await _deleteWithFallback('/es-ew-areas/$id');
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  // Master data: Users
+  Future<Map<String, dynamic>> createUser(Map<String, dynamic> data) async {
+    final response = await _postJsonWithFallback('/users', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateUser(
+      int id, Map<String, dynamic> data) async {
+    final response = await _putJsonWithFallback('/users/$id', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> deleteUser(int id) async {
+    final response = await _deleteWithFallback('/users/$id');
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
   }
 
   String _errorMessage(http.Response response) {

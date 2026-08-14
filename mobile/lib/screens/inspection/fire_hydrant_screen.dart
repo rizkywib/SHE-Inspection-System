@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -484,19 +487,24 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                                 return;
                               }
 
-                              final payload = <String, dynamic>{
+                              final fields = <String, String>{
                                 'inspection_date': dateController.text,
-                                'location_id': locationId,
-                                'inspector_id': inspectorId,
+                                'location_id': locationId.toString(),
+                                'inspector_id': inspectorId.toString(),
                                 'status': status,
-                                'notes': _nullIfEmpty(notesController.text),
-                                'items': itemForms
-                                    .map((form) => form.toPayload())
-                                    .toList(),
+                                'notes': _nullIfEmpty(notesController.text) ?? '',
+                                for (var i = 0; i < itemForms.length; i++)
+                                  ..._hydrantItemFields(itemForms[i], i),
                               };
-
-                              final saved =
-                                  await _saveInspection(item, payload);
+                                                                                          final files = <String, File?>{
+                                for (var i = 0; i < itemForms.length; i++)
+                                  ..._hydrantItemPhotoFields(
+                                      itemForms[i], i),
+                              };                              final saved = await _saveInspectionWithPhotos(
+                                item,
+                                fields,
+                                files,
+                              );
                               if (!context.mounted) return;
                               if (saved) {
                                 didSave = true;
@@ -546,12 +554,19 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     return null;
   }
 
-  Future<bool> _saveInspection(
-      Map<String, dynamic>? item, Map<String, dynamic> payload) async {
+  Future<bool> _saveInspectionWithPhotos(
+    Map<String, dynamic>? item,
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) async {
     final api = context.read<ApiService>();
     final response = item == null
-        ? await api.createFireHydrant(payload)
-        : await api.updateFireHydrant(_intValue(item['id'])!, payload);
+        ? await api.createFireHydrantWithPhotos(fields, files)
+        : await api.updateFireHydrantWithPhotos(
+            _intValue(item['id'])!,
+            fields,
+            files,
+          );
 
     if (!mounted) return false;
     if (response.containsKey('error')) {
@@ -565,6 +580,36 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     }
 
     return true;
+  }
+
+  Map<String, String> _hydrantItemFields(
+    _HydrantItemFormData form,
+    int index,
+  ) {
+    return {
+      'items[$index][hydrant_number]': form.hydrantNumber.text.trim(),
+      'items[$index][name]': form.name.text.trim(),
+      'items[$index][location_detail]':
+          _nullIfEmpty(form.locationDetail.text) ?? '',
+      'items[$index][hose_condition]': form.hoseCondition ? '1' : '0',
+      'items[$index][nozzle_condition]': form.nozzleCondition ? '1' : '0',
+      'items[$index][coupling_condition]': form.couplingCondition ? '1' : '0',
+      'items[$index][wrench_condition]': form.wrenchCondition ? '1' : '0',
+      'items[$index][valve_condition]': form.valveCondition ? '1' : '0',
+      'items[$index][coupling_extra_condition]':
+          form.couplingExtraCondition ? '1' : '0',
+      'items[$index][remark]': _nullIfEmpty(form.remark.text) ?? '',
+    };
+  }
+
+  Map<String, File?> _hydrantItemPhotoFields(
+    _HydrantItemFormData form,
+    int index,
+  ) {
+    return {
+      'items[$index][photo_before]': form.newPhotoBefore,
+      'items[$index][photo_after]': form.newPhotoAfter,
+    };
   }
 
   Future<void> _confirmDelete(Map<String, dynamic> item) async {
@@ -795,7 +840,8 @@ class _HydrantItemFormData {
       wrenchCondition: _truthy(item['wrench_condition']),
       valveCondition: _truthy(item['valve_condition']),
       couplingExtraCondition: _truthy(item['coupling_extra_condition']),
-    );
+    )..existingPhotoBefore = item['photo_before']?.toString()
+      ..existingPhotoAfter = item['photo_after']?.toString();
   }
 
   final TextEditingController hydrantNumber;
@@ -808,6 +854,10 @@ class _HydrantItemFormData {
   bool wrenchCondition;
   bool valveCondition;
   bool couplingExtraCondition;
+  String? existingPhotoBefore;
+  String? existingPhotoAfter;
+  File? newPhotoBefore;
+  File? newPhotoAfter;
 
   Map<String, dynamic> toPayload() {
     final payload = <String, dynamic>{
@@ -1012,8 +1062,144 @@ class _HydrantItemEditor extends StatelessWidget {
               border: OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 12),
+          Text(
+            'Photos',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          _HydrantPhotoPicker(
+            label: 'Foto Sebelum (Before)',
+            existingPath: data.existingPhotoBefore,
+            file: data.newPhotoBefore,
+            onPick: () async {
+              final selected = await ImagePicker().pickImage(
+                source: ImageSource.camera,
+                imageQuality: 75,
+                maxWidth: 1600,
+              );
+              if (selected == null) return;
+              data.newPhotoBefore = File(selected.path);
+              onChanged();
+            },
+            onClear: () {
+              data.newPhotoBefore = null;
+              onChanged();
+            },
+          ),
+          const SizedBox(height: 10),
+          _HydrantPhotoPicker(
+            label: 'Foto Sesudah (After)',
+            existingPath: data.existingPhotoAfter,
+            file: data.newPhotoAfter,
+            onPick: () async {
+              final selected = await ImagePicker().pickImage(
+                source: ImageSource.camera,
+                imageQuality: 75,
+                maxWidth: 1600,
+              );
+              if (selected == null) return;
+              data.newPhotoAfter = File(selected.path);
+              onChanged();
+            },
+            onClear: () {
+              data.newPhotoAfter = null;
+              onChanged();
+            },
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _HydrantPhotoPicker extends StatelessWidget {
+  const _HydrantPhotoPicker({
+    required this.label,
+    required this.existingPath,
+    required this.file,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String label;
+  final String? existingPath;
+  final File? file;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (file != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                file!,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ] else if (_hasValue(existingPath)) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _existingPhoto(context, existingPath!),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPick,
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: Text(file == null ? 'Take Photo' : 'Retake'),
+                ),
+              ),
+              if (file != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove new photo',
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _existingPhoto(BuildContext context, String path) {
+    final url = _mediaUrl(context, path);
+    return Container(
+      height: 120,
+      width: double.infinity,
+      color: const Color(0xFFE2E8F0),
+      child: url == null
+          ? const Icon(Icons.image_not_supported_outlined, color: Colors.black45)
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.broken_image_outlined,
+                color: Colors.black45,
+              ),
+            ),
     );
   }
 }

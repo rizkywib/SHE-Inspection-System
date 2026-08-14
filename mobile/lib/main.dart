@@ -18,6 +18,7 @@ import 'screens/incident/incident_list_screen.dart';
 import 'screens/incident/incident_form_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/master_data/master_data_config.dart';
 
 void main() {
   runApp(const MyApp());
@@ -90,6 +91,18 @@ class MyApp extends StatelessWidget {
               break;
             case '/incident-form':
               page = const IncidentFormScreen();
+              break;
+            case '/master-hydrant-locations':
+              page = hydrantLocationsScreen();
+              break;
+            case '/master-incident-types':
+              page = incidentTypesScreen();
+              break;
+            case '/master-es-ew-areas':
+              page = esEwAreasScreen();
+              break;
+            case '/master-users':
+              page = usersScreen();
               break;
             default:
               page = const HomeScreen();

@@ -712,6 +712,52 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/incidents');
             },
           ),
+          if (_isAdminUser(user)) ...[
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16, top: 8, bottom: 4),
+              child: Text(
+                'Master Data',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_outlined),
+              title: const Text('Hydrant Locations'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/master-hydrant-locations');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.warning_amber_outlined),
+              title: const Text('Incident Types'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/master-incident-types');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.shower_outlined),
+              title: const Text('ES&EW Areas'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/master-es-ew-areas');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Users'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/master-users');
+              },
+            ),
+          ],
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -1525,6 +1571,11 @@ Map<String, dynamic> _mapFrom(dynamic value) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) return Map<String, dynamic>.from(value);
   return <String, dynamic>{};
+}
+
+bool _isAdminUser(dynamic user) {
+  final role = _mapFrom(user)['role']?.toString().toLowerCase() ?? '';
+  return role == 'admin' || role == 'super_admin';
 }
 
 const Set<String> _hiddenItemFields = {

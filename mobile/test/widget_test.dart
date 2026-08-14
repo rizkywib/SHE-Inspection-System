@@ -864,10 +864,31 @@ class _FakeFireExtinguisherApiService extends _FakeApiService {
   }
 
   @override
+  Future<Map<String, dynamic>> createFireExtinguisherWithPhotos(
+    Map<String, String> fields, {
+    File? photoBefore,
+    File? photoAfter,
+  }) async {
+    createCalls++;
+    return {'data': fields};
+  }
+
+  @override
   Future<Map<String, dynamic>> updateFireExtinguisher(
       int id, Map<String, dynamic> data) async {
     updateCalls++;
     return {'data': data};
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateFireExtinguisherWithPhotos(
+    int id,
+    Map<String, String> fields, {
+    File? photoBefore,
+    File? photoAfter,
+  }) async {
+    updateCalls++;
+    return {'data': fields};
   }
 
   @override

@@ -253,7 +253,7 @@
                 <img id="qrPrintLogo" src="/images/ecogreen-logo-print.png" alt="Ecogreen Oleochemicals" class="qr-print-logo">
                 <h4 id="qrPointName" class="text-xl font-bold text-gray-900 mb-4"></h4>
                 <img id="qrImage" alt="Point QR Code" class="mx-auto w-56 h-56 border border-gray-200 rounded-lg p-2 bg-white">
-                <p id="qrCodeText" class="mt-4 text-sm font-mono text-gray-700 break-all"></p>
+                <p id="qrCodeText" class="mt-4 text-sm font-mono text-gray-700 break-all whitespace-pre-line"></p>
                 <p id="qrGeneratedAt" class="mt-1 text-xs text-gray-500"></p>
             </div>
             <div class="flex justify-end gap-3 px-5 py-4 border-t border-gray-200 no-print">
@@ -312,17 +312,8 @@ function formatDateTime(value) {
     return date.toLocaleString('id-ID');
 }
 
-function qrPayload(point) {
-    return JSON.stringify({
-        type: 'point',
-        id: point.id,
-        name_point: point.name_point,
-        qr_code: point.qr_code
-    });
-}
-
 function qrImageUrl(point) {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=${encodeURIComponent(qrPayload(point))}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=${encodeURIComponent(point.qr_code)}`;
 }
 
 function viewQr(id) {
@@ -871,7 +862,7 @@ function renderTable() {
                         <button onclick="viewQr(${loc.id})" class="text-indigo-600 hover:text-indigo-800 font-medium">
                             <i class="fas fa-qrcode mr-1"></i>View
                         </button>
-                        <div class="text-xs font-mono text-gray-400 mt-1">${escapeHtml(loc.qr_code)}</div>
+                        <div class="text-xs font-mono text-gray-400 mt-1 whitespace-pre-line">${escapeHtml(loc.qr_code)}</div>
                     ` : '<span class="text-gray-400">Belum ada</span>'}
                 </td>
                 <td class="px-6 py-4 text-sm">${statusBadge(loc.status)}</td>
