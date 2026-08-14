@@ -3,10 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PermitType extends Model
 {
     protected $fillable = ['name', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
+
+    public function permitInspections(): HasMany
+    {
+        return $this->hasMany(SafeWorkPermitInspection::class, 'permit_type_id');
+    }
 }

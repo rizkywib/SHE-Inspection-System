@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\AreaController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\IncidentTypeController;
 use App\Http\Controllers\Api\SupervisionAreaController;
+use App\Http\Controllers\Api\PermitTypeController;
 use App\Http\Controllers\Api\FireHydrantController;
 use App\Http\Controllers\Api\FireExtinguisherController;
 use App\Http\Controllers\Api\FireAlarmController;
@@ -68,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('areas', AreaController::class);
     Route::apiResource('es-ew-areas', EsEwAreaController::class);
     Route::apiResource('supervision-areas', SupervisionAreaController::class);
+    Route::apiResource('permit-types', PermitTypeController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::get('/incident-types', [IncidentTypeController::class, 'index']);
     Route::post('/incident-types', [IncidentTypeController::class, 'store']);
