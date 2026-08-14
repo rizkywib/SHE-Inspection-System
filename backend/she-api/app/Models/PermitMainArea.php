@@ -15,4 +15,9 @@ class PermitMainArea extends Model
     {
         return $this->hasMany(PermitSubArea::class, 'main_area_id');
     }
+
+    public function permitInspections(): HasMany
+    {
+        return $this->hasMany(SafeWorkPermitInspection::class, 'main_area_id');
+    }
 }

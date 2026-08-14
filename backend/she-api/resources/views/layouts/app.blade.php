@@ -116,6 +116,14 @@
                     <i class="fas fa-file-signature w-5"></i>
                     <span>Type Permit</span>
                 </a>
+                <a href="/dashboard/permit-main-areas" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-permit-main-areas', '')">
+                    <i class="fas fa-layer-group w-5"></i>
+                    <span>Main Area</span>
+                </a>
+                <a href="/dashboard/permit-sub-areas" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-permit-sub-areas', '')">
+                    <i class="fas fa-sitemap w-5"></i>
+                    <span>Sub Area</span>
+                </a>
                 <a id="usersMenuDesktop" href="/dashboard/users" class="hidden nav-link items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-users', '')">
                     <i class="fas fa-users w-5"></i>
                     <span>Users</span>
@@ -172,6 +180,8 @@
                     <a href="/dashboard/es-ew-areas" class="block py-2 text-gray-600 hover:text-gray-900">ES&EW Areas</a>
                     <a href="/dashboard/supervision-areas" class="block py-2 text-gray-600 hover:text-gray-900">Area Pengawasan</a>
                     <a href="/dashboard/permit-types" class="block py-2 text-gray-600 hover:text-gray-900">Type Permit</a>
+                    <a href="/dashboard/permit-main-areas" class="block py-2 text-gray-600 hover:text-gray-900">Main Area</a>
+                    <a href="/dashboard/permit-sub-areas" class="block py-2 text-gray-600 hover:text-gray-900">Sub Area</a>
                     <a id="usersMenuMobile" href="/dashboard/users" class="hidden py-2 text-gray-600 hover:text-gray-900">Users</a>
                     <a href="/dashboard/profile" class="block py-2 text-blue-600 hover:text-blue-800"><i class="fas fa-user-pen mr-2"></i>Edit Profil</a>
                     <button onclick="logout()" class="text-red-600 hover:text-red-800 text-sm py-2">Logout</button>

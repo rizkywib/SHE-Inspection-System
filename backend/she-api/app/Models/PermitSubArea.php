@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PermitSubArea extends Model
 {
@@ -14,5 +15,10 @@ class PermitSubArea extends Model
     public function mainArea(): BelongsTo
     {
         return $this->belongsTo(PermitMainArea::class, 'main_area_id');
+    }
+
+    public function permitInspections(): HasMany
+    {
+        return $this->hasMany(SafeWorkPermitInspection::class, 'sub_area_id');
     }
 }
