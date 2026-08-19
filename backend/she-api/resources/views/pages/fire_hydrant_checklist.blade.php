@@ -15,9 +15,6 @@
                 <h1 class="text-3xl font-bold text-gray-900">Fire Hydrant Items Checklist</h1>
                 <p id="pageSubtitle" class="text-sm text-blue-600 font-medium mt-0.5"></p>
             </div>
-            <button id="createItemButton" onclick="createNewItem()" class="btn-primary text-white px-6 py-3 rounded-lg shadow-md">
-                <i class="fas fa-plus mr-2"></i>Create New Fire Hydrant Item
-            </button>
         </div>
     </div>
 
@@ -57,7 +54,6 @@ let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || '{}');
 let locations = [];
 let pointHydrants = [];
-let targetInspectionId = null;
 
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
@@ -132,7 +128,6 @@ async function loadChecklist() {
     const targetInspection = requestedInspectionId
         ? inspections.find(inspection => String(inspection.id) === String(requestedInspectionId))
         : inspections[0];
-    targetInspectionId = targetInspection?.id || null;
 
     const tbody = document.getElementById('checklistTable');
 
@@ -206,18 +201,6 @@ async function loadChecklist() {
             </tr>
         `;
     }).join('');
-}
-
-function createNewItem() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const locationId = urlParams.get('location_id');
-
-    if (!targetInspectionId) {
-        alert('Belum ada inspection header untuk lokasi ini. Silakan buat inspection terlebih dahulu.');
-        return;
-    }
-
-    window.location.href = `/dashboard/fire-hydrants/edit?id=${targetInspectionId}&create=1&location_id=${encodeURIComponent(locationId || '')}&inspection_id=${targetInspectionId}`;
 }
 
 async function confirmDeleteItem(inspectionId, itemIndex) {

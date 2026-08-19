@@ -99,7 +99,6 @@ document.getElementById('userName').textContent = user.name || 'User';
 const urlParams = new URLSearchParams(window.location.search);
 const inspectionId = urlParams.get('id');
 const itemParam = urlParams.get('item');
-const createMode = urlParams.get('create') === '1';
 const returnLocationId = urlParams.get('location_id');
 const returnInspectionId = urlParams.get('inspection_id') || inspectionId;
 
@@ -271,14 +270,14 @@ function getItemFromForm() {
 }
 
 async function loadInspection() {
-    if (!inspectionId || (!createMode && itemParam === null)) {
+    if (!inspectionId || itemParam === null) {
         document.getElementById('errorMessage').textContent = 'Invalid URL parameters.';
         document.getElementById('loadingState').classList.add('hidden');
         document.getElementById('errorState').classList.remove('hidden');
         return;
     }
 
-    itemIndex = createMode ? -1 : parseInt(itemParam, 10);
+    itemIndex = parseInt(itemParam, 10);
 
     try {
         await loadReferenceData();
@@ -292,28 +291,22 @@ async function loadInspection() {
         inspectionData = json.data;
 
         const items = Array.isArray(inspectionData.items) ? inspectionData.items : [];
-        if (!createMode && (itemIndex < 0 || itemIndex >= items.length)) {
+        if (itemIndex < 0 || itemIndex >= items.length) {
             throw new Error(`Item index ${itemIndex} is out of range (0-${items.length - 1})`);
         }
 
-        const item = createMode ? {} : items[itemIndex];
+        const item = items[itemIndex];
 
         // Set hidden fields
         document.getElementById('hid_id').value = inspectionData.id;
         document.getElementById('itemIndex').value = itemIndex;
 
         // Set reference display
-        document.getElementById('pageTitle').textContent = createMode
-            ? 'Create New Fire Hydrant Item'
-            : 'Edit Fire Hydrant Item';
-        document.getElementById('itemFormTitle').textContent = createMode ? 'New Item Details' : 'Item Details';
-        document.getElementById('saveButtonLabel').textContent = createMode ? 'Add Item' : 'Save Changes';
-        document.getElementById('pageReference').textContent = createMode
-            ? `${inspectionData.reference_no || 'No Reference'} - New Item`
-            : `${inspectionData.reference_no || 'No Reference'} - Item ${itemIndex + 1}`;
-        document.getElementById('itemLabel').textContent = createMode
-            ? `Adding item ${items.length + 1}`
-            : `Editing item ${itemIndex + 1} of ${items.length}`;
+        document.getElementById('pageTitle').textContent = 'Edit Fire Hydrant Item';
+        document.getElementById('itemFormTitle').textContent = 'Item Details';
+        document.getElementById('saveButtonLabel').textContent = 'Save Changes';
+        document.getElementById('pageReference').textContent = `${inspectionData.reference_no || 'No Reference'} - Item ${itemIndex + 1}`;
+        document.getElementById('itemLabel').textContent = `Editing item ${itemIndex + 1} of ${items.length}`;
 
         // Set inspection info
         const locName = inspectionData.location 
@@ -388,21 +381,6 @@ document.getElementById('itemForm').addEventListener('submit', async e => {
         };
     });
 
-    if (createMode) {
-        allItems.push({
-            hydrant_number: editedItem.hydrant_number,
-            name: editedItem.name,
-            location_detail: editedItem.location_detail,
-            hose_condition: editedItem.hose_condition,
-            nozzle_condition: editedItem.nozzle_condition,
-            coupling_condition: editedItem.coupling_condition,
-            wrench_condition: editedItem.wrench_condition,
-            valve_condition: editedItem.valve_condition,
-            coupling_extra_condition: editedItem.coupling_extra_condition,
-            remark: editedItem.remark,
-        });
-    }
-
     // But when uploading, put the file reference for the edited item index
     const formData = new FormData();
     formData.append('inspection_date', inspectionData.inspection_date);
@@ -421,7 +399,7 @@ document.getElementById('itemForm').addEventListener('submit', async e => {
             formData.append(`items[${index}][${key}]`, typeof value === 'boolean' ? (value ? '1' : '0') : value);
         });
         // For the edited item, add the actual file if selected
-        if ((!createMode && index === idx) || (createMode && index === allItems.length - 1)) {
+        if (index === idx) {
             const photoBeforeFile = document.querySelector('[data-field="photo_before"]').files[0];
             const photoAfterFile = document.querySelector('[data-field="photo_after"]').files[0];
             if (photoBeforeFile) formData.append(`items[${index}][photo_before]`, photoBeforeFile);
@@ -450,7 +428,7 @@ document.getElementById('itemForm').addEventListener('submit', async e => {
             return;
         }
 
-        alert(createMode ? 'Item added successfully!' : 'Item updated successfully!');
+        alert('Item updated successfully!');
         window.location.href = returnLocationId
             ? `/dashboard/fire-hydrant-checklist?location_id=${encodeURIComponent(returnLocationId)}&inspection_id=${encodeURIComponent(returnInspectionId)}`
             : '/dashboard/fire-hydrants';

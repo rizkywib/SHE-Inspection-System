@@ -21,7 +21,7 @@
             <input type="hidden" id="hid_id">
             <input type="hidden" id="reference_no">
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                <div class="xl:col-span-6 space-y-5">
+                <div class="xl:col-span-12 space-y-5">
                     <div class="border-b border-gray-200 pb-3">
                         <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Inspection Data</h3>
                     </div>
@@ -52,28 +52,12 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="xl:col-span-6 space-y-5">
-                    <div class="border-b border-gray-200 pb-3">
-                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Notes</h3>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea id="notes" rows="11" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
-                    </div>
-                </div>
             </div>
 
             <div class="border-t border-gray-200 pt-6">
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Fire Hydrant Items</h3>
-                        <p class="text-sm text-gray-500 mt-1">Isi detail item hydrant dan kondisi perlengkapannya.</p>
-                    </div>
-                    <button type="button" onclick="addHydrantItem()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
-                        <i class="fas fa-plus mr-2"></i>Add Item
-                    </button>
+                <div class="mb-4">
+                    <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Fire Hydrant Item</h3>
+                    <p class="text-sm text-gray-500 mt-1">Isi detail item hydrant dan kondisi perlengkapannya.</p>
                 </div>
                 <div id="hydrantItems" class="space-y-4"></div>
             </div>
@@ -533,11 +517,8 @@ function addHydrantItem(item = {}) {
     const card = document.createElement('div');
     card.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50 hydrant-item';
     card.innerHTML = `
-        <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="mb-4">
             <h4 class="font-semibold text-gray-900">Item Hydrant <span class="item-number">${index}</span></h4>
-            <button type="button" onclick="removeHydrantItem(this)" class="text-red-600 hover:text-red-800 text-sm font-medium">
-                <i class="fas fa-trash mr-1"></i>Remove
-            </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -586,11 +567,6 @@ function addHydrantItem(item = {}) {
     renumberHydrantItems();
 }
 
-function removeHydrantItem(button) {
-    button.closest('.hydrant-item').remove();
-    renumberHydrantItems();
-}
-
 function renumberHydrantItems() {
     document.querySelectorAll('#hydrantItems .hydrant-item').forEach((item, index) => {
         item.querySelector('.item-number').textContent = index + 1;
@@ -621,11 +597,7 @@ function collectHydrantItems() {
 
 function resetHydrantItems(items = []) {
     document.getElementById('hydrantItems').innerHTML = '';
-    if (items.length === 0) {
-        addHydrantItem();
-        return;
-    }
-    items.forEach(item => addHydrantItem(item));
+    addHydrantItem(items[0] || {});
 }
 
 function getLocationLabel(locationId) {
@@ -740,7 +712,6 @@ async function editItem(id) {
     document.getElementById('inspection_date').value = formatDateOnly(detail.inspection_date);
     document.getElementById('location_id').value = detail.location_id || '';
     document.getElementById('inspector_id').value = detail.inspector_id || '';
-    document.getElementById('notes').value = detail.notes || '';
     resetHydrantItems(Array.isArray(detail.items) ? detail.items : []);
 }
 
@@ -892,7 +863,6 @@ document.getElementById('hydrantForm').addEventListener('submit', async e => {
         inspection_date: document.getElementById('inspection_date').value,
         location_id: document.getElementById('location_id').value || null,
         inspector_id: document.getElementById('inspector_id').value || null,
-        notes: document.getElementById('notes').value || null,
     };
     const formData = new FormData();
     Object.entries(payload).forEach(([key, value]) => {
