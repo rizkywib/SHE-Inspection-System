@@ -33,7 +33,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Account is deactivated'], 403);
         }
 
-        $token = $user->createToken('she-inspection')->plainTextToken;
+        $token = $user->createToken('she-inspection', ['*'], now()->addDays(30))->plainTextToken;
 
         $user->update(['last_login' => now()]);
 
@@ -45,11 +45,15 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+        if (app()->environment('production')) {
+            abort(404);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users,username',
             'password' => 'required|min:8',
-            'role' => 'in:admin,inspector,viewer',
+            'role' => 'in:inspector,viewer',
         ]);
 
         $user = User::create([
@@ -57,9 +61,10 @@ class AuthController extends Controller
             'username' => $request->username,
             'password_hash' => Hash::make($request->password),
             'role' => $request->role ?? 'inspector',
+            'is_active' => false,
         ]);
 
-        $token = $user->createToken('she-inspection')->plainTextToken;
+        $token = $user->createToken('she-inspection', ['*'], now()->addDays(30))->plainTextToken;
 
         return response()->json([
             'token' => $token,

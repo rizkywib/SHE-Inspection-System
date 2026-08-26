@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:io';
 import 'api_service.dart';
 
 class AuthService extends ChangeNotifier {
   final ApiService _api = ApiService();
+  static const _tokenKey = 'auth_token';
+  static const _storage = FlutterSecureStorage();
   Map<String, dynamic>? _user;
   String? _token;
   bool _isLoading = false;
@@ -17,8 +19,7 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _token != null && _user != null;
 
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('token');
+    _token = await _storage.read(key: _tokenKey);
     if (_token != null) {
       _api.setToken(_token);
       try {
@@ -27,7 +28,7 @@ class AuthService extends ChangeNotifier {
       } catch (e) {
         _token = null;
         _user = null;
-        await prefs.remove('token');
+        await _storage.delete(key: _tokenKey);
       }
     }
     notifyListeners();
@@ -43,8 +44,7 @@ class AuthService extends ChangeNotifier {
         _token = response['token'];
         _user = response['user'];
         _api.setToken(_token);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
+        await _storage.write(key: _tokenKey, value: _token!);
         _isLoading = false;
         notifyListeners();
         return null;
@@ -84,8 +84,7 @@ class AuthService extends ChangeNotifier {
     _token = null;
     _user = null;
     _api.setToken(null);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    await _storage.delete(key: _tokenKey);
     notifyListeners();
   }
 }

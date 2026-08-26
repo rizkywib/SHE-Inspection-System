@@ -38,9 +38,11 @@ use App\Http\Controllers\Api\SafetyTalkTrainingController;
 |--------------------------------------------------------------------------
 */
 
-// Public routes
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/register', [AuthController::class, 'register']);
+// Public routes (rate-limited to mitigate brute force)
+Route::post('/auth/login', [AuthController::class, 'login'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/register', [AuthController::class, 'register'])
+    ->middleware('throttle:5,1');
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -55,32 +57,48 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/incident-summary', [DashboardController::class, 'incidentSummary']);
 
     // Master Data
-    Route::apiResource('companies', CompanyController::class);
-    Route::apiResource('branches', BranchController::class);
-    Route::apiResource('divisions', DivisionController::class);
-    Route::apiResource('departments', DepartmentController::class);
-    Route::apiResource('sections', SectionController::class);
+    Route::apiResource('companies', CompanyController::class)->only(['index', 'show']);
+    Route::apiResource('companies', CompanyController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('branches', BranchController::class)->only(['index', 'show']);
+    Route::apiResource('branches', BranchController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('divisions', DivisionController::class)->only(['index', 'show']);
+    Route::apiResource('divisions', DivisionController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('departments', DepartmentController::class)->only(['index', 'show']);
+    Route::apiResource('departments', DepartmentController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('sections', SectionController::class)->only(['index', 'show']);
+    Route::apiResource('sections', SectionController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::get('/locations', [LocationController::class, 'index']);
-    Route::post('/locations', [LocationController::class, 'store']);
+    Route::post('/locations', [LocationController::class, 'store'])->middleware('admin');
     Route::get('/locations/{id}', [LocationController::class, 'show']);
-    Route::put('/locations/{id}', [LocationController::class, 'update']);
-    Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
-    Route::apiResource('points', PointController::class);
-    Route::apiResource('fire-hydrant-locations', FireHydrantLocationController::class);
-    Route::apiResource('fire-extinguisher-locations', FireExtinguisherLocationController::class);
-    Route::apiResource('areas', AreaController::class);
-    Route::apiResource('es-ew-areas', EsEwAreaController::class);
-    Route::apiResource('supervision-areas', SupervisionAreaController::class);
-    Route::apiResource('permit-types', PermitTypeController::class);
-    Route::apiResource('permit-main-areas', PermitMainAreaController::class);
-    Route::apiResource('permit-sub-areas', PermitSubAreaController::class);
-    Route::apiResource('categories', CategoryController::class);
+    Route::put('/locations/{id}', [LocationController::class, 'update'])->middleware('admin');
+    Route::delete('/locations/{id}', [LocationController::class, 'destroy'])->middleware('admin');
+    Route::apiResource('points', PointController::class)->only(['index', 'show']);
+    Route::apiResource('points', PointController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('fire-hydrant-locations', FireHydrantLocationController::class)->only(['index', 'show']);
+    Route::apiResource('fire-hydrant-locations', FireHydrantLocationController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('fire-extinguisher-locations', FireExtinguisherLocationController::class)->only(['index', 'show']);
+    Route::apiResource('fire-extinguisher-locations', FireExtinguisherLocationController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('areas', AreaController::class)->only(['index', 'show']);
+    Route::apiResource('areas', AreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('es-ew-areas', EsEwAreaController::class)->only(['index', 'show']);
+    Route::apiResource('es-ew-areas', EsEwAreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('supervision-areas', SupervisionAreaController::class)->only(['index', 'show']);
+    Route::apiResource('supervision-areas', SupervisionAreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('permit-types', PermitTypeController::class)->only(['index', 'show']);
+    Route::apiResource('permit-types', PermitTypeController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('permit-main-areas', PermitMainAreaController::class)->only(['index', 'show']);
+    Route::apiResource('permit-main-areas', PermitMainAreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('permit-sub-areas', PermitSubAreaController::class)->only(['index', 'show']);
+    Route::apiResource('permit-sub-areas', PermitSubAreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('categories', CategoryController::class)->only(['index', 'show']);
+    Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::get('/incident-types', [IncidentTypeController::class, 'index']);
-    Route::post('/incident-types', [IncidentTypeController::class, 'store']);
+    Route::post('/incident-types', [IncidentTypeController::class, 'store'])->middleware('admin');
     Route::get('/incident-types/{id}', [IncidentTypeController::class, 'show']);
-    Route::put('/incident-types/{id}', [IncidentTypeController::class, 'update']);
-    Route::delete('/incident-types/{id}', [IncidentTypeController::class, 'destroy']);
-    Route::apiResource('users', UserController::class);
+    Route::put('/incident-types/{id}', [IncidentTypeController::class, 'update'])->middleware('admin');
+    Route::delete('/incident-types/{id}', [IncidentTypeController::class, 'destroy'])->middleware('admin');
+    Route::apiResource('users', UserController::class)->only(['index', 'show']);
+    Route::apiResource('users', UserController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
 
     // Permit Matrix / Safe Work Permit Inspections
     Route::get('/safe-work-permit-inspections/master-data', [SafeWorkPermitInspectionController::class, 'masterData'])

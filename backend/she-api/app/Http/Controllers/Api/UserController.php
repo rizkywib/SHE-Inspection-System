@@ -22,6 +22,8 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAdmin($request->user());
+
         $this->normalizePhone($request);
 
         $validator = Validator::make($request->all(), [
@@ -43,6 +45,7 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
+        $this->assertRoleAllowed($request->user(), $data['role'] ?? null);
         $data['password_hash'] = Hash::make($data['password']);
         unset($data['password']);
         $this->storeSignature($request, $data);
@@ -61,6 +64,7 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $this->authorizeAdmin($request->user());
         $this->normalizePhone($request);
 
         $validator = Validator::make($request->all(), [
@@ -82,6 +86,7 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
+        $this->assertRoleAllowed($request->user(), $data['role'] ?? null);
         if (isset($data['password']) && $data['password']) {
             $data['password_hash'] = Hash::make($data['password']);
         }
@@ -96,9 +101,33 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+        $this->authorizeAdmin(request()->user());
+
+        if ($user->id === request()->user()->id) {
+            abort(403, 'Anda tidak dapat menghapus akun sendiri.');
+        }
+
         $user->delete();
 
         return response()->json(['message' => 'Deleted successfully']);
+    }
+
+    private function authorizeAdmin($actor): void
+    {
+        if (!$actor || !$actor->isAdmin()) {
+            abort(403, 'Anda tidak memiliki izin untuk melakukan tindakan ini.');
+        }
+    }
+
+    private function assertRoleAllowed($actor, ?string $role): void
+    {
+        if ($role === null) {
+            return;
+        }
+
+        if ($role === 'super_admin' && $actor->role !== 'super_admin') {
+            abort(403, 'Hanya super admin yang dapat menetapkan role super admin.');
+        }
     }
 
     private function storeSignature(Request $request, array &$data): void
