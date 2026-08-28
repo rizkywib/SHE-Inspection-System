@@ -143,13 +143,12 @@ class SafeWorkPermitInspectionTest extends TestCase
                 'supervision_area_id',
                 'main_area_id',
                 'sub_area_id',
-                'section_equipment',
-                'job_performance',
-                'authorized_craftman',
-                'authorized_facility',
-                'contractor_name',
-                'work_description',
-            ]);
+'section_equipment',
+            'job_performance',
+            'authorized_craftman',
+            'authorized_facility',
+            'work_description',
+        ]);
     }
 
     public function test_invalid_or_inactive_master_ids_are_rejected(): void

@@ -417,9 +417,8 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
                           _TextField(
                             key: const ValueKey('contractor_name'),
                             controller: _contractorNameController,
-                            label: 'Nama Kontraktor *',
+                            label: 'Nama Kontraktor',
                             icon: Icons.business_outlined,
-                            validator: _requiredText,
                           ),
                           const SizedBox(height: 12),
                           _TextField(

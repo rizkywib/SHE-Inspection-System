@@ -69,8 +69,8 @@
                 <p data-error="authorized_facility" class="hidden text-red-600 text-sm mt-1"></p>
             </div>
             <div class="md:col-span-2">
-                <label for="contractor_name" class="block text-sm font-medium text-gray-700 mb-1">Nama Kontraktor <span class="text-red-600">*</span></label>
-                <input id="contractor_name" name="contractor_name" maxlength="255" required class="{{ $inputClass }}">
+                <label for="contractor_name" class="block text-sm font-medium text-gray-700 mb-1">Nama Kontraktor</label>
+                <input id="contractor_name" name="contractor_name" maxlength="255" class="{{ $inputClass }}">
                 <p data-error="contractor_name" class="hidden text-red-600 text-sm mt-1"></p>
             </div>
             <div class="md:col-span-2">

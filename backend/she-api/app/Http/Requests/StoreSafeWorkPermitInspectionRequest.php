@@ -44,7 +44,7 @@ class StoreSafeWorkPermitInspectionRequest extends FormRequest
             'job_performance' => ['required', 'string', 'max:65535', Rule::exists('permit_job_performances', 'name')->where('is_active', true)],
             'authorized_craftman' => ['required', 'string', 'max:255'],
             'authorized_facility' => ['required', 'string', 'max:255'],
-            'contractor_name' => ['required', 'string', 'max:255'],
+            'contractor_name' => ['nullable', 'string', 'max:255'],
             'work_description' => ['required', 'string', 'max:65535'],
             'permit_findings' => ['nullable', 'string', 'max:65535'],
         ];
