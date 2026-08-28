@@ -11,7 +11,7 @@ class IncidentImage extends Model
     protected $table = 'incident_images';
 
     protected $fillable = [
-        'incident_id', 'image_path', 'uploaded_by'
+        'incident_id', 'image_path', 'uploaded_by', 'kind'
     ];
 
     public function incident()

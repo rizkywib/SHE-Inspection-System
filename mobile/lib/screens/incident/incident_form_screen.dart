@@ -26,6 +26,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
   int? _incidentTypeId;
   String _status = 'open';
   File? _image;
+  File? _repairImage;
   bool _isLoading = true;
   bool _isSaving = false;
   String? _loadError;
@@ -86,7 +87,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
     if (selected != null && mounted) setState(() => _time = selected);
   }
 
-  Future<void> _chooseImageSource() async {
+  Future<void> _chooseImageSource(ValueChanged<File> onPicked) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (context) => SafeArea(
@@ -114,7 +115,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
       maxWidth: 1920,
     );
     if (selected != null && mounted) {
-      setState(() => _image = File(selected.path));
+      setState(() => onPicked(File(selected.path)));
     }
   }
 
@@ -123,7 +124,8 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_image == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gambar inspection wajib dipilih.')),
+        const SnackBar(
+            content: Text('Foto temuan awal wajib dipilih.')),
       );
       return;
     }
@@ -140,6 +142,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
         'status': _status,
       },
       image: _image,
+      repairPhoto: _repairImage,
     );
 
     if (!mounted) return;
@@ -291,7 +294,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                       _FormCard(
                         children: [
                           const Text(
-                            'Gambar Inspection',
+                            'Foto Temuan Awal *',
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 10),
@@ -307,14 +310,56 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                             ),
                           if (_image != null) const SizedBox(height: 10),
                           OutlinedButton.icon(
-                            onPressed: _chooseImageSource,
+                            onPressed: () => _chooseImageSource(
+                              (file) => _image = file,
+                            ),
                             icon: Icon(
                               _image == null
                                   ? Icons.add_a_photo_outlined
                                   : Icons.change_circle_outlined,
                             ),
                             label: Text(
-                              _image == null ? 'Upload Gambar' : 'Ganti Gambar',
+                              _image == null
+                                  ? 'Upload Gambar'
+                                  : 'Ganti Gambar',
+                            ),
+                          ),
+                          const Divider(height: 32),
+                          const Text(
+                            'Perbaikan',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Opsional - tidak wajib diisi.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          if (_repairImage != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.file(
+                                _repairImage!,
+                                height: 210,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          if (_repairImage != null)
+                            const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => _chooseImageSource(
+                              (file) => _repairImage = file,
+                            ),
+                            icon: Icon(
+                              _repairImage == null
+                                  ? Icons.add_a_photo_outlined
+                                  : Icons.change_circle_outlined,
+                            ),
+                            label: Text(
+                              _repairImage == null
+                                  ? 'Upload Perbaikan'
+                                  : 'Ganti Perbaikan',
                             ),
                           ),
                         ],

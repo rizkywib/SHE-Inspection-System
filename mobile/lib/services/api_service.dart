@@ -125,27 +125,6 @@ class ApiService extends ChangeNotifier {
     );
   }
 
-  Future<http.Response> _postMultipartWithFallback(
-    String path,
-    Map<String, String> fields,
-    File? image,
-  ) {
-    return _requestWithFallback((candidate) async {
-      final request = http.MultipartRequest('POST', _apiUri(candidate, path));
-      request.headers.addAll({
-        'Accept': 'application/json',
-        if (_token != null) 'Authorization': 'Bearer $_token',
-      });
-      request.fields.addAll(fields);
-      if (image != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('image', image.path),
-        );
-      }
-      return http.Response.fromStream(await request.send());
-    });
-  }
-
   Future<http.Response> _postMultipartFilesWithFallback(
     String path,
     Map<String, String> fields,
@@ -695,11 +674,12 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> createIncident(
     Map<String, String> data, {
     File? image,
+    File? repairPhoto,
   }) async {
-    final response = await _postMultipartWithFallback(
+    final response = await _postMultipartFilesWithFallback(
       '/incidents',
       data,
-      image,
+      {'image': image, 'repair_photo': repairPhoto},
     );
     if (response.statusCode >= 400) {
       return {'error': _errorMessage(response)};

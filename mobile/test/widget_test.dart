@@ -47,7 +47,10 @@ void main() {
     expect(find.text('Keterangan'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
+    expect(find.text('Foto Temuan Awal *'), findsOneWidget);
     expect(find.text('Upload Gambar'), findsOneWidget);
+    expect(find.text('Perbaikan'), findsOneWidget);
+    expect(find.text('Upload Perbaikan'), findsOneWidget);
     expect(find.text('Simpan'), findsOneWidget);
   });
 

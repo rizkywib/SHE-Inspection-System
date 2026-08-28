@@ -132,19 +132,38 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-5 md:p-6">
-                <label for="image" class="block text-sm font-semibold text-gray-700 mb-3">Gambar Inspection</label>
-                <p id="imageHelp" class="text-sm text-gray-500 mb-3">Gambar wajib dipilih.</p>
-                <div id="uploadArea" class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition">
-                    <img id="imagePreview" class="hidden mx-auto mb-4 max-h-72 rounded-lg object-contain" alt="Preview gambar inspection">
-                    <div id="uploadPlaceholder">
-                        <i class="fas fa-cloud-arrow-up text-4xl text-blue-500 mb-3"></i>
-                        <p class="font-medium text-gray-700">Upload Gambar</p>
-                        <p class="text-sm text-gray-500 mt-1">JPG, PNG, atau WebP, maksimal 5 MB</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="image" class="block text-sm font-semibold text-gray-700 mb-3">Foto Temuan Awal <span class="text-red-600">*</span></label>
+                        <p id="imageHelp" class="text-sm text-gray-500 mb-3">Foto temuan awal wajib dipilih.</p>
+                        <div id="uploadArea" class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition">
+                            <img id="imagePreview" class="hidden mx-auto mb-4 max-h-72 rounded-lg object-contain" alt="Preview foto temuan awal">
+                            <div id="uploadPlaceholder">
+                                <i class="fas fa-cloud-arrow-up text-4xl text-blue-500 mb-3"></i>
+                                <p class="font-medium text-gray-700">Upload Foto Temuan</p>
+                                <p class="text-sm text-gray-500 mt-1">JPG, PNG, atau WebP, maksimal 5 MB</p>
+                            </div>
+                            <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" required
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        </div>
+                        <div id="selectedFile" class="hidden mt-3 text-sm text-gray-600"></div>
                     </div>
-                    <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" required
-                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <div>
+                        <label for="repair_photo" class="block text-sm font-semibold text-gray-700 mb-3">Perbaikan</label>
+                        <p id="repairHelp" class="text-sm text-gray-500 mb-3">Opsional - tidak wajib.</p>
+                        <div id="repairUploadArea" class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition">
+                            <img id="repairImagePreview" class="hidden mx-auto mb-4 max-h-72 rounded-lg object-contain" alt="Preview foto perbaikan">
+                            <div id="repairUploadPlaceholder">
+                                <i class="fas fa-cloud-arrow-up text-4xl text-blue-500 mb-3"></i>
+                                <p class="font-medium text-gray-700">Upload Perbaikan</p>
+                                <p class="text-sm text-gray-500 mt-1">JPG, PNG, atau WebP, maksimal 5 MB</p>
+                            </div>
+                            <input id="repair_photo" name="repair_photo" type="file" accept="image/jpeg,image/png,image/webp"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        </div>
+                        <div id="repairSelectedFile" class="hidden mt-3 text-sm text-gray-600"></div>
+                    </div>
                 </div>
-                <div id="selectedFile" class="hidden mt-3 text-sm text-gray-600"></div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -189,6 +208,10 @@ const imageInput = document.getElementById('image');
 const imagePreview = document.getElementById('imagePreview');
 const uploadPlaceholder = document.getElementById('uploadPlaceholder');
 const selectedFile = document.getElementById('selectedFile');
+const repairImageInput = document.getElementById('repair_photo');
+const repairImagePreview = document.getElementById('repairImagePreview');
+const repairUploadPlaceholder = document.getElementById('repairUploadPlaceholder');
+const repairSelectedFile = document.getElementById('repairSelectedFile');
 let inspectionsData = [];
 let currentPage = 1;
 let pageSize = 25;
@@ -212,7 +235,7 @@ function showInspectionForm() {
     document.getElementById('incident_id').value = '';
     document.getElementById('formHeading').textContent = 'Inspection Baru';
     document.getElementById('submitText').textContent = 'Simpan';
-    document.getElementById('imageHelp').textContent = 'Gambar wajib dipilih.';
+    document.getElementById('imageHelp').textContent = 'Foto temuan awal wajib dipilih.';
     imageInput.required = true;
     resetImagePreview();
     listSection.classList.add('hidden');
@@ -337,9 +360,9 @@ function renderTable() {
             </tr>`;
     } else {
         table.innerHTML = pageItems.map(item => {
-            const image = Array.isArray(item.images) && item.images.length > 0
-                ? mediaUrl(item.images[0].image_path)
-                : null;
+            const images = Array.isArray(item.images) ? item.images : [];
+            const findingImage = images.find(img => img.kind !== 'repair') || images[0] || null;
+            const repairImage = images.find(img => img.kind === 'repair') || null;
             return `
                 <tr class="hover:bg-gray-50 align-top">
                     <td class="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">
@@ -353,9 +376,15 @@ function renderTable() {
                     </td>
                     <td class="px-5 py-4 text-sm">${statusBadge(item.status)}</td>
                     <td class="px-5 py-4">
-                        ${image
-                            ? `<a href="${image}" target="_blank" rel="noopener"><img src="${image}" alt="Gambar inspection" class="w-16 h-16 rounded-lg object-cover border border-gray-200"></a>`
-                            : '<span class="text-sm text-gray-400">-</span>'}
+                        <div class="flex gap-2">
+                            ${findingImage
+                                ? `<a href="${mediaUrl(findingImage.image_path)}" target="_blank" rel="noopener" title="Foto Temuan Awal"><img src="${mediaUrl(findingImage.image_path)}" alt="Foto temuan awal" class="w-16 h-16 rounded-lg object-cover border border-gray-200"></a>`
+                                : ''}
+                            ${repairImage
+                                ? `<a href="${mediaUrl(repairImage.image_path)}" target="_blank" rel="noopener" title="Perbaikan"><img src="${mediaUrl(repairImage.image_path)}" alt="Foto perbaikan" class="w-16 h-16 rounded-lg object-cover border border-amber-300"></a>`
+                                : ''}
+                            ${!findingImage && !repairImage ? '<span class="text-sm text-gray-400">-</span>' : ''}
+                        </div>
                     </td>
                     <td class="px-5 py-4 text-sm whitespace-nowrap">
                         <button type="button" onclick="viewInspection(${Number(item.id)})" class="text-sky-600 hover:text-sky-800 mr-3" title="Lihat">
@@ -399,9 +428,9 @@ async function getInspection(id) {
 async function viewInspection(id) {
     try {
         const item = await getInspection(id);
-        const image = Array.isArray(item.images) && item.images.length > 0
-            ? mediaUrl(item.images[0].image_path)
-            : null;
+        const images = Array.isArray(item.images) ? item.images : [];
+        const findingImage = images.find(img => img.kind !== 'repair') || images[0] || null;
+        const repairImage = images.find(img => img.kind === 'repair') || null;
         document.getElementById('detailContent').innerHTML = `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 ${detailField('Referensi', item.reference_no)}
@@ -412,10 +441,16 @@ async function viewInspection(id) {
                 <div><p class="text-xs font-semibold uppercase text-gray-400 mb-1">Status</p>${statusBadge(item.status)}</div>
                 <div class="sm:col-span-2">${detailField('Keterangan', item.description)}</div>
                 <div class="sm:col-span-2">
-                    <p class="text-xs font-semibold uppercase text-gray-400 mb-2">Gambar</p>
-                    ${image
-                        ? `<a href="${image}" target="_blank" rel="noopener"><img src="${image}" alt="Gambar inspection" class="max-h-80 rounded-lg border border-gray-200 object-contain"></a>`
+                    <p class="text-xs font-semibold uppercase text-gray-400 mb-2">Foto Temuan Awal</p>
+                    ${findingImage
+                        ? `<a href="${mediaUrl(findingImage.image_path)}" target="_blank" rel="noopener"><img src="${mediaUrl(findingImage.image_path)}" alt="Foto temuan awal" class="max-h-80 rounded-lg border border-gray-200 object-contain"></a>`
                         : '<p class="text-gray-500">-</p>'}
+                </div>
+                <div class="sm:col-span-2">
+                    <p class="text-xs font-semibold uppercase text-gray-400 mb-2">Perbaikan</p>
+                    ${repairImage
+                        ? `<a href="${mediaUrl(repairImage.image_path)}" target="_blank" rel="noopener"><img src="${mediaUrl(repairImage.image_path)}" alt="Foto perbaikan" class="max-h-80 rounded-lg border border-gray-200 object-contain"></a>`
+                        : '<p class="text-gray-500">Tidak ada foto perbaikan</p>'}
                 </div>
             </div>`;
         const modal = document.getElementById('detailModal');
@@ -444,7 +479,7 @@ async function editInspection(id) {
     document.getElementById('formHeading').textContent = 'Edit Inspection';
     document.getElementById('pageSubtitle').textContent = 'Perbarui data inspection';
     document.getElementById('submitText').textContent = 'Update';
-    document.getElementById('imageHelp').textContent = 'Kosongkan jika gambar tidak ingin diganti.';
+    document.getElementById('imageHelp').textContent = 'Kosongkan jika foto temuan awal tidak ingin diganti.';
     imageInput.required = false;
 
     try {
@@ -460,12 +495,24 @@ async function editInspection(id) {
         document.getElementById('status').value = item.status === 'closed' ? 'close' : 'open';
         document.getElementById('description').value = item.description || '';
 
-        if (Array.isArray(item.images) && item.images.length > 0) {
-            imagePreview.src = mediaUrl(item.images[0].image_path);
+        const images = Array.isArray(item.images) ? item.images : [];
+        const finding = images.find(img => img.kind !== 'repair') || images[0] || null;
+        const repair = images.find(img => img.kind === 'repair') || null;
+
+        if (finding) {
+            imagePreview.src = mediaUrl(finding.image_path);
             imagePreview.classList.remove('hidden');
             uploadPlaceholder.classList.add('hidden');
-            selectedFile.textContent = 'Gambar saat ini - pilih file baru untuk mengganti.';
+            selectedFile.textContent = 'Foto temuan awal saat ini - pilih file baru untuk mengganti.';
             selectedFile.classList.remove('hidden');
+        }
+
+        if (repair) {
+            repairImagePreview.src = mediaUrl(repair.image_path);
+            repairImagePreview.classList.remove('hidden');
+            repairUploadPlaceholder.classList.add('hidden');
+            repairSelectedFile.textContent = 'Foto perbaikan saat ini - pilih file baru untuk mengganti.';
+            repairSelectedFile.classList.remove('hidden');
         }
     } catch (error) {
         showInspectionList();
@@ -545,12 +592,34 @@ imageInput.addEventListener('change', () => {
     selectedFile.classList.remove('hidden');
 });
 
+repairImageInput.addEventListener('change', () => {
+    const file = repairImageInput.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        repairImageInput.value = '';
+        showMessage('Ukuran gambar maksimal 5 MB.');
+        return;
+    }
+    repairImagePreview.src = URL.createObjectURL(file);
+    repairImagePreview.classList.remove('hidden');
+    repairUploadPlaceholder.classList.add('hidden');
+    repairSelectedFile.textContent = file.name;
+    repairSelectedFile.classList.remove('hidden');
+});
+
 function resetImagePreview() {
     imagePreview.src = '';
     imagePreview.classList.add('hidden');
     uploadPlaceholder.classList.remove('hidden');
     selectedFile.textContent = '';
     selectedFile.classList.add('hidden');
+
+    repairImagePreview.src = '';
+    repairImagePreview.classList.add('hidden');
+    repairUploadPlaceholder.classList.remove('hidden');
+    repairSelectedFile.textContent = '';
+    repairSelectedFile.classList.add('hidden');
+    repairImageInput.value = '';
 }
 
 form.addEventListener('submit', async event => {
