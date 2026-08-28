@@ -8,11 +8,15 @@
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Permit Matrix</h1>
-            <p class="text-gray-600 mt-1">Hasil inspeksi Safe Work Permit</p>
         </div>
-        <a id="createButton" href="/dashboard/permit-matrix/create" class="hidden btn-primary text-white px-5 py-3 rounded-lg shadow-md">
-            <i class="fas fa-plus mr-2"></i>Tambah
-        </a>
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <button id="exportButton" onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg shadow-md">
+                <i class="fas fa-file-excel mr-2"></i>Export Excel
+            </button>
+            <a id="createButton" href="/dashboard/permit-matrix/create" class="hidden btn-primary text-white px-5 py-3 rounded-lg shadow-md">
+                <i class="fas fa-plus mr-2"></i>Tambah
+            </a>
+        </div>
     </div>
 
     <div id="messageBox" class="hidden mb-5 rounded-lg border px-4 py-3" role="alert"></div>
@@ -90,6 +94,7 @@ const token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 let permissions = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
 const can = permission => currentUser.role === 'super_admin' || permissions.includes(permission);
+const isAdmin = () => currentUser.role === 'super_admin' || currentUser.role === 'admin';
 let masterData = {};
 
 if (!token) window.location.href = '/';
@@ -173,8 +178,8 @@ function renderTable(result) {
         body.innerHTML = result.data.map((row, index) => {
             const actions = [
                 can('safe-work-permit-inspection.view') ? `<a href="/dashboard/permit-matrix/${row.id}" class="text-blue-600 hover:text-blue-800" title="Detail"><i class="fas fa-eye"></i></a>` : '',
-                can('safe-work-permit-inspection.update') ? `<a href="/dashboard/permit-matrix/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
-                can('safe-work-permit-inspection.delete') ? `<button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
+                isAdmin() ? `<a href="/dashboard/permit-matrix/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
+                isAdmin() ? `<button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
             ].join('');
             const withFinding = row.finding_status === 'Ada Temuan';
             return `<tr class="hover:bg-gray-50">
@@ -205,6 +210,71 @@ function renderTable(result) {
 function goToPage(page) {
     params.set('page', page);
     window.location.search = params.toString();
+}
+
+async function exportExcel() {
+    const query = new URLSearchParams(params);
+    query.delete('page');
+    let page = 1;
+    const all = [];
+    while (true) {
+        query.set('page', page);
+        query.set('per_page', '100');
+        const response = await fetch(`/api/safe-work-permit-inspections?${query}`, {headers: authHeaders});
+        if (!response.ok) return message('Data gagal diambil untuk export.', 'error');
+        const result = await response.json();
+        all.push(...result.data);
+        if (page >= result.last_page) break;
+        page += 1;
+    }
+
+    const rows = all.map((row, index) => `<tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(row.permit_date)}</td>
+        <td>${escapeHtml(row.permit_number)}</td>
+        <td>${escapeHtml(row.inspector?.name || row.legacy_inspector?.name)}</td>
+        <td>${escapeHtml(row.permit_type?.name)}</td>
+        <td>${escapeHtml(row.supervision_area?.code)}</td>
+        <td>${escapeHtml(row.main_area?.name)}</td>
+        <td>${escapeHtml(row.sub_area?.name)}</td>
+        <td>${escapeHtml(row.contractor_name)}</td>
+        <td>${escapeHtml(row.finding_status)}</td>
+    </tr>`).join('');
+
+    const htmlContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+        <meta charset="utf-8">
+        <title>Permit Matrix</title>
+        <style>
+            table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 11px; }
+            th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: top; white-space: nowrap; }
+            th { background-color: #c0c0c0; font-weight: bold; text-align: center; }
+            .header { margin-bottom: 12px; font-family: Arial, sans-serif; }
+            .header h2 { margin: 0 0 8px 0; font-size: 16px; }
+        </style>
+    </head>
+    <body>
+        <div class="header"><h2>DATA PERMIT MATRIX</h2></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>No</th><th>Tanggal Permit</th><th>No. Permit</th><th>Nama Inspector</th><th>Type Permit</th><th>Area Pengawasan</th><th>Main Area</th><th>Sub Area</th><th>Nama Kontraktor</th><th>Status Temuan</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </body>
+    </html>`;
+
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'permit_matrix_' + new Date().toISOString().slice(0, 10) + '.xls';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 async function removeInspection(id) {

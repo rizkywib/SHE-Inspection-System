@@ -41,7 +41,7 @@ async function loadDetail() {
         const user = await profileResponse.json();
         const permissions = Array.isArray(user.permissions) ? user.permissions : [];
         localStorage.setItem('user', JSON.stringify(user));
-        if (user.role === 'super_admin' || permissions.includes('safe-work-permit-inspection.update')) {
+        if (user.role === 'super_admin' || user.role === 'admin') {
             document.getElementById('editButton').classList.remove('hidden');
         }
     }

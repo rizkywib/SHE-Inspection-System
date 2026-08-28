@@ -186,7 +186,7 @@ class SafeWorkPermitInspectionTest extends TestCase
         $payload = $this->validPayload();
         $payload['contractor_name'] = 'KONTRAKTOR DIPERBARUI';
 
-        $this->actingAs($this->permittedUser(['safe-work-permit-inspection.update']), 'sanctum')
+        $this->actingAs($this->makeUser('admin'), 'sanctum')
             ->putJson("/api/safe-work-permit-inspections/{$inspection->id}", $payload)
             ->assertOk()
             ->assertJsonPath('data.contractor_name', 'KONTRAKTOR DIPERBARUI');
@@ -196,11 +196,26 @@ class SafeWorkPermitInspectionTest extends TestCase
     {
         $inspection = SafeWorkPermitInspection::create($this->validPayload());
 
-        $this->actingAs($this->permittedUser(['safe-work-permit-inspection.delete']), 'sanctum')
+        $this->actingAs($this->makeUser('admin'), 'sanctum')
             ->deleteJson("/api/safe-work-permit-inspections/{$inspection->id}")
             ->assertOk();
 
         $this->assertDatabaseMissing('safe_work_permit_inspections', ['id' => $inspection->id]);
+    }
+
+    public function test_non_admin_with_update_permission_cannot_update_or_delete(): void
+    {
+        $inspection = SafeWorkPermitInspection::create($this->validPayload());
+
+        $this->actingAs($this->permittedUser(['safe-work-permit-inspection.update']), 'sanctum')
+            ->putJson("/api/safe-work-permit-inspections/{$inspection->id}", $this->validPayload())
+            ->assertForbidden();
+
+        $this->actingAs($this->permittedUser(['safe-work-permit-inspection.delete']), 'sanctum')
+            ->deleteJson("/api/safe-work-permit-inspections/{$inspection->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('safe_work_permit_inspections', ['id' => $inspection->id]);
     }
 
     public function test_search_and_filters_return_matching_data(): void

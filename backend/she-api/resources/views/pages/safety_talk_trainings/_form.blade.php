@@ -115,8 +115,13 @@ async function initForm() {
     if (!profileResponse.ok) return showMessage('Profil pengguna gagal dimuat.');
     const user = await profileResponse.json();
     const permissions = Array.isArray(user.permissions) ? user.permissions : [];
-    const needed = mode === 'create' ? 'safety-talk-training.create' : 'safety-talk-training.update';
-    if (user.role !== 'super_admin' && !permissions.includes(needed)) {
+    const needed = mode === 'create' ? 'safety-talk-training.create' : null;
+    if (mode === 'edit') {
+        if (user.role !== 'super_admin' && user.role !== 'admin') {
+            document.getElementById('trainingForm').classList.add('hidden');
+            return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
+        }
+    } else if (user.role !== 'super_admin' && !permissions.includes(needed)) {
         document.getElementById('trainingForm').classList.add('hidden');
         return showMessage('Anda tidak memiliki izin untuk tindakan ini.');
     }

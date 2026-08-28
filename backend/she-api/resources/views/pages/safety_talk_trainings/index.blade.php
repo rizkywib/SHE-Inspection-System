@@ -10,9 +10,14 @@
             <h1 class="text-3xl font-bold text-gray-900">Data Safety Talk / Training On Site</h1>
             <p class="text-gray-600 mt-1">Kelola kegiatan penyampaian Safety Talk di lapangan</p>
         </div>
-        <a id="createButton" href="/dashboard/safety-talk-trainings/create" class="hidden btn-primary text-white px-5 py-3 rounded-lg shadow-md">
-            <i class="fas fa-plus mr-2"></i>Tambah Data
-        </a>
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <button id="exportButton" onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg shadow-md">
+                <i class="fas fa-file-excel mr-2"></i>Export Excel
+            </button>
+            <a id="createButton" href="/dashboard/safety-talk-trainings/create" class="hidden btn-primary text-white px-5 py-3 rounded-lg shadow-md">
+                <i class="fas fa-plus mr-2"></i>Tambah Data
+            </a>
+        </div>
     </div>
 
     <div id="messageBox" class="hidden mb-5 rounded-lg border px-4 py-3" role="alert"></div>
@@ -73,6 +78,7 @@ const token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 let permissions = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
 const can = permission => currentUser.role === 'super_admin' || permissions.includes(permission);
+const isAdmin = () => currentUser.role === 'super_admin' || currentUser.role === 'admin';
 const authHeaders = {'Authorization': `Bearer ${token}`, 'Accept': 'application/json'};
 const params = new URLSearchParams(window.location.search);
 if (!token) window.location.href = '/';
@@ -138,8 +144,8 @@ function renderTable(result) {
         body.innerHTML = result.data.map((row, index) => {
             const actions = [
                 `<a href="/dashboard/safety-talk-trainings/${row.id}" class="text-blue-600 hover:text-blue-800" title="Lihat"><i class="fas fa-eye"></i></a>`,
-                can('safety-talk-training.update') ? `<a href="/dashboard/safety-talk-trainings/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
-                can('safety-talk-training.delete') ? `<button onclick="removeTraining(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
+                isAdmin() ? `<a href="/dashboard/safety-talk-trainings/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
+                isAdmin() ? `<button onclick="removeTraining(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
             ].join('');
             const topic = row.topic.length > 80 ? `${row.topic.slice(0, 80)}…` : row.topic;
             return `<tr class="hover:bg-gray-50">
@@ -171,6 +177,72 @@ function renderTable(result) {
 function goToPage(page) {
     params.set('page', page);
     window.location.search = params.toString();
+}
+
+async function exportExcel() {
+    const query = new URLSearchParams(params);
+    query.delete('page');
+    let page = 1;
+    const all = [];
+    while (true) {
+        query.set('page', page);
+        query.set('per_page', '100');
+        const response = await fetch(`/api/safety-talk-trainings?${query}`, {headers: authHeaders});
+        if (!response.ok) return message('Data gagal diambil untuk export.', 'error');
+        const result = await response.json();
+        all.push(...result.data);
+        if (page >= result.last_page) break;
+        page += 1;
+    }
+
+    const rows = all.map((row, index) => `<tr>
+        <td>${index + 1}</td>
+        <td>${formatDate(row.implementation_date)}</td>
+        <td>${escapeHtml(row.speaker?.name || row.legacy_speaker?.name)}</td>
+        <td>${escapeHtml(row.topic)}</td>
+        <td>Area ${row.implementation_area}</td>
+        <td>${row.ecogreen_participants}</td>
+        <td>${row.outsourcing_participants}</td>
+        <td>${row.contractor_participants}</td>
+        <td>${row.total_participants}</td>
+        <td>${row.duration_minutes} menit</td>
+        <td>${escapeHtml(row.creator?.name)}</td>
+    </tr>`).join('');
+
+    const htmlContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+        <meta charset="utf-8">
+        <title>Safety Talk / Training On Site</title>
+        <style>
+            table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 11px; }
+            th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: top; white-space: nowrap; }
+            th { background-color: #c0c0c0; font-weight: bold; text-align: center; }
+            .header { margin-bottom: 12px; font-family: Arial, sans-serif; }
+            .header h2 { margin: 0 0 8px 0; font-size: 16px; }
+        </style>
+    </head>
+    <body>
+        <div class="header"><h2>DATA SAFETY TALK / TRAINING ON SITE</h2></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>No</th><th>Tanggal</th><th>Pembicara</th><th>Topik / Materi</th><th>Area</th><th>Peserta Ecogreen</th><th>Peserta Outsourcing</th><th>Peserta Contractor</th><th>Total Peserta</th><th>Durasi</th><th>Dibuat Oleh</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </body>
+    </html>`;
+
+    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'safety_talk_' + new Date().toISOString().slice(0, 10) + '.xls';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 async function removeTraining(id) {

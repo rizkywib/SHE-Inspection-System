@@ -160,7 +160,7 @@ class SafetyTalkTrainingTest extends TestCase
         $payload = $this->validPayloadWithoutPhoto();
         $payload['topic'] = 'Materi yang diperbarui';
 
-        $this->actingAs($this->permittedUser(['update']), 'sanctum')
+        $this->actingAs($this->makeUser('admin'), 'sanctum')
             ->putJson("/api/safety-talk-trainings/{$training->id}", $payload)
             ->assertOk()
             ->assertJsonPath('data.topic', 'Materi yang diperbarui')
@@ -177,7 +177,7 @@ class SafetyTalkTrainingTest extends TestCase
         $payload['_method'] = 'PUT';
         $payload['activity_photo'] = $this->fakeImage('replacement.png');
 
-        $response = $this->actingAs($this->permittedUser(['update']), 'sanctum')
+        $response = $this->actingAs($this->makeUser('admin'), 'sanctum')
             ->post("/api/safety-talk-trainings/{$training->id}", $payload, ['Accept' => 'application/json'])
             ->assertOk();
 
@@ -190,12 +190,28 @@ class SafetyTalkTrainingTest extends TestCase
         $training = $this->makeTraining();
         Storage::disk('public')->put($training->activity_photo_path, 'photo');
 
-        $this->actingAs($this->permittedUser(['delete']), 'sanctum')
+        $this->actingAs($this->makeUser('admin'), 'sanctum')
             ->deleteJson("/api/safety-talk-trainings/{$training->id}")
             ->assertOk();
 
         $this->assertDatabaseMissing('safety_talk_trainings', ['id' => $training->id]);
         Storage::disk('public')->assertMissing($training->activity_photo_path);
+    }
+
+    public function test_non_admin_with_update_permission_cannot_update_or_delete(): void
+    {
+        $training = $this->makeTraining();
+        Storage::disk('public')->put($training->activity_photo_path, 'old-photo');
+
+        $this->actingAs($this->permittedUser(['update']), 'sanctum')
+            ->putJson("/api/safety-talk-trainings/{$training->id}", $this->validPayloadWithoutPhoto())
+            ->assertForbidden();
+
+        $this->actingAs($this->permittedUser(['delete']), 'sanctum')
+            ->deleteJson("/api/safety-talk-trainings/{$training->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('safety_talk_trainings', ['id' => $training->id]);
     }
 
     public function test_total_participants_is_calculated_correctly(): void

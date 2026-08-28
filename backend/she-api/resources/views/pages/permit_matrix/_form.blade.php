@@ -155,6 +155,18 @@ function showErrors(errors) {
 }
 
 async function initForm() {
+    if (mode === 'edit') {
+        const profileResponse = await fetch('/api/auth/me', {headers: authHeaders});
+        if (profileResponse.status === 401) return window.location.href = '/';
+        if (!profileResponse.ok) return showMessage('Profil pengguna gagal dimuat.');
+        const user = await profileResponse.json();
+        if (user.role !== 'super_admin' && user.role !== 'admin') {
+            document.getElementById('permitForm').classList.add('hidden');
+            return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
+        }
+        localStorage.setItem('user', JSON.stringify(user));
+    }
+
     const masterResponse = await fetch('/api/safe-work-permit-inspections/master-data', {headers: authHeaders});
     if (masterResponse.status === 401) return window.location.href = '/';
     if (!masterResponse.ok) return showMessage('Master data tidak dapat dimuat atau Anda tidak memiliki izin.');

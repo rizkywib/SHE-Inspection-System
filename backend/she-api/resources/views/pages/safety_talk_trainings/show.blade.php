@@ -38,8 +38,10 @@ async function init() {
     const permissions = Array.isArray(user.permissions) ? user.permissions : [];
     const can = permission => user.role === 'super_admin' || permissions.includes(permission);
     if (!can('safety-talk-training.view')) return error('Anda tidak memiliki izin melihat data ini.');
-    if (can('safety-talk-training.update')) document.getElementById('editButton').classList.remove('hidden');
-    if (can('safety-talk-training.delete')) document.getElementById('deleteButton').classList.remove('hidden');
+    if (user.role === 'super_admin' || user.role === 'admin') {
+        document.getElementById('editButton').classList.remove('hidden');
+        document.getElementById('deleteButton').classList.remove('hidden');
+    }
 
     const response = await fetch(`/api/safety-talk-trainings/${trainingId}`, {headers});
     if (!response.ok) return error('Data Safety Talk tidak ditemukan.');

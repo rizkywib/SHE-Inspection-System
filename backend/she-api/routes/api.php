@@ -112,10 +112,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:safe-work-permit-inspection.view');
     Route::put('/safe-work-permit-inspections/{id}', [SafeWorkPermitInspectionController::class, 'update'])
         ->whereNumber('id')
-        ->middleware('permission:safe-work-permit-inspection.update');
+        ->middleware('admin');
     Route::delete('/safe-work-permit-inspections/{id}', [SafeWorkPermitInspectionController::class, 'destroy'])
         ->whereNumber('id')
-        ->middleware('permission:safe-work-permit-inspection.delete');
+        ->middleware('admin');
 
     // Safety Talk / Training On Site
     Route::get('/safety-talk-trainings/master-data', [SafetyTalkTrainingController::class, 'masterData'])
@@ -129,10 +129,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:safety-talk-training.view');
     Route::put('/safety-talk-trainings/{id}', [SafetyTalkTrainingController::class, 'update'])
         ->whereNumber('id')
-        ->middleware('permission:safety-talk-training.update');
+        ->middleware('admin');
     Route::delete('/safety-talk-trainings/{id}', [SafetyTalkTrainingController::class, 'destroy'])
         ->whereNumber('id')
-        ->middleware('permission:safety-talk-training.delete');
+        ->middleware('admin');
 
     // QR Codes
     Route::get('/qr-codes/generate/{assetType}/{assetId}', [QrCodeController::class, 'generate']);
