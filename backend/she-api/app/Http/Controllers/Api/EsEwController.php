@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Http\Requests\StoreEsEwInspectionRequest;
 use App\Http\Requests\StoreEsEwItemRequest;
 use App\Http\Requests\UpdateEsEwInspectionRequest;
@@ -20,6 +21,8 @@ use Throwable;
 
 class EsEwController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index(Request $request): JsonResponse
     {
         $query = EsEwInspection::query()
@@ -100,6 +103,11 @@ class EsEwController extends Controller
     public function update(UpdateEsEwInspectionRequest $request, int $id): JsonResponse
     {
         $inspection = EsEwInspection::with('items')->findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $data = $request->validated();
         if (blank($data['reference_no'] ?? null)) {
             unset($data['reference_no']);
@@ -151,6 +159,11 @@ class EsEwController extends Controller
     public function storeItem(StoreEsEwItemRequest $request, int $inspectionId): JsonResponse
     {
         $inspection = EsEwInspection::findOrFail($inspectionId);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $storedPaths = [];
 
         try {
@@ -175,6 +188,11 @@ class EsEwController extends Controller
         int $itemId
     ): JsonResponse {
         $inspection = EsEwInspection::findOrFail($inspectionId);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $item = $inspection->items()->findOrFail($itemId);
         $oldPaths = collect([$item->photo_before, $item->photo_after])->filter()->all();
         $storedPaths = [];
@@ -200,9 +218,14 @@ class EsEwController extends Controller
         ]);
     }
 
-    public function destroyItem(int $inspectionId, int $itemId): JsonResponse
+    public function destroyItem(Request $request, int $inspectionId, int $itemId): JsonResponse
     {
         $inspection = EsEwInspection::findOrFail($inspectionId);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $item = $inspection->items()->findOrFail($itemId);
         $paths = collect([$item->photo_before, $item->photo_after])->filter()->all();
 
@@ -212,9 +235,14 @@ class EsEwController extends Controller
         return response()->json(['message' => 'Item ES&EW berhasil dihapus.']);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $inspection = EsEwInspection::with('items')->findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $paths = $inspection->items
             ->flatMap(fn ($item) => [$item->photo_before, $item->photo_after])
             ->filter()

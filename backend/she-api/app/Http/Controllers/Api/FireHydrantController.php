@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Models\FireHydrantInspection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 
 class FireHydrantController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index(Request $request)
     {
         $query = FireHydrantInspection::with(['inspector', 'signer', 'location', 'area', 'items'])
@@ -99,6 +102,10 @@ class FireHydrantController extends Controller
     public function update(Request $request, $id)
     {
         $inspection = FireHydrantInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
 
         $validator = Validator::make($request->all(), [
             'reference_no' => 'nullable|string|max:40|unique:fire_hydrant_inspections,reference_no,' . $id,
@@ -290,9 +297,14 @@ class FireHydrantController extends Controller
         return $items;
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $inspection = FireHydrantInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $inspection->delete();
 
         return response()->json(['message' => 'Deleted successfully']);
@@ -345,9 +357,14 @@ class FireHydrantController extends Controller
         return response()->json(['data' => $inspection->load('signer')]);
     }
 
-    public function deleteItem($inspectionId, $itemIndex)
+    public function deleteItem(Request $request, $inspectionId, $itemIndex)
     {
         $inspection = FireHydrantInspection::findOrFail($inspectionId);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $items = $inspection->items()->orderBy('id')->get()->values();
 
         if ($itemIndex < 0 || $itemIndex >= $items->count()) {

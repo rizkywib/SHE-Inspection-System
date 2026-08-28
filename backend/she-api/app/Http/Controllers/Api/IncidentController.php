@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Models\Incident;
 use App\Models\IncidentImage;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 
 class IncidentController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index()
     {
         $incidents = Incident::with(['reporter', 'incidentType', 'location', 'images'])
@@ -108,6 +111,11 @@ class IncidentController extends Controller
     public function update(Request $request, $id)
     {
         $incident = Incident::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $incident, 'reporter_id')) {
+            return $forbidden;
+        }
+
         $validator = Validator::make($request->all(), [
             'incident_date' => 'sometimes|required|date_format:Y-m-d',
             'incident_time' => 'sometimes|required|date_format:H:i',
@@ -190,9 +198,14 @@ class IncidentController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $incident = Incident::with('images')->findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $incident, 'reporter_id')) {
+            return $forbidden;
+        }
+
         foreach ($incident->images as $image) {
             Storage::disk('public')->delete(Str::after($image->image_path, 'storage/'));
         }

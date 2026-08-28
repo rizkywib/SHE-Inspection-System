@@ -186,7 +186,8 @@ class EsEwInspectionTest extends TestCase
 
     public function test_inspection_and_items_can_be_updated(): void
     {
-        $inspection = $this->makeInspection();
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id]);
         $inspection->items()->create($this->validItem(['name' => 'Old Unit']));
         $retainedItem = $inspection->items()->create($this->validItem([
             'name' => 'Retained Unit',
@@ -196,7 +197,7 @@ class EsEwInspectionTest extends TestCase
         $payload['items'][0]['water_flow_es'] = 0;
         $payload['items'][0]['remark'] = 'Updated remark';
 
-        $this->actingAs($this->makeUser(), 'sanctum')
+        $this->actingAs($owner, 'sanctum')
             ->putJson("/api/es-ew/{$inspection->id}", $payload)
             ->assertOk()
             ->assertJsonPath('data.items.0.water_flow_es', false)
@@ -215,13 +216,44 @@ class EsEwInspectionTest extends TestCase
         $this->assertCount(2, $inspection->fresh()->items);
     }
 
+    public function test_non_owner_cannot_update_or_delete_inspection(): void
+    {
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id]);
+        $other = $this->makeUser(['name' => 'ES EW Other User']);
+
+        $this->actingAs($other, 'sanctum')
+            ->putJson("/api/es-ew/{$inspection->id}", $this->validPayloadWithoutFiles())
+            ->assertForbidden();
+
+        $this->actingAs($other, 'sanctum')
+            ->deleteJson("/api/es-ew/{$inspection->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('es_ew_inspections', ['id' => $inspection->id]);
+    }
+
+    public function test_admin_can_update_and_delete_others_inspection(): void
+    {
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id]);
+        $admin = $this->makeUser(['name' => 'ES EW Admin', 'role' => 'admin']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/es-ew/{$inspection->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('es_ew_inspections', ['id' => $inspection->id]);
+    }
+
     public function test_item_can_be_added_to_existing_header_without_changing_inspection_date(): void
     {
-        $inspection = $this->makeInspection(['inspection_date' => '2026-07-18']);
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id, 'inspection_date' => '2026-07-18']);
         $inspection->items()->create($this->validItem(['name' => 'Existing Unit']));
         $payload = $this->validItemPayload(['remark' => 'New item detail']);
 
-        $response = $this->actingAs($this->makeUser(), 'sanctum')
+        $response = $this->actingAs($owner, 'sanctum')
             ->postJson("/api/es-ew/{$inspection->id}/items", $payload)
             ->assertCreated()
             ->assertJsonPath('message', 'Item ES&EW berhasil disimpan.')
@@ -238,7 +270,8 @@ class EsEwInspectionTest extends TestCase
 
     public function test_existing_item_can_be_updated_and_deleted_independently(): void
     {
-        $inspection = $this->makeInspection();
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id]);
         $retainedItem = $inspection->items()->create($this->validItem(['name' => 'Retained Unit']));
         $targetItem = $inspection->items()->create($this->validItem(['name' => 'Target Unit']));
         $payload = $this->validItemPayload([
@@ -246,7 +279,7 @@ class EsEwInspectionTest extends TestCase
             'remark' => 'Updated item only',
         ]);
 
-        $this->actingAs($this->makeUser(), 'sanctum')
+        $this->actingAs($owner, 'sanctum')
             ->putJson("/api/es-ew/{$inspection->id}/items/{$targetItem->id}", $payload)
             ->assertOk()
             ->assertJsonPath('data.water_flow_es', false)
@@ -302,7 +335,8 @@ class EsEwInspectionTest extends TestCase
 
     public function test_old_photo_is_deleted_when_replaced(): void
     {
-        $inspection = $this->makeInspection();
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id]);
         $oldPath = 'storage/es-ew-inspections/old.png';
         $inspection->items()->create($this->validItem(['photo_before' => $oldPath]));
         Storage::disk('public')->put('es-ew-inspections/old.png', 'old-photo');
@@ -311,7 +345,7 @@ class EsEwInspectionTest extends TestCase
         $payload['reference_no'] = $inspection->reference_no;
         $payload['items'][0]['photo_before'] = $this->fakeImage('new.png');
 
-        $response = $this->actingAs($this->makeUser(), 'sanctum')
+        $response = $this->actingAs($owner, 'sanctum')
             ->post("/api/es-ew/{$inspection->id}", $payload, ['Accept' => 'application/json'])
             ->assertOk();
 
@@ -323,13 +357,14 @@ class EsEwInspectionTest extends TestCase
 
     public function test_inspection_items_and_photos_are_deleted(): void
     {
-        $inspection = $this->makeInspection();
+        $owner = $this->makeUser();
+        $inspection = $this->makeInspection(['inspector_id' => $owner->id]);
         $inspection->items()->create($this->validItem([
             'photo_before' => 'storage/es-ew-inspections/delete.png',
         ]));
         Storage::disk('public')->put('es-ew-inspections/delete.png', 'photo');
 
-        $this->actingAs($this->makeUser(), 'sanctum')
+        $this->actingAs($owner, 'sanctum')
             ->deleteJson("/api/es-ew/{$inspection->id}")
             ->assertOk();
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Models\FireExtinguisherInspection;
 use App\Models\Point;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 
 class FireExtinguisherController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index(Request $request)
     {
         $query = FireExtinguisherInspection::with(['inspector', 'signer', 'location', 'items']);
@@ -98,6 +101,10 @@ class FireExtinguisherController extends Controller
     public function update(Request $request, $id)
     {
         $inspection = FireExtinguisherInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
 
         $validator = Validator::make($request->all(), [
             'reference_no' => 'required|string|max:40|unique:fire_extinguisher_inspections,reference_no,' . $id,
@@ -207,9 +214,14 @@ class FireExtinguisherController extends Controller
         return $referenceNo;
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $inspection = FireExtinguisherInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $inspection->delete();
 
         return response()->json(['message' => 'Deleted successfully']);
