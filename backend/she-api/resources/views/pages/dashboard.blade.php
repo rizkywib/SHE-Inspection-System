@@ -100,7 +100,7 @@
                     <span class="bg-blue-600 text-white"><i class="fas fa-clipboard-check"></i></span><span><strong>Inspection</strong><small>Buat laporan baru</small></span><i class="fas fa-arrow-right ml-auto text-xs text-blue-500"></i>
                 </a>
                 <a href="/dashboard/fire-hydrants" class="quick-action border-sky-100 bg-sky-50/60 hover:border-sky-300 hover:bg-sky-50">
-                    <span class="bg-sky-600 text-white"><i class="fas fa-faucet-drip"></i></span><span><strong>Fire Hydrant</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-sky-500"></i>
+                    <span class="bg-sky-600 text-white"><i class="fas fa-faucet-drip"></i></span><span><strong>Hydrant</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-sky-500"></i>
                 </a>
                 <a href="/dashboard/fire-extinguishers#inspection-list" class="quick-action border-rose-100 bg-rose-50/60 hover:border-rose-300 hover:bg-rose-50">
                     <span class="bg-rose-500 text-white"><i class="fas fa-fire-extinguisher"></i></span><span><strong>APAR</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-rose-500"></i>

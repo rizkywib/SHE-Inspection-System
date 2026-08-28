@@ -60,7 +60,7 @@
                 </a>
                 <a href="/dashboard/fire-hydrants" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-fire-hydrants', '')">
                     <i class="fas fa-fire-extinguisher w-5"></i>
-                    <span>Fire Hydrants</span>
+                    <span>Hydrant</span>
                 </a>
                 <a href="/dashboard/fire-extinguishers#inspection-list" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-fire-extinguishers', '')">
                     <i class="fas fa-fire w-5"></i>
@@ -164,7 +164,7 @@
                 </div>
                 <div id="mobileMenu" class="hidden px-4 pb-4 space-y-2">
                     <a href="/dashboard" class="block py-2 text-gray-600 hover:text-gray-900">Dashboard</a>
-                    <a href="/dashboard/fire-hydrants" class="block py-2 text-gray-600 hover:text-gray-900">Fire Hydrants</a>
+                    <a href="/dashboard/fire-hydrants" class="block py-2 text-gray-600 hover:text-gray-900">Hydrant</a>
                     <a href="/dashboard/fire-extinguishers#inspection-list" class="block py-2 text-gray-600 hover:text-gray-900">Fire Extinguishers</a>
                     <a href="/dashboard/fire-alarms" class="block py-2 text-gray-600 hover:text-gray-900">Fire Alarms</a>
                     <a href="/dashboard/es-ew-inspections" class="block py-2 text-gray-600 hover:text-gray-900">ES&amp;EW Inspection</a>

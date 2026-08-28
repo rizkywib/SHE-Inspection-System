@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final loaders = [
       _loadType(
         loader: api.getFireHydrants,
-        type: 'Fire Hydrant',
+        type: 'Hydrant',
         route: '/fire-hydrant',
         detailPath: 'fire-hydrants',
         color: const Color(0xFF145F3A),
@@ -658,7 +658,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.water_damage_outlined),
-            title: const Text('Fire Hydrant'),
+            title: const Text('Hydrant'),
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/fire-hydrant');
