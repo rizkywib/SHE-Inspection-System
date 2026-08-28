@@ -21,13 +21,17 @@ Sistem pemeriksaan Safety, Health, dan Environment (SHE) yang komprehensif untuk
 - Role-based access control (Super Admin, Admin, Inspector, Viewer)
 - User groups dengan sistem permissions
 - API token authentication via Laravel Sanctum
+- Edit/hapus inspeksi Hydrant, APAR, ES/EW, dan Inspection hanya oleh pembuat (`inspector_id`/`reporter_id`) atau admin/super admin
+- Edit/hapus Permit Matrix dan Safety Talk khusus admin/super admin
 
 ### 3. Inspeksi Peralatan
-- **Fire Hydrant**: Inspeksi hidran pemadam api
+- **Hydrant**: Inspeksi hidran pemadam api
 - **Fire Extinguisher**: Inspeksi tabung pemadam api
 - **Fire Alarm**: Inspeksi alarm kebakaran
-- **Emergency Shower/Eye Wash**: Inspeksi perkakas darurat
+- **Emergency Shower/Eye Wash (ES/EW)**: Inspeksi perkakas darurat
 - **General Checklist**: Inspeksi umum yang dapat disesuaikan
+- **Permit Matrix**: Inspeksi Safe Work Permit; kolom Job Performance berupa dropdown yang isiannya dikelola lewat menu **Job Performance** (tabel `permit_job_performances`)
+- **Safety Talk / Training**: Pendataan kegiatan safety talk / training di lapangan
 
 Setiap inspeksi mencakup:
 - Check-in dengan GPS tracking
@@ -37,8 +41,8 @@ Setiap inspeksi mencakup:
 
 ### 4. Pelaporan Insiden
 - Registrasi insiden dengan tipe dan level keparahan
+- Upload dokumentasi **Foto Temuan Awal** (wajib) dan **Perbaikan** (opsional) pada `incident_images` (kolom `kind`)
 - Investigasi insiden
-- Upload dokumentasi
 - Tracking status insiden
 
 ### 5. Laporan Medis
@@ -143,7 +147,8 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    .\start-she-server.ps1
    ```
 
-Server akan berjalan di `http://eoblas10.ecogreenoleo.co.id:82`
+Server akan berjalan di `http://172.16.16.51:83` (deployment Docker saat ini).
+Dokumentasi lama merujuk ke `http://eoblas10.ecogreenoleo.co.id:82`.
 
 ## API Documentation
 
@@ -180,6 +185,12 @@ Authorization: Bearer <token>
 - `GET|POST /api/areas`
 - `GET|POST /api/categories`
 - `GET|POST /api/users`
+- `GET|POST /api/incident-types`
+- `GET|POST /api/permit-types`
+- `GET|POST /api/permit-main-areas`
+- `GET|POST /api/permit-sub-areas`
+- `GET|POST /api/supervision-areas`
+- `GET|POST /api/permit-job-performances` (isi dropdown Job Performance Permit Matrix)
 
 #### 4. QR Code Management
 - `GET /api/qr-codes/generate/{assetType}/{assetId}` - Generate QR
@@ -187,11 +198,13 @@ Authorization: Bearer <token>
 - `GET /api/qr-codes` - List all QR codes
 
 #### 5. Inspeksi
-- **Fire Hydrant**: `GET|POST /api/fire-hydrants`
+- **Hydrant**: `GET|POST /api/fire-hydrants`
 - **Fire Extinguisher**: `GET|POST /api/fire-extinguishers`
 - **Fire Alarm**: `GET|POST /api/fire-alarms`
 - **ES/EW**: `GET|POST /api/es-ew`
 - **Checklist**: `GET|POST /api/checklists`
+- **Permit Matrix**: `GET|POST /api/safe-work-permit-inspections`
+- **Safety Talk / Training**: `GET|POST /api/safety-talk-trainings`
 
 Setiap module memiliki endpoints:
 - `GET /{id}` - Detail
@@ -200,12 +213,14 @@ Setiap module memiliki endpoints:
 - `POST /{id}/checkin` - Check-in dengan GPS
 - `POST /{id}/sign` - Digital signature
 
+**Export to Excel**: Halaman index **Permit Matrix** dan **Safety Talk** masing-masing memiliki tombol "Export Excel" (ekspor seluruh data hasil filter ke file `.xls` secara client-side).
+
 #### 6. Incidents
 - `GET|POST /api/incidents`
 - `GET /api/incidents/{id}`
-- `PUT /api/incidents/{id}`
+- `PUT /api/incidents/{id}` - Menerima foto `image` (Foto Temuan Awal) dan opsional `repair_photo` (Perbaikan)
 - `DELETE /api/incidents/{id}`
-- `POST /api/incidents/{id}/images` - Upload gambar
+- `POST /api/incidents/{id}/images` - Upload gambar (opsional field `kind: finding|repair`)
 - `POST /api/incidents/{id}/investigate` - Buat investigation
 - `GET /api/incident-types` - List tipe insiden
 - `GET /api/incident-levels` - List level keparahan
@@ -223,15 +238,16 @@ Lihat [api-contract.md](../api-contract.md) untuk dokumentasi API lengkap dengan
 
 ## Default Credentials
 
-Setelah install database dengan schema.sql:
+Login menggunakan `username` (bukan email). Akun dibuat melalui menu **Users** di website
+atau seeder database. Ganti password default akun setelah instalasi pertama!
 
+Contoh payload login:
+```json
+{
+  "username": "inspector01",
+  "password": "password"
+}
 ```
-Email: admin@sheinspection.com
-Password: admin123
-Role: super_admin
-```
-
-**Catatan**: Ganti password default setelah instalasi pertama!
 
 ## User Roles
 

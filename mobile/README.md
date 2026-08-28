@@ -4,26 +4,26 @@ A Flutter-based Android mobile application for Safety, Health, and Environment (
 
 ## Features
 
-- **Authentication** - Secure login/logout with JWT token and biometric support
+- **Authentication** - Login/logout with Bearer token (Laravel Sanctum)
 - **Dashboard** - Overview of inspection statistics and recent activities
-- **Fire Hydrant Inspection** - QR-based check-in and digital inspection forms for fire hydrants
+- **Hydrant Inspection** - QR-based check-in and digital inspection forms for fire hydrants
 - **Fire Extinguisher Inspection** - QR-based check-in and digital inspection forms for fire extinguishers
 - **Fire Alarm Inspection** - QR-based check-in and digital inspection forms for fire alarms
-- **ES/EW Inspection** - Earthquake and Earthquake-Wind equipment inspection
+- **ES/EW Inspection** - Emergency Shower & Eye Wash station monthly inspection
+- **Permit Matrix** - Safe Work Permit inspection form and list (Job Performance is a dropdown managed from the website)
+- **Safety Talk / Training** - On-site safety talk / training activity form and list
 - **Checklist Inspection** - Custom checklist-based inspections by category
-- **Incident Reporting** - Report incidents with GPS coordinates and photo attachments
-- **Medical Reports** - Log and manage medical reports
+- **Inspection / Incident** - Report inspections/incidents with "Foto Temuan Awal" (mandatory) and "Perbaikan" (optional) photos; edit is only available to the creator and admin/super admin
 - **QR Code Scanner** - Scan asset QR codes to quickly open inspection forms
 - **GPS Check-In** - Verify on-site presence with geolocation during inspections
-- **Digital Signature** - Capture inspector signatures on-site
+- **Master Data** - Manage points, locations, users, incident types, and ES&EW areas from the app
 
 ## Tech Stack
 
 - **Flutter** - UI framework
 - **Provider** - State management
 - **HTTP** - REST API client
-- **Flutter Secure Storage** - Secure token storage
-- **Shared Preferences** - Lightweight local storage
+- **Shared Preferences** - Lightweight local storage for token
 - **Geolocator** - GPS location services
 - **Image Picker** - Camera and gallery access
 - **Google Maps Flutter** - Map display
@@ -40,10 +40,6 @@ A Flutter-based Android mobile application for Safety, Health, and Environment (
 ## Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd she-inspection-system/mobile
-
 # Install dependencies
 flutter pub get
 
@@ -53,10 +49,16 @@ flutter run
 
 ## Configuration
 
-Update the API endpoint in `lib/services/api_service.dart`:
+Default API endpoint is defined in `lib/services/api_service.dart`:
 
-```dart
-static const String baseUrl = 'http://your-backend-domain/api';
+```text
+http://172.16.16.51:83/api
+```
+
+Override at build/run time with:
+
+```bash
+flutter run --dart-define=API_URL=http://localhost:8000/api
 ```
 
 ## Project Structure
@@ -66,31 +68,26 @@ mobile/
 ├── android/                    # Android native configuration
 ├── assets/                     # Images and icons
 ├── lib/
-│   ├── main.dart              # App entry point
+│   ├── main.dart              # App entry point and route registry
 │   ├── screens/               # UI screens
-│   │   └── inspection/        # Inspection screen sub-modules
-│   ├── services/              # API services and utilities
-│   ├── models/                # Data models
-│   └── providers/             # State management providers
+│   │   ├── inspection/        # Fire hydrant, extinguisher, alarm, ES/EW, checklist
+│   │   ├── incident/          # Inspection / incident reporting and list
+│   │   ├── permit_matrix/     # Permit Matrix modules
+│   │   ├── safety_talk/       # Safety Talk / Training modules
+│   │   └── master_data/       # Master data management
+│   ├── services/              # ApiService and AuthService
+│   └── theme/                 # Theme and colors
 ├── test/                      # Unit and widget tests
-├── pubspec.yaml               # Dependencies and assets
-└── README.md
+└── pubspec.yaml               # Dependencies and assets
 ```
-
-## Available Inspection Modules
-
-- `fire_hydrant_screen.dart`
-- `fire_extinguisher_screen.dart`
-- `fire_alarm_screen.dart`
-- `es_ew_screen.dart`
 
 ## Backend API
 
-See [`backend/api-contract.md`](../she-api/api-contract.md) for full API documentation.
+See [`../api-contract.md`](../api-contract.md) for the API contract.
 
 Base URL:
 ```
-http://eoblas10.ecogreenoleo.co.id:82/api
+http://172.16.16.51:83/api
 ```
 
 Authentication uses Bearer tokens:
@@ -100,14 +97,16 @@ Authorization: Bearer <token>
 
 ## Supported Operations
 
-- Login / Register / Logout
+- Login / Logout
 - View dashboard statistics
-- CRUD on inspections (Create, Read, Update, Delete)
+- Inspections for hydrant, extinguisher, alarm, and ES/EW
+- Permit Matrix create/view/edit/delete (edit & delete admin-only on backend)
+- Safety Talk / Training create/view/edit/delete
+- Inspection / incident creation and editing (creator or admin/super admin)
 - QR code scanning and asset lookup
 - GPS check-in for inspection sites
 - Digital signature capture
-- Incident reporting with location and photos
-- Medical report management
+- Master data management
 
 ## License
 
