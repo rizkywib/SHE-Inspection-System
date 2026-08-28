@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\IncidentTypeController;
 use App\Http\Controllers\Api\SupervisionAreaController;
 use App\Http\Controllers\Api\PermitTypeController;
+use App\Http\Controllers\Api\PermitJobPerformanceController;
 use App\Http\Controllers\Api\PermitMainAreaController;
 use App\Http\Controllers\Api\PermitSubAreaController;
 use App\Http\Controllers\Api\FireHydrantController;
@@ -86,6 +87,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('supervision-areas', SupervisionAreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::apiResource('permit-types', PermitTypeController::class)->only(['index', 'show']);
     Route::apiResource('permit-types', PermitTypeController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('permit-job-performances', PermitJobPerformanceController::class)->only(['index', 'show']);
+    Route::apiResource('permit-job-performances', PermitJobPerformanceController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::apiResource('permit-main-areas', PermitMainAreaController::class)->only(['index', 'show']);
     Route::apiResource('permit-main-areas', PermitMainAreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::apiResource('permit-sub-areas', PermitSubAreaController::class)->only(['index', 'show']);

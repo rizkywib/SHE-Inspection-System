@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSafeWorkPermitInspectionRequest;
 use App\Http\Requests\UpdateSafeWorkPermitInspectionRequest;
 use App\Models\PermitMainArea;
+use App\Models\PermitJobPerformance;
 use App\Models\PermitSubArea;
 use App\Models\PermitType;
 use App\Models\SafeWorkPermitInspection;
@@ -47,6 +48,7 @@ class SafeWorkPermitInspectionController extends Controller
             'supervision_areas' => SupervisionArea::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'main_areas' => PermitMainArea::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'sub_areas' => PermitSubArea::where('is_active', true)->orderBy('name')->get(['id', 'main_area_id', 'name']),
+            'job_performances' => PermitJobPerformance::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

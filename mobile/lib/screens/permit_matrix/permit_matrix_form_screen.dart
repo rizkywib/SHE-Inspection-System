@@ -19,7 +19,6 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
   late final TextEditingController _dateController;
   late final TextEditingController _permitNumberController;
   late final TextEditingController _sectionEquipmentController;
-  late final TextEditingController _jobPerformanceController;
   late final TextEditingController _authorizedCraftmanController;
   late final TextEditingController _authorizedFacilityController;
   late final TextEditingController _contractorNameController;
@@ -31,11 +30,13 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
   List<dynamic> _supervisionAreas = [];
   List<dynamic> _mainAreas = [];
   List<dynamic> _subAreas = [];
+  List<dynamic> _jobPerformances = [];
   int? _inspectorId;
   int? _permitTypeId;
   int? _supervisionAreaId;
   int? _mainAreaId;
   int? _subAreaId;
+  String? _jobPerformance;
   bool _isLoading = true;
   bool _isSaving = false;
   String? _error;
@@ -55,9 +56,6 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
         TextEditingController(text: permitText(inspection['permit_number']));
     _sectionEquipmentController = TextEditingController(
       text: permitText(inspection['section_equipment']),
-    );
-    _jobPerformanceController = TextEditingController(
-      text: permitText(inspection['job_performance']),
     );
     _authorizedCraftmanController = TextEditingController(
       text: permitText(inspection['authorized_craftman']),
@@ -82,7 +80,6 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
     _dateController.dispose();
     _permitNumberController.dispose();
     _sectionEquipmentController.dispose();
-    _jobPerformanceController.dispose();
     _authorizedCraftmanController.dispose();
     _authorizedFacilityController.dispose();
     _contractorNameController.dispose();
@@ -108,12 +105,15 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
         _supervisionAreas = permitList(master['supervision_areas']);
         _mainAreas = permitList(master['main_areas']);
         _subAreas = permitList(master['sub_areas']);
+        _jobPerformances = permitList(master['job_performances']);
         _inspectorId = permitInt(inspection['inspector_id']) ??
             _availableId(currentUser['id'], _inspectors);
         _permitTypeId = permitInt(inspection['permit_type_id']);
         _supervisionAreaId = permitInt(inspection['supervision_area_id']);
         _mainAreaId = permitInt(inspection['main_area_id']);
         _subAreaId = permitInt(inspection['sub_area_id']);
+        final jobPerformance = permitText(inspection['job_performance']);
+        _jobPerformance = jobPerformance.isEmpty ? null : jobPerformance;
         _isLoading = false;
       });
     } catch (error) {
@@ -188,7 +188,7 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
       'main_area_id': _mainAreaId,
       'sub_area_id': _subAreaId,
       'section_equipment': _sectionEquipmentController.text.trim(),
-      'job_performance': _jobPerformanceController.text.trim(),
+      'job_performance': (_jobPerformance ?? '').trim(),
       'authorized_craftman': _authorizedCraftmanController.text.trim(),
       'authorized_facility': _authorizedFacilityController.text.trim(),
       'contractor_name': _contractorNameController.text.trim(),
@@ -385,13 +385,16 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
                             validator: _requiredText,
                           ),
                           const SizedBox(height: 12),
-                          _TextField(
+                          _NameDropdownField(
                             key: const ValueKey('job_performance'),
-                            controller: _jobPerformanceController,
                             label: 'Job Performance *',
                             icon: Icons.engineering_outlined,
-                            minLines: 3,
-                            maxLines: 5,
+                            value: _jobPerformance,
+                            rows: _jobPerformances,
+                            itemLabel: (row) => permitText(row['name']),
+                            onChanged: (value) => setState(() {
+                              _jobPerformance = value;
+                            }),
                             validator: _requiredText,
                           ),
                           const SizedBox(height: 12),
@@ -523,6 +526,50 @@ class _DropdownField extends StatelessWidget {
         return DropdownMenuItem<int>(
           value: permitInt(row['id']),
           child: Text(itemLabel(row), overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+      onChanged: onChanged,
+      validator: validator,
+    );
+  }
+}
+
+class _NameDropdownField extends StatelessWidget {
+  const _NameDropdownField({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.rows,
+    required this.itemLabel,
+    required this.onChanged,
+    required this.validator,
+  });
+
+  final String label;
+  final IconData icon;
+  final String? value;
+  final List<dynamic> rows;
+  final String Function(Map<String, dynamic>) itemLabel;
+  final ValueChanged<String?> onChanged;
+  final FormFieldValidator<String> validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: const OutlineInputBorder(),
+      ),
+      hint: Text('Pilih ${label.replaceAll(' *', '')}'),
+      items: rows.map(permitMap).map((row) {
+        final name = itemLabel(row);
+        return DropdownMenuItem<String>(
+          value: name,
+          child: Text(name, overflow: TextOverflow.ellipsis),
         );
       }).toList(),
       onChanged: onChanged,

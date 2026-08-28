@@ -569,13 +569,18 @@ void main() {
     await selectOption('supervision_area_id', 'A1 - Area Produksi');
     await selectOption('main_area_id', 'EOB1');
     await selectOption('sub_area_id-1', 'METHYLESTER');
+    final jpField = find.descendant(
+      of: find.byKey(const ValueKey('job_performance')),
+      matching: find.byType(DropdownButtonFormField<String>),
+    );
+    await tester.ensureVisible(jpField);
+    await tester.tap(jpField);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pengelasan pipa').last);
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('section_equipment')),
       'Tank 101',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('job_performance')),
-      'Pengelasan pipa',
     );
     await tester.enterText(
       find.byKey(const ValueKey('authorized_craftman')),
@@ -605,6 +610,7 @@ void main() {
     expect(api.lastCreateData['permit_number'], 'PM-NEW-001');
     expect(api.lastCreateData['main_area_id'], 1);
     expect(api.lastCreateData['sub_area_id'], 11);
+    expect(api.lastCreateData['job_performance'], 'Pengelasan pipa');
     expect(api.lastCreateData['permit_findings'], 'APD perlu dilengkapi');
   });
 
@@ -1052,6 +1058,10 @@ class _FakePermitMatrixApiService extends _FakeApiService {
         'sub_areas': [
           {'id': 11, 'main_area_id': 1, 'name': 'METHYLESTER'},
           {'id': 12, 'main_area_id': 2, 'name': 'FATTY ACID'},
+        ],
+        'job_performances': [
+          {'id': 1, 'name': 'Pekerjaan pengelasan'},
+          {'id': 2, 'name': 'Pengelasan pipa'},
         ],
       };
 

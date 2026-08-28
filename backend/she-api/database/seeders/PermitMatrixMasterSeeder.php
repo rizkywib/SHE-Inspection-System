@@ -40,6 +40,13 @@ class PermitMatrixMasterSeeder extends Seeder
             'EXCAVATION',
         ], $now);
 
+        $this->seedNames('permit_job_performances', [
+            'Pemeriksaan pekerjaan hot work',
+            'Pengawasan pekerjaan confined space',
+            'Pengawasan pekerjaan di ketinggian',
+            'Pengawasan pekerjaan penggalian',
+        ], $now);
+
         foreach (range(1, 6) as $area) {
             DB::table('supervision_areas')->updateOrInsert(
                 ['code' => (string) $area],

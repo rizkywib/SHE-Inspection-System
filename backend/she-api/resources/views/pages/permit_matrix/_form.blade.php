@@ -53,9 +53,9 @@
                 <input id="section_equipment" name="section_equipment" maxlength="255" required class="{{ $inputClass }}">
                 <p data-error="section_equipment" class="hidden text-red-600 text-sm mt-1"></p>
             </div>
-            <div class="md:col-span-2">
+            <div>
                 <label for="job_performance" class="block text-sm font-medium text-gray-700 mb-1">Job Performance <span class="text-red-600">*</span></label>
-                <textarea id="job_performance" name="job_performance" rows="4" maxlength="65535" required class="{{ $inputClass }}"></textarea>
+                <select id="job_performance" name="job_performance" required class="{{ $inputClass }}"><option value="">Pilih Job Performance</option></select>
                 <p data-error="job_performance" class="hidden text-red-600 text-sm mt-1"></p>
             </div>
             <div>
@@ -176,6 +176,9 @@ async function initForm() {
     fillSelect('permit_type_id', master.permit_types);
     fillSelect('supervision_area_id', master.supervision_areas, row => row.code);
     fillSelect('main_area_id', master.main_areas);
+    master.job_performances.forEach(row => {
+        document.getElementById('job_performance').insertAdjacentHTML('beforeend', `<option value="${escapeHtml(row.name)}">${escapeHtml(row.name)}</option>`);
+    });
     renderSubAreas();
 
     if (mode === 'edit') {
