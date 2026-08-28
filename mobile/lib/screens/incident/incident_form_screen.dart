@@ -8,7 +8,9 @@ import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 
 class IncidentFormScreen extends StatefulWidget {
-  const IncidentFormScreen({super.key});
+  const IncidentFormScreen({super.key, this.inspection});
+
+  final Map<String, dynamic>? inspection;
 
   @override
   State<IncidentFormScreen> createState() => _IncidentFormScreenState();
@@ -27,13 +29,37 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
   String _status = 'open';
   File? _image;
   File? _repairImage;
+  Map<String, dynamic>? _existingFinding;
+  Map<String, dynamic>? _existingRepair;
   bool _isLoading = true;
   bool _isSaving = false;
   String? _loadError;
 
+  bool get _isEdit => widget.inspection != null;
+
   @override
   void initState() {
     super.initState();
+    final inspection = widget.inspection ?? const <String, dynamic>{};
+    final parsedDate =
+        DateTime.tryParse(inspection['incident_date']?.toString() ?? '');
+    if (parsedDate != null) _date = parsedDate;
+    _time = _parseTime(inspection['incident_time']);
+    _locationController.text = _string(inspection['location_text']);
+    _descriptionController.text = _string(inspection['description']);
+    _incidentTypeId = _asInt(inspection['incident_type_id']);
+    final status = inspection['status']?.toString().toLowerCase();
+    if (status == 'closed' || status == 'close') _status = 'close';
+
+    final images = _listFrom(inspection['images']);
+    for (final raw in images) {
+      final image = _asMap(raw);
+      if (image['kind']?.toString() == 'repair') {
+        _existingRepair ??= image;
+      } else {
+        _existingFinding ??= image;
+      }
+    }
     _loadMasterData();
   }
 
@@ -122,28 +148,37 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
-    if (_image == null) {
+    final hasFinding = _image != null || (_isEdit && _existingFinding != null);
+    if (!hasFinding) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Foto temuan awal wajib dipilih.')),
+        const SnackBar(content: Text('Foto temuan awal wajib dipilih.')),
       );
       return;
     }
 
     setState(() => _isSaving = true);
-    final result = await context.read<ApiService>().createIncident(
-      {
-        'incident_date': DateFormat('yyyy-MM-dd').format(_date),
-        'incident_time':
-            '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
-        'location_text': _locationController.text.trim(),
-        'incident_type_id': _incidentTypeId.toString(),
-        'description': _descriptionController.text.trim(),
-        'status': _status,
-      },
-      image: _image,
-      repairPhoto: _repairImage,
-    );
+    final payload = {
+      'incident_date': DateFormat('yyyy-MM-dd').format(_date),
+      'incident_time':
+          '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
+      'location_text': _locationController.text.trim(),
+      'incident_type_id': _incidentTypeId.toString(),
+      'description': _descriptionController.text.trim(),
+      'status': _status,
+    };
+    final api = context.read<ApiService>();
+    final result = _isEdit
+        ? await api.updateIncident(
+            _asInt(widget.inspection!['id'])!,
+            payload,
+            image: _image,
+            repairPhoto: _repairImage,
+          )
+        : await api.createIncident(
+            payload,
+            image: _image,
+            repairPhoto: _repairImage,
+          );
 
     if (!mounted) return;
     setState(() => _isSaving = false);
@@ -181,7 +216,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(title: const Text('Inspection')),
+      appBar: AppBar(title: Text(_isEdit ? 'Edit Inspection' : 'Inspection')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
@@ -307,19 +342,55 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                                 width: double.infinity,
                                 fit: BoxFit.cover,
                               ),
+                            )
+                          else if (_existingFinding != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Image.network(
+                                    _mediaUrl(context,
+                                        _existingFinding!['image_path'])!,
+                                    height: 210,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      height: 210,
+                                      color: const Color(0xFFE2E8F0),
+                                      child: const Icon(
+                                        Icons.broken_image_outlined),
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      'Foto temuan awal saat ini',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          if (_image != null) const SizedBox(height: 10),
+                          if (_image != null ||
+                              _existingFinding != null)
+                            const SizedBox(height: 10),
                           OutlinedButton.icon(
                             onPressed: () => _chooseImageSource(
                               (file) => _image = file,
                             ),
                             icon: Icon(
-                              _image == null
+                              _image == null &&
+                                      _existingFinding == null
                                   ? Icons.add_a_photo_outlined
                                   : Icons.change_circle_outlined,
                             ),
                             label: Text(
-                              _image == null
+                              _image == null &&
+                                      _existingFinding == null
                                   ? 'Upload Gambar'
                                   : 'Ganti Gambar',
                             ),
@@ -344,20 +415,55 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                                 width: double.infinity,
                                 fit: BoxFit.cover,
                               ),
+                            )
+                          else if (_existingRepair != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Image.network(
+                                    _mediaUrl(context,
+                                        _existingRepair!['image_path'])!,
+                                    height: 210,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      height: 210,
+                                      color: const Color(0xFFE2E8F0),
+                                      child: const Icon(
+                                        Icons.broken_image_outlined),
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      'Foto perbaikan saat ini',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          if (_repairImage != null)
+                          if (_repairImage != null ||
+                              _existingRepair != null)
                             const SizedBox(height: 10),
                           OutlinedButton.icon(
                             onPressed: () => _chooseImageSource(
                               (file) => _repairImage = file,
                             ),
                             icon: Icon(
-                              _repairImage == null
+                              _repairImage == null &&
+                                      _existingRepair == null
                                   ? Icons.add_a_photo_outlined
                                   : Icons.change_circle_outlined,
                             ),
                             label: Text(
-                              _repairImage == null
+                              _repairImage == null &&
+                                      _existingRepair == null
                                   ? 'Upload Perbaikan'
                                   : 'Ganti Perbaikan',
                             ),
@@ -482,6 +588,38 @@ Map<String, dynamic> _asMap(dynamic value) {
 int? _asInt(dynamic value) {
   if (value is int) return value;
   return int.tryParse(value?.toString() ?? '');
+}
+
+String _string(dynamic value) {
+  return value?.toString().trim() ?? '';
+}
+
+List<dynamic> _listFrom(dynamic value) {
+  return value is List ? value : <dynamic>[];
+}
+
+TimeOfDay _parseTime(dynamic value) {
+  final text = value?.toString() ?? '';
+  if (text.length < 5) return TimeOfDay.now();
+  final parts = text.split(':');
+  final hour = int.tryParse(parts[0]);
+  final minute = parts.length > 1 ? int.tryParse(parts[1]) : null;
+  if (hour == null || minute == null) return TimeOfDay.now();
+  return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
+}
+
+String? _mediaUrl(BuildContext context, dynamic path) {
+  final text = path?.toString().trim() ?? '';
+  if (text.isEmpty) return null;
+  if (text.startsWith('http://') || text.startsWith('https://')) return text;
+
+  final apiBase = context.read<ApiService>().baseUrl;
+  final appBase = apiBase.replaceFirst(RegExp(r'/api/?$'), '');
+  final cleanBase = appBase.endsWith('/')
+      ? appBase.substring(0, appBase.length - 1)
+      : appBase;
+  final cleanPath = text.startsWith('/') ? text.substring(1) : text;
+  return '$cleanBase/$cleanPath';
 }
 
 String _cleanError(Object error) {

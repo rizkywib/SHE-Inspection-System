@@ -90,7 +90,11 @@ class MyApp extends StatelessWidget {
               page = const IncidentListScreen();
               break;
             case '/incident-form':
-              page = const IncidentFormScreen();
+              page = IncidentFormScreen(
+                inspection: settings.arguments is Map<String, dynamic>
+                    ? settings.arguments as Map<String, dynamic>
+                    : null,
+              );
               break;
             case '/master-hydrant-locations':
               page = hydrantLocationsScreen();

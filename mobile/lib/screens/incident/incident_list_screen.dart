@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 
 class IncidentListScreen extends StatefulWidget {
   const IncidentListScreen({super.key});
@@ -46,6 +47,17 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
   Future<void> _createInspection() async {
     final created = await Navigator.pushNamed(context, '/incident-form');
     if (created == true && mounted) {
+      await _loadInspections();
+    }
+  }
+
+  Future<void> _editInspection(Map<String, dynamic> inspection) async {
+    final edited = await Navigator.pushNamed(
+      context,
+      '/incident-form',
+      arguments: inspection,
+    );
+    if (edited == true && mounted) {
       await _loadInspections();
     }
   }
@@ -117,6 +129,8 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
     }
 
     if (!mounted) return;
+    final currentUser = _mapFrom(context.read<AuthService>().user);
+    final canEdit = _canEdit(detail, currentUser);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -195,12 +209,34 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
                     }).toList(),
                   ),
                 ],
+                if (canEdit) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _editInspection(detail);
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit Inspection'),
+                  ),
+                ],
               ],
             );
           },
         );
       },
     );
+  }
+
+  bool _canEdit(
+    Map<String, dynamic> inspection,
+    Map<String, dynamic> currentUser,
+  ) {
+    final role = currentUser['role']?.toString();
+    if (role == 'admin' || role == 'super_admin') return true;
+    final reporterId = _intValue(inspection['reporter_id']);
+    final userId = _intValue(currentUser['id']);
+    return reporterId != null && userId != null && reporterId == userId;
   }
 }
 

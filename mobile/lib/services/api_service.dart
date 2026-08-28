@@ -687,6 +687,23 @@ class ApiService extends ChangeNotifier {
     return jsonDecode(response.body);
   }
 
+  Future<Map<String, dynamic>> updateIncident(
+    int id,
+    Map<String, String> data, {
+    File? image,
+    File? repairPhoto,
+  }) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/incidents/$id',
+      {...data, '_method': 'PUT'},
+      {'image': image, 'repair_photo': repairPhoto},
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return jsonDecode(response.body);
+  }
+
   // File Upload
   Future<Map<String, dynamic>> uploadFile(File file) async {
     var request = http.MultipartRequest(
