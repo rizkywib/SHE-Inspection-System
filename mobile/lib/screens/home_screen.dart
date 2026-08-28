@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
         route: '/fire-hydrant',
         detailPath: 'fire-hydrants',
         color: const Color(0xFF145F3A),
-        icon: Icons.water_damage_outlined,
+        icon: Icons.fire_hydrant,
       ),
       _loadType(
         loader: api.getFireExtinguishers,
@@ -226,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               _QuickAction(
                                 label: 'Hydrant',
-                                icon: Icons.water_damage_outlined,
+                                icon: Icons.fire_hydrant,
                                 color: const Color(0xFF145F3A),
                                 onTap: () => Navigator.pushNamed(
                                   context,
@@ -657,7 +657,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.water_damage_outlined),
+            leading: const Icon(Icons.fire_hydrant),
             title: const Text('Hydrant'),
             onTap: () {
               Navigator.pop(context);

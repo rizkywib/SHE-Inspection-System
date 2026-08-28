@@ -68,7 +68,7 @@
                     <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Perlu tindak lanjut</p>
                 </article>
                 <article class="stat-card group rounded-2xl border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
-                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-sky-50 text-sky-600"><i class="fas fa-faucet-drip"></i></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Asset</span></div>
+                    <div class="flex items-start justify-between gap-2"><span class="stat-icon bg-sky-50 text-sky-600"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M4 22v-2h2v-3H5q-.825 0-1.412-.587T3 15v-2q0-.825.588-1.412T5 11h1V8H4V6h2.35q.625-1.75 2.163-2.875T12 2t3.488 1.125T17.65 6H20v2h-2v3h1q.825 0 1.413.588T21 13v2q0 .825-.587 1.413T19 17h-1v3h2v2zm10.475-5.525Q15.5 15.45 15.5 14t-1.025-2.475T12 10.5t-2.475 1.025T8.5 14t1.025 2.475T12 17.5t2.475-1.025m-3.537-1.412Q10.5 14.625 10.5 14t.438-1.062T12 12.5t1.063.438T13.5 14t-.437 1.063T12 15.5t-1.062-.437"/></svg></span><span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Asset</span></div>
                     <p class="mt-5 text-2xl font-extrabold text-slate-900" id="hydrantCount">0</p>
                     <p class="mt-1 text-xs font-medium leading-4 text-slate-500">Fire hydrant</p>
                 </article>
@@ -100,7 +100,7 @@
                     <span class="bg-blue-600 text-white"><i class="fas fa-clipboard-check"></i></span><span><strong>Inspection</strong><small>Buat laporan baru</small></span><i class="fas fa-arrow-right ml-auto text-xs text-blue-500"></i>
                 </a>
                 <a href="/dashboard/fire-hydrants" class="quick-action border-sky-100 bg-sky-50/60 hover:border-sky-300 hover:bg-sky-50">
-                    <span class="bg-sky-600 text-white"><i class="fas fa-faucet-drip"></i></span><span><strong>Hydrant</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-sky-500"></i>
+                    <span class="bg-sky-600 text-white"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M4 22v-2h2v-3H5q-.825 0-1.412-.587T3 15v-2q0-.825.588-1.412T5 11h1V8H4V6h2.35q.625-1.75 2.163-2.875T12 2t3.488 1.125T17.65 6H20v2h-2v3h1q.825 0 1.413.588T21 13v2q0 .825-.587 1.413T19 17h-1v3h2v2zm10.475-5.525Q15.5 15.45 15.5 14t-1.025-2.475T12 10.5t-2.475 1.025T8.5 14t1.025 2.475T12 17.5t2.475-1.025m-3.537-1.412Q10.5 14.625 10.5 14t.438-1.062T12 12.5t1.063.438T13.5 14t-.437 1.063T12 15.5t-1.062-.437"/></svg></span><span><strong>Hydrant</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-sky-500"></i>
                 </a>
                 <a href="/dashboard/fire-extinguishers#inspection-list" class="quick-action border-rose-100 bg-rose-50/60 hover:border-rose-300 hover:bg-rose-50">
                     <span class="bg-rose-500 text-white"><i class="fas fa-fire-extinguisher"></i></span><span><strong>APAR</strong><small>Kelola inspeksi</small></span><i class="fas fa-arrow-right ml-auto text-xs text-rose-500"></i>
