@@ -910,11 +910,6 @@ class _HydrantItemEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedPointId = _selectedPointIdForHydrant(
-      data.hydrantNumber.text,
-      points,
-    );
-
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
@@ -936,47 +931,12 @@ class _HydrantItemEditor extends StatelessWidget {
             : null,
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
-          DropdownButtonFormField<int?>(
-            initialValue: selectedPointId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Hydrant Number',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              DropdownMenuItem<int?>(
-                value: null,
-                child: Text(
-                  data.hydrantNumber.text.trim().isEmpty
-                      ? '- Select Hydrant Number -'
-                      : data.hydrantNumber.text.trim(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              ...points
-                  .map(_mapFrom)
-                  .where((point) => _intValue(point['id']) != null)
-                  .map((point) {
-                return DropdownMenuItem<int?>(
-                  value: _intValue(point['id']),
-                  child: Text(
-                    _pointOption(point),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }),
-            ],
-            onChanged: (id) {
-              final point = points.map(_mapFrom).firstWhere(
-                    (value) => _intValue(value['id']) == id,
-                    orElse: () => <String, dynamic>{},
-                  );
-              if (point.isNotEmpty) {
-                data.applyPoint(point);
-                onChanged();
-              }
+          _SearchableHydrantDropdown(
+            points: points,
+            selectedLabel: data.hydrantNumber.text,
+            onSelected: (point) {
+              data.applyPoint(point);
+              onChanged();
             },
           ),
           const SizedBox(height: 12),
@@ -1109,6 +1069,86 @@ class _HydrantItemEditor extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SearchableHydrantDropdown extends StatelessWidget {
+  const _SearchableHydrantDropdown({
+    required this.points,
+    required this.selectedLabel,
+    required this.onSelected,
+  });
+
+  final List<dynamic> points;
+  final String selectedLabel;
+  final ValueChanged<Map<String, dynamic>> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = points
+        .map(_mapFrom)
+        .where((point) => _intValue(point['id']) != null)
+        .toList(growable: false);
+    final hasSelection = selectedLabel.trim().isNotEmpty;
+
+    return SearchAnchor(
+      builder: (context, controller) {
+        return InkWell(
+          onTap: controller.openView,
+          borderRadius: BorderRadius.circular(4),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: 'Hydrant Number',
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.search),
+                tooltip: 'Search Hydrant Number',
+                onPressed: controller.openView,
+              ),
+            ),
+            child: Text(
+              hasSelection ? selectedLabel.trim() : '- Select Hydrant Number -',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: hasSelection
+                    ? const Color(0xFF0F172A)
+                    : Theme.of(context).hintColor,
+              ),
+            ),
+          ),
+        );
+      },
+      suggestionsBuilder: (context, controller) {
+        final query = controller.text.trim().toLowerCase();
+        final filtered = items.where((point) {
+          if (query.isEmpty) return true;
+          return _pointSearchText(point).toLowerCase().contains(query);
+        }).toList(growable: false);
+
+        if (filtered.isEmpty) {
+          return const [
+            ListTile(
+              leading: Icon(Icons.search_off),
+              title: Text('No hydrant found'),
+            ),
+          ];
+        }
+
+        return filtered.map((point) {
+          final ket2 = point['ket2']?.toString().trim() ?? '';
+          return ListTile(
+            leading: const Icon(Icons.fire_hydrant_alt_outlined),
+            title: Text(_pointOption(point)),
+            subtitle: ket2.isEmpty ? null : Text(ket2),
+            onTap: () {
+              controller.closeView(_pointOption(point));
+              onSelected(point);
+            },
+          );
+        }).toList(growable: false);
+      },
     );
   }
 }
@@ -1519,27 +1559,6 @@ int? _selectedId(dynamic value, List<dynamic> options, String key) {
   return exists ? id : null;
 }
 
-int? _selectedPointIdForHydrant(String hydrantNumber, List<dynamic> points) {
-  final selected = hydrantNumber.trim();
-  if (selected.isEmpty) return null;
-
-  for (final pointValue in points) {
-    final point = _mapFrom(pointValue);
-    final pointId = _intValue(point['id']);
-    if (pointId == null) continue;
-
-    final names = [
-      point['name_point'],
-      point['ket1'],
-      point['id'],
-    ].map((value) => value?.toString().trim()).whereType<String>();
-
-    if (names.any((value) => value == selected)) return pointId;
-  }
-
-  return null;
-}
-
 String? _nullIfEmpty(String value) {
   final text = value.trim();
   return text.isEmpty ? null : text;
@@ -1558,4 +1577,15 @@ String _pointOption(Map<String, dynamic> point) {
   final ket1 = point['ket1']?.toString() ?? '';
   if (ket1.isEmpty) return id.isEmpty ? name : '$id - $name';
   return id.isEmpty ? '$name - $ket1' : '$id - $name - $ket1';
+}
+
+String _pointSearchText(Map<String, dynamic> point) {
+  final values = [
+    point['id'],
+    point['name_point'],
+    point['ket1'],
+    point['ket2'],
+    _pointOption(point),
+  ];
+  return values.map((value) => value?.toString() ?? '').join(' ');
 }
