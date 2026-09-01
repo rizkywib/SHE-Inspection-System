@@ -210,7 +210,19 @@ function buildItemEditor(item) {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Hydrant Number</label>
-                <select data-field="hydrant_number" required onchange="applyHydrantPoint(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <div class="relative" data-hydrant-combobox>
+                    <button type="button" data-hydrant-toggle class="w-full text-left border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between">
+                        <span data-hydrant-label class="text-gray-400 truncate">- Select Hydrant Number -</span>
+                        <i class="fas fa-angle-down text-gray-400 ml-2"></i>
+                    </button>
+                    <div data-hydrant-panel class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden">
+                        <div class="p-2 border-b border-gray-200 bg-white">
+                            <input type="text" data-hydrant-search placeholder="Search hydrant number..." class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <ul data-hydrant-list class="max-h-56 overflow-y-auto"></ul>
+                    </div>
+                </div>
+                <select data-field="hydrant_number" required tabindex="-1" aria-hidden="true" class="sr-only">
                     ${hydrantPointOptions(item.hydrant_number || '')}
                 </select>
             </div>
@@ -268,6 +280,105 @@ function getItemFromForm() {
         photo_after: container.querySelector('[data-field="photo_after"]').files[0] || null,
     };
 }
+
+function hydrantComboboxRef(container) {
+    return {
+        select: container.querySelector('[data-field="hydrant_number"]'),
+        label: container.querySelector('[data-hydrant-label]'),
+        panel: container.querySelector('[data-hydrant-panel]'),
+        search: container.querySelector('[data-hydrant-search]'),
+        list: container.querySelector('[data-hydrant-list]'),
+    };
+}
+
+function hydrantComboboxSync(container) {
+    const { select, label } = hydrantComboboxRef(container);
+    const option = select.options[select.selectedIndex];
+    if (option && option.value) {
+        label.textContent = option.textContent || option.value;
+        label.classList.remove('text-gray-400');
+    } else {
+        label.textContent = '- Select Hydrant Number -';
+        label.classList.add('text-gray-400');
+    }
+}
+
+function hydrantComboboxClose(container) {
+    hydrantComboboxRef(container).panel.classList.add('hidden');
+}
+
+function hydrantComboboxRender(container) {
+    const { select, panel, search, list } = hydrantComboboxRef(container);
+    const query = search.value.toLowerCase().trim();
+    const matches = pointHydrants.filter(point => {
+        if (!query) return true;
+        return [point.id, point.name_point, point.ket1, point.ket2]
+            .filter(value => value != null)
+            .join(' ')
+            .toLowerCase()
+            .includes(query);
+    });
+
+    if (matches.length === 0) {
+        list.innerHTML = '<li class="px-3 py-4 text-sm text-gray-400 italic">No hydrant found</li>';
+    } else {
+        list.innerHTML = matches.map(point => {
+            const value = String(point.name_point ?? point.id);
+            const isSelected = Array.from(select.options)
+                .some(option => option.value === value && option.selected);
+            return `
+                <li data-value="${escapeHtml(value)}" class="px-3 py-2 cursor-pointer text-sm hover:bg-blue-50 ${isSelected ? 'bg-blue-50' : ''}">
+                    <div class="font-medium text-gray-900">${escapeHtml(`${point.id} - ${point.name_point || 'Point'}`)}</div>
+                    ${point.ket2 ? `<div class="text-xs text-gray-500 truncate">${escapeHtml(point.ket2)}</div>` : ''}
+                </li>
+            `;
+        }).join('');
+    }
+
+    list.querySelectorAll('li[data-value]').forEach(item => {
+        item.addEventListener('click', () => {
+            const option = Array.from(select.options)
+                .find(option => option.value === item.dataset.value);
+            if (!option) return;
+            select.value = option.value;
+            applyHydrantPoint(select);
+            hydrantComboboxSync(container);
+            hydrantComboboxClose(container);
+        });
+    });
+
+    panel.classList.remove('hidden');
+}
+
+function hydrantComboboxInit(container) {
+    const { panel, search } = hydrantComboboxRef(container);
+
+    container.querySelector('[data-hydrant-toggle]').addEventListener('click', () => {
+        if (panel.classList.contains('hidden')) {
+            search.value = '';
+            hydrantComboboxRender(container);
+            setTimeout(() => search.focus(), 0);
+        } else {
+            hydrantComboboxClose(container);
+        }
+    });
+
+    search.addEventListener('input', () => hydrantComboboxRender(container));
+    search.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') event.preventDefault();
+        if (event.key === 'Escape') hydrantComboboxClose(container);
+    });
+    search.addEventListener('click', (event) => event.stopPropagation());
+
+    hydrantComboboxSync(container);
+}
+
+document.addEventListener('click', (event) => {
+    document.querySelectorAll('[data-hydrant-panel]:not(.hidden)').forEach(panel => {
+        const combobox = panel.closest('[data-hydrant-combobox]');
+        if (combobox && !combobox.contains(event.target)) panel.classList.add('hidden');
+    });
+});
 
 async function loadInspection() {
     if (!inspectionId || itemParam === null) {
@@ -329,6 +440,7 @@ async function loadInspection() {
 
         // Build the single item editor
         document.getElementById('itemEditor').innerHTML = buildItemEditor(item);
+        hydrantComboboxInit(document.getElementById('itemEditor'));
 
         document.getElementById('loadingState').classList.add('hidden');
         document.getElementById('editForm').classList.remove('hidden');
