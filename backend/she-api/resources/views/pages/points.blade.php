@@ -237,6 +237,7 @@
                 <button id="prevPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
                 <span id="pageNumbers" class="text-sm text-gray-700"></span>
                 <button id="nextPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                <button id="lastPage" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Last</button>
             </div>
         </div>
     </div>
@@ -890,6 +891,7 @@ function renderTable() {
 
     document.getElementById('prevPage').disabled = currentPage <= 1;
     document.getElementById('nextPage').disabled = currentPage >= totalPages;
+    document.getElementById('lastPage').disabled = currentPage >= totalPages;
 }
 
 function openForm() {
@@ -977,10 +979,10 @@ document.getElementById('prevPage').addEventListener('click', function() {
     }
 });
 
-document.getElementById('nextPage').addEventListener('click', function() {
-    const totalItems = points.filter(loc => {
-        const search = searchFilter.toLowerCase().trim();
-        if (!search) return true;
+function getFilteredCount() {
+    const search = searchFilter.toLowerCase().trim();
+    if (!search) return points.length;
+    return points.filter(loc => {
         return String(loc.id).includes(search) ||
             (loc.name_point || '').toLowerCase().includes(search) ||
             (loc.lat || '').toLowerCase().includes(search) ||
@@ -990,9 +992,20 @@ document.getElementById('nextPage').addEventListener('click', function() {
             (loc.qr_code || '').toLowerCase().includes(search) ||
             (Number(loc.status) === 1 ? 'active' : 'inactive').includes(search);
     }).length;
-    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+document.getElementById('nextPage').addEventListener('click', function() {
+    const totalPages = Math.max(1, Math.ceil(getFilteredCount() / pageSize));
     if (currentPage < totalPages) {
         currentPage++;
+        renderTable();
+    }
+});
+
+document.getElementById('lastPage').addEventListener('click', function() {
+    const totalPages = Math.max(1, Math.ceil(getFilteredCount() / pageSize));
+    if (currentPage < totalPages) {
+        currentPage = totalPages;
         renderTable();
     }
 });
