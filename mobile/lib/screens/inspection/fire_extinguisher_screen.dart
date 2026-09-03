@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/save_status_badge.dart';
 import 'fire_extinguisher_create_screen.dart';
 
 class FireExtinguisherScreen extends StatefulWidget {
@@ -35,7 +37,20 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
 
   Future<void> _loadInspections() async {
     try {
-      final data = await context.read<ApiService>().getFireExtinguishers();
+      final api = context.read<ApiService>();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> data;
+      if (connectivity.isOnline) {
+        data = await api.getFireExtinguishers();
+        unawaited(
+          OfflineStorageService.instance.saveCache('extinguishers', data),
+        );
+      } else {
+        data = await OfflineStorageService.instance
+                .readCache('extinguishers') ??
+            <dynamic>[];
+      }
+      data = [...data, ...await _extinguisherDraftRows()];
       if (!mounted) return;
       setState(() {
         _inspections = data;
@@ -49,6 +64,21 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
         _error = error.toString();
       });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _extinguisherDraftRows() async {
+    final drafts = await OfflineStorageService.instance.getPendingDrafts();
+    return drafts
+        .where((d) =>
+            d['endpoint']?.toString().startsWith('/fire-extinguishers') == true)
+        .map((d) => <String, dynamic>{
+              'id': 'draft-${d['id']}',
+              'is_draft': true,
+              'location_text': d['display_name']?.toString() ?? 'Draft',
+              'inspector_name': 'Menunggu sinkronisasi',
+              'inspection_date': _dateOnly(d['created_at']?.toString()),
+            })
+        .toList();
   }
 
   Future<void> _loadReferenceData() async {
@@ -117,9 +147,38 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
   }
 
   Future<void> _showInspectionDetail(Map<String, dynamic> inspection) async {
+    if (inspection['is_draft'] == true) {
+      await _showDraftDialog();
+      return;
+    }
     final detail = await _fetchDetail(inspection);
     if (!mounted) return;
     _openDetailSheet(detail);
+  }
+
+  Future<void> _showDraftDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.cloud_upload_outlined,
+          color: Color(0xFFB66A13),
+          size: 40,
+        ),
+        title: const Text('Draft Menunggu Sinkronisasi'),
+        content: const Text(
+          'Data ini disimpan secara offline. '
+          'Data akan dikirim ke server saat koneksi tersedia.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openDetailSheet(Map<String, dynamic> detail) {
@@ -742,21 +801,31 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                         itemCount: _inspections.length,
                         itemBuilder: (context, index) {
                           final inspection = _mapFrom(_inspections[index]);
+                          final isDraft = inspection['is_draft'] == true;
                           return _ExtinguisherListCard(
-                            location: _relationName(
-                              inspection['location'],
-                              inspection['location_id'],
-                              'Location',
-                            ),
-                            inspector: _relationName(
-                              inspection['inspector'],
-                              inspection['inspector_id'],
-                              'Inspector',
-                            ),
+                            location: isDraft
+                                ? (inspection['location_text']?.toString() ??
+                                    '-')
+                                : _relationName(
+                                    inspection['location'],
+                                    inspection['location_id'],
+                                    'Location',
+                                  ),
+                            inspector: isDraft
+                                ? (inspection['inspector_name']?.toString() ??
+                                    '-')
+                                : _relationName(
+                                    inspection['inspector'],
+                                    inspection['inspector_id'],
+                                    'Inspector',
+                                  ),
                             inspectionDate:
                                 _dateOnly(inspection['inspection_date']) ?? '',
+                            pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(inspection),
-                            onLongPress: () => _confirmDelete(inspection),
+                            onLongPress: isDraft
+                                ? null
+                                : () => _confirmDelete(inspection),
                           );
                         },
                       ),
@@ -770,15 +839,17 @@ class _ExtinguisherListCard extends StatelessWidget {
     required this.location,
     required this.inspector,
     required this.inspectionDate,
+    required this.pendingSync,
     required this.onTap,
-    required this.onLongPress,
+    this.onLongPress,
   });
 
   final String location;
   final String inspector;
   final String inspectionDate;
+  final bool pendingSync;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -802,14 +873,22 @@ class _ExtinguisherListCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                location.isEmpty ? '-' : location,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      location.isEmpty ? '-' : location,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SaveStatusBadge(isPending: pendingSync),
+                ],
               ),
               const SizedBox(height: 12),
               Row(

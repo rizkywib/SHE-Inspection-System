@@ -197,6 +197,15 @@ class SyncService extends ChangeNotifier {
 
       final incidents = await api.getIncidents();
       await _storage.saveCache('incidents', incidents);
+
+      final hydrants = await api.getFireHydrants();
+      await _storage.saveCache('hydrants', hydrants);
+
+      final extinguishers = await api.getFireExtinguishers();
+      await _storage.saveCache('extinguishers', extinguishers);
+
+      final esEw = await api.getEsEw();
+      await _storage.saveCache('es_ew', esEw);
     } catch (error) {
       debugPrint('[Sync] Gagal cache master data: $error');
     }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/save_status_badge.dart';
 import 'fire_hydrant_create_flow.dart';
 
 class FireHydrantScreen extends StatefulWidget {
@@ -58,7 +60,18 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
   Future<void> _loadInspections() async {
     try {
       final api = context.read<ApiService>();
-      final data = await api.getFireHydrants();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> data;
+      if (connectivity.isOnline) {
+        data = await api.getFireHydrants();
+        unawaited(
+          OfflineStorageService.instance.saveCache('hydrants', data),
+        );
+      } else {
+        data = await OfflineStorageService.instance.readCache('hydrants') ??
+            <dynamic>[];
+      }
+      data = [...data, ...await _hydrantDraftRows()];
       if (!mounted) return;
       _inspections = data;
       _isLoading = false;
@@ -78,6 +91,20 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
       }
       setState(() {});
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _hydrantDraftRows() async {
+    final drafts = await OfflineStorageService.instance.getPendingDrafts();
+    return drafts
+        .where((d) => d['endpoint']?.toString().startsWith('/fire-hydrants') == true)
+        .map((d) => <String, dynamic>{
+              'id': 'draft-${d['id']}',
+              'is_draft': true,
+              'location_text': d['display_name']?.toString() ?? 'Draft',
+              'inspector_name': 'Menunggu sinkronisasi',
+              'inspection_date': _dateOnly(d['created_at']?.toString()),
+            })
+        .toList();
   }
 
   void _showDetailForInitialId() {
@@ -166,21 +193,29 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                         itemCount: _inspections.length,
                         itemBuilder: (context, index) {
                           final item = _mapFrom(_inspections[index]);
+                          final isDraft = item['is_draft'] == true;
                           return _FireHydrantListCard(
-                            location: _relationName(
-                              item['location'],
-                              item['location_id'],
-                              'Location',
-                            ),
-                            inspector: _relationName(
-                              item['inspector'],
-                              item['inspector_id'],
-                              'Inspector',
-                            ),
+                            location: isDraft
+                                ? (item['location_text']?.toString() ?? '-')
+                                : _relationName(
+                                    item['location'],
+                                    item['location_id'],
+                                    'Location',
+                                  ),
+                            inspector: isDraft
+                                ? (item['inspector_name']?.toString() ?? '-')
+                                : _relationName(
+                                    item['inspector'],
+                                    item['inspector_id'],
+                                    'Inspector',
+                                  ),
                             inspectionDate:
                                 _dateOnly(item['inspection_date']) ?? '',
+                            pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(item),
-                            onLongPress: () => _confirmDelete(item),
+                            onLongPress: isDraft
+                                ? null
+                                : () => _confirmDelete(item),
                           );
                         },
                       ),
@@ -273,8 +308,37 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
   }
 
   Future<void> _showInspectionDetail(Map<String, dynamic> item) async {
+    if (item['is_draft'] == true) {
+      _showDraftDialog();
+      return;
+    }
     final detail = await _fetchDetail(item);
     _openDetailSheet(detail);
+  }
+
+  Future<void> _showDraftDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.cloud_upload_outlined,
+          color: Color(0xFFB66A13),
+          size: 40,
+        ),
+        title: const Text('Draft Menunggu Sinkronisasi'),
+        content: const Text(
+          'Data ini disimpan secara offline. '
+          'Data akan dikirim ke server saat koneksi tersedia.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showInspectionForm({Map<String, dynamic>? item}) async {
@@ -732,15 +796,17 @@ class _FireHydrantListCard extends StatelessWidget {
     required this.location,
     required this.inspector,
     required this.inspectionDate,
+    required this.pendingSync,
     required this.onTap,
-    required this.onLongPress,
+    this.onLongPress,
   });
 
   final String location;
   final String inspector;
   final String inspectionDate;
+  final bool pendingSync;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -764,14 +830,22 @@ class _FireHydrantListCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                location.isEmpty ? '-' : location,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      location.isEmpty ? '-' : location,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SaveStatusBadge(isPending: pendingSync),
+                ],
               ),
               const SizedBox(height: 12),
               Row(

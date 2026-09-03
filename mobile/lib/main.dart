@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'route_observer.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         initialRoute: '/splash',
+        navigatorObservers: [routeObserver],
         onGenerateRoute: (settings) {
           Widget page;
           String? idArg;

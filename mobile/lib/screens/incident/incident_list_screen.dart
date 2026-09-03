@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/save_status_badge.dart';
 
 class IncidentListScreen extends StatefulWidget {
   const IncidentListScreen({super.key});
@@ -44,6 +45,7 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
       } else {
         rows = await OfflineStorageService.instance.readCache('incidents') ?? [];
       }
+      rows = [...rows, ...await _incidentDraftRows()];
       if (!mounted) return;
       setState(() {
         _inspections = rows.map(_mapFrom).toList();
@@ -58,11 +60,53 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
     }
   }
 
+  Future<void> _showDraftDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.cloud_upload_outlined,
+          color: Color(0xFFB66A13),
+          size: 40,
+        ),
+        title: const Text('Draft Menunggu Sinkronisasi'),
+        content: const Text(
+          'Data ini disimpan secara offline. '
+          'Data akan dikirim ke server saat koneksi tersedia.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _createInspection() async {
     final created = await Navigator.pushNamed(context, '/incident-form');
     if (created == true && mounted) {
       await _loadInspections();
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _incidentDraftRows() async {
+    final drafts = await OfflineStorageService.instance.getPendingDrafts();
+    return drafts
+        .where(
+            (d) => d['endpoint']?.toString().startsWith('/incidents') == true)
+        .map((d) => <String, dynamic>{
+              'id': 'draft-${d['id']}',
+              'is_draft': true,
+              'incident_type': {'name': 'Draft'},
+              'incident_date': _dateOnly(d['created_at']?.toString()),
+              'incident_time': '',
+              'location_text': d['display_name']?.toString() ?? 'Draft',
+              'description': 'Menunggu sinkronisasi',
+            })
+        .toList();
   }
 
   Future<void> _editInspection(Map<String, dynamic> inspection) async {
@@ -120,6 +164,7 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
                             final inspection = _inspections[index];
                             return _InspectionListItem(
                               inspection: inspection,
+                              pendingSync: inspection['is_draft'] == true,
                               onTap: () => _showDetail(inspection),
                             );
                           },
@@ -129,6 +174,10 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
   }
 
   Future<void> _showDetail(Map<String, dynamic> inspection) async {
+    if (inspection['is_draft'] == true) {
+      await _showDraftDialog();
+      return;
+    }
     var detail = inspection;
     final id = _intValue(inspection['id']);
 
@@ -257,10 +306,12 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
 class _InspectionListItem extends StatelessWidget {
   const _InspectionListItem({
     required this.inspection,
+    required this.pendingSync,
     required this.onTap,
   });
 
   final Map<String, dynamic> inspection;
+  final bool pendingSync;
   final VoidCallback onTap;
 
   @override
@@ -297,6 +348,8 @@ class _InspectionListItem extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   _StatusBadge(status: inspection['status']?.toString() ?? ''),
+                  const SizedBox(width: 8),
+                  SaveStatusBadge(isPending: pendingSync),
                 ],
               ),
               const SizedBox(height: 8),

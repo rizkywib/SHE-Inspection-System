@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../route_observer.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/save_status_badge.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,12 +18,13 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   final TextEditingController _searchController = TextEditingController();
   List<_InspectionItem> _inspections = [];
   String _selectedStatus = 'all';
   bool _isLoading = true;
   String? _error;
+  bool _subscribedToRoute = false;
 
   @override
   void initState() {
@@ -30,6 +35,24 @@ class _HomeScreenState extends State<HomeScreen> {
     _warmCache();
     _wasOnline = _connectivity.isOnline;
     _connectivity.addListener(_onConnectivityChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_subscribedToRoute) {
+      _subscribedToRoute = true;
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // Kembali ke dashboard (misal selesai membuat inspeksi): muat ulang
+    // termasuk draft offline yang baru dibuat.
+    _refreshPendingCount();
+    _loadInspections();
   }
 
   late final ConnectivityService _connectivity;
@@ -59,6 +82,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    if (_subscribedToRoute) {
+      routeObserver.unsubscribe(this);
+    }
     _connectivity.removeListener(_onConnectivityChanged);
     _searchController.dispose();
     super.dispose();
@@ -87,42 +113,49 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     final api = context.read<ApiService>();
+    final connectivity = context.read<ConnectivityService>();
     final loaded = <_InspectionItem>[];
-    final loaders = [
-      _loadType(
+
+    final sources = [
+      _InspectionSource(
         loader: api.getFireHydrants,
+        cacheKey: 'hydrants',
         type: 'Hydrant',
         route: '/fire-hydrant',
         detailPath: 'fire-hydrants',
         color: const Color(0xFF145F3A),
         icon: Icons.fire_hydrant,
       ),
-      _loadType(
+      _InspectionSource(
         loader: api.getFireExtinguishers,
+        cacheKey: 'extinguishers',
         type: 'Fire Extinguisher',
         route: '/fire-extinguisher',
         detailPath: 'fire-extinguishers',
         color: const Color(0xFF177245),
         icon: Icons.fire_extinguisher,
       ),
-      _loadType(
+      _InspectionSource(
         loader: api.getFireAlarms,
+        cacheKey: 'fire_alarms',
         type: 'Fire Alarm',
         route: '/fire-alarm',
         detailPath: 'fire-alarms',
         color: const Color(0xFF238653),
         icon: Icons.notifications_active_outlined,
       ),
-      _loadType(
+      _InspectionSource(
         loader: api.getEsEw,
+        cacheKey: 'es_ew',
         type: 'ES/EW',
         route: '/es-ew',
         detailPath: 'es-ew',
         color: const Color(0xFF329566),
         icon: Icons.shower_outlined,
       ),
-      _loadType(
+      _InspectionSource(
         loader: api.getIncidents,
+        cacheKey: 'incidents',
         type: 'Inspection',
         route: '/incident-form',
         detailPath: 'incidents',
@@ -131,46 +164,57 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
-    await Future.wait(loaders.map((future) async {
-      final items = await future;
-      loaded.addAll(items);
-      loaded.sort((a, b) => b.dateText.compareTo(a.dateText));
-      if (!mounted) return;
-      setState(() {
-        _inspections = List.of(loaded);
-        _isLoading = false;
-      });
-    }));
+    if (connectivity.isOnline) {
+      await Future.wait(sources.map((source) async {
+        try {
+          final rows = await source.loader();
+          unawaited(OfflineStorageService.instance
+              .saveCache(source.cacheKey, rows));
+          loaded.addAll(_itemsFromRows(rows, source));
+        } catch (_) {
+          // Satu sumber gagal tidak menghentikan sumber lainnya.
+        }
+        if (!mounted) return;
+        setState(() {
+          _inspections = List.of(loaded);
+          _isLoading = false;
+        });
+      }));
+    } else {
+      for (final source in sources) {
+        final rows = await OfflineStorageService.instance
+                .readCache(source.cacheKey) ??
+            <dynamic>[];
+        loaded.addAll(_itemsFromRows(rows, source));
+      }
+    }
+
+    loaded.addAll(_draftItems(
+      await OfflineStorageService.instance.getPendingDrafts(),
+    ));
 
     if (!mounted) return;
-    if (loaded.isEmpty) {
-      setState(() => _isLoading = false);
-    }
+    loaded.sort((a, b) => b.dateText.compareTo(a.dateText));
+    setState(() {
+      _inspections = List.of(loaded);
+      _isLoading = false;
+    });
   }
 
-  Future<List<_InspectionItem>> _loadType({
-    required Future<List<dynamic>> Function() loader,
-    required String type,
-    required String route,
-    required String detailPath,
-    required Color color,
-    required IconData icon,
-  }) async {
-    try {
-      final rows = await loader();
-      return rows
-          .map((row) => _InspectionItem.fromMap(
-                _mapFrom(row),
-                type: type,
-                route: route,
-                detailPath: detailPath,
-                color: color,
-                icon: icon,
-              ))
-          .toList();
-    } catch (_) {
-      return [];
-    }
+  List<_InspectionItem> _itemsFromRows(
+    List<dynamic> rows,
+    _InspectionSource source,
+  ) {
+    return rows
+        .map((row) => _InspectionItem.fromMap(
+              _mapFrom(row),
+              type: source.type,
+              route: source.route,
+              detailPath: source.detailPath,
+              color: source.color,
+              icon: source.icon,
+            ))
+        .toList();
   }
 
   List<_InspectionItem> get _filteredInspections {
@@ -471,6 +515,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showInspectionDetail(_InspectionItem item) async {
+    if (item.pendingSync) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          icon: const Icon(
+            Icons.cloud_upload_outlined,
+            color: Color(0xFFB66A13),
+            size: 40,
+          ),
+          title: const Text('Draft Menunggu Sinkronisasi'),
+          content: const Text(
+            'Data ini disimpan secara offline. '
+            'Data akan dikirim ke server saat koneksi tersedia.',
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     Map<String, dynamic> detail = item.rawData;
     final id = int.tryParse(item.id);
 
@@ -1222,6 +1293,8 @@ class _InspectionListTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   _StatusBadge(status: item.status),
+                  const SizedBox(width: 8),
+                  SaveStatusBadge(isPending: item.pendingSync),
                   const SizedBox(width: 3),
                   const Icon(
                     Icons.chevron_right,
@@ -1551,6 +1624,7 @@ class _InspectionItem {
     required this.rawData,
     required this.color,
     required this.icon,
+    this.pendingSync = false,
   });
 
   factory _InspectionItem.fromMap(
@@ -1607,6 +1681,7 @@ class _InspectionItem {
   final Map<String, dynamic> rawData;
   final Color color;
   final IconData icon;
+  final bool pendingSync;
 
   String get searchText {
     return [
@@ -1620,6 +1695,97 @@ class _InspectionItem {
       remark,
     ].join(' ').toLowerCase();
   }
+}
+
+class _InspectionSource {
+  const _InspectionSource({
+    required this.loader,
+    required this.cacheKey,
+    required this.type,
+    required this.route,
+    required this.detailPath,
+    required this.color,
+    required this.icon,
+  });
+
+  final Future<List<dynamic>> Function() loader;
+  final String cacheKey;
+  final String type;
+  final String route;
+  final String detailPath;
+  final Color color;
+  final IconData icon;
+}
+
+/// Mengubah antrian draft offline menjadi item daftar agar tetap terlihat
+/// di dashboard beserta penanda "menunggu sinkronisasi".
+List<_InspectionItem> _draftItems(List<Map<String, dynamic>> drafts) {
+  return drafts.map((draft) {
+    final endpoint = draft['endpoint']?.toString() ?? '';
+    final created =
+        DateTime.tryParse(draft['created_at']?.toString() ?? '');
+    return _InspectionItem(
+      id: 'draft-${draft['id']}',
+      reference: draft['display_name']?.toString() ?? 'Draft',
+      type: _draftType(endpoint),
+      status: 'draft',
+      dateText:
+          created == null ? '' : _dateOnly(created.toIso8601String()),
+      location: '',
+      inspector: '',
+      remark: 'Draft offline - menunggu sinkronisasi.',
+      route: _draftRoute(endpoint),
+      detailPath: _draftDetailPath(endpoint),
+      rawData: Map<String, dynamic>.from(draft),
+      color: _draftColor(endpoint),
+      icon: _draftIcon(endpoint),
+      pendingSync: true,
+    );
+  }).toList();
+}
+
+String _draftType(String endpoint) {
+  if (endpoint.startsWith('/fire-hydrants')) return 'Hydrant';
+  if (endpoint.startsWith('/fire-extinguishers')) return 'Fire Extinguisher';
+  if (endpoint.startsWith('/es-ew')) return 'ES/EW';
+  if (endpoint.startsWith('/incidents')) return 'Inspection';
+  return 'Draft';
+}
+
+String _draftDetailPath(String endpoint) {
+  if (endpoint.startsWith('/fire-hydrants')) return 'fire-hydrants';
+  if (endpoint.startsWith('/fire-extinguishers')) return 'fire-extinguishers';
+  if (endpoint.startsWith('/es-ew')) return 'es-ew';
+  if (endpoint.startsWith('/incidents')) return 'incidents';
+  return '';
+}
+
+String _draftRoute(String endpoint) {
+  if (endpoint.startsWith('/fire-hydrants')) return '/fire-hydrant';
+  if (endpoint.startsWith('/fire-extinguishers')) return '/fire-extinguisher';
+  if (endpoint.startsWith('/es-ew')) return '/es-ew';
+  if (endpoint.startsWith('/incidents')) return '/incident-form';
+  return '';
+}
+
+Color _draftColor(String endpoint) {
+  if (endpoint.startsWith('/fire-hydrants')) return const Color(0xFF145F3A);
+  if (endpoint.startsWith('/fire-extinguishers')) {
+    return const Color(0xFF177245);
+  }
+  if (endpoint.startsWith('/es-ew')) return const Color(0xFF329566);
+  if (endpoint.startsWith('/incidents')) return const Color(0xFF4AA878);
+  return AppColors.primaryDark;
+}
+
+IconData _draftIcon(String endpoint) {
+  if (endpoint.startsWith('/fire-hydrants')) return Icons.fire_hydrant;
+  if (endpoint.startsWith('/fire-extinguishers')) {
+    return Icons.fire_extinguisher;
+  }
+  if (endpoint.startsWith('/es-ew')) return Icons.shower_outlined;
+  if (endpoint.startsWith('/incidents')) return Icons.assignment_outlined;
+  return Icons.cloud_upload_outlined;
 }
 
 Map<String, dynamic> _mapFrom(dynamic value) {

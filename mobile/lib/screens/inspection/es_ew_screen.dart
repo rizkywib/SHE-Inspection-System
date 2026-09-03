@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/save_status_badge.dart';
 import 'es_ew_common.dart';
 import 'es_ew_create_flow.dart';
 
@@ -38,7 +40,17 @@ class _EsEwScreenState extends State<EsEwScreen> {
 
   Future<void> _loadInspections() async {
     try {
-      final values = await context.read<ApiService>().getEsEw();
+      final api = context.read<ApiService>();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> values;
+      if (connectivity.isOnline) {
+        values = await api.getEsEw();
+        unawaited(OfflineStorageService.instance.saveCache('es_ew', values));
+      } else {
+        values = await OfflineStorageService.instance.readCache('es_ew') ??
+            <dynamic>[];
+      }
+      values = [...values, ...await _esEwDraftRows()];
       if (!mounted) return;
       setState(() {
         _inspections = values;
@@ -53,6 +65,21 @@ class _EsEwScreenState extends State<EsEwScreen> {
         _error = error.toString();
       });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _esEwDraftRows() async {
+    final drafts = await OfflineStorageService.instance.getPendingDrafts();
+    return drafts
+        .where(
+            (d) => d['endpoint']?.toString().startsWith('/es-ew') == true)
+        .map((d) => <String, dynamic>{
+              'id': 'draft-${d['id']}',
+              'is_draft': true,
+              'area_name': d['display_name']?.toString() ?? 'Draft',
+              'inspector_name': 'Menunggu sinkronisasi',
+              'inspection_date': _dateOnly(d['created_at']?.toString()),
+            })
+        .toList();
   }
 
   Future<void> _loadMasterData() async {
@@ -129,8 +156,37 @@ class _EsEwScreenState extends State<EsEwScreen> {
   Future<void> _showInspectionDetail(
     Map<String, dynamic> inspection,
   ) async {
+    if (inspection['is_draft'] == true) {
+      await _showDraftDialog();
+      return;
+    }
     final detail = await _fetchDetail(inspection);
     if (mounted) _openDetailSheet(detail);
+  }
+
+  Future<void> _showDraftDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.cloud_upload_outlined,
+          color: Color(0xFFB66A13),
+          size: 40,
+        ),
+        title: const Text('Draft Menunggu Sinkronisasi'),
+        content: const Text(
+          'Data ini disimpan secara offline. '
+          'Data akan dikirim ke server saat koneksi tersedia.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openDetailSheet(Map<String, dynamic> detail) {
@@ -310,21 +366,30 @@ class _EsEwScreenState extends State<EsEwScreen> {
                         itemCount: _inspections.length,
                         itemBuilder: (context, index) {
                           final inspection = esEwMap(_inspections[index]);
+                          final isDraft = inspection['is_draft'] == true;
                           return _EsEwListCard(
-                            area: _relationName(
-                              inspection['area'],
-                              inspection['area_id'],
-                              'Area',
-                            ),
-                            inspector: _relationName(
-                              inspection['inspector'],
-                              inspection['inspector_id'],
-                              'Inspector',
-                            ),
+                            area: isDraft
+                                ? (inspection['area_name']?.toString() ?? '-')
+                                : _relationName(
+                                    inspection['area'],
+                                    inspection['area_id'],
+                                    'Area',
+                                  ),
+                            inspector: isDraft
+                                ? (inspection['inspector_name']?.toString() ??
+                                    '-')
+                                : _relationName(
+                                    inspection['inspector'],
+                                    inspection['inspector_id'],
+                                    'Inspector',
+                                  ),
                             inspectionDate:
                                 _dateOnly(inspection['inspection_date']),
+                            pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(inspection),
-                            onLongPress: () => _confirmDelete(inspection),
+                            onLongPress: isDraft
+                                ? null
+                                : () => _confirmDelete(inspection),
                           );
                         },
                       ),
@@ -711,15 +776,17 @@ class _EsEwListCard extends StatelessWidget {
     required this.area,
     required this.inspector,
     required this.inspectionDate,
+    required this.pendingSync,
     required this.onTap,
-    required this.onLongPress,
+    this.onLongPress,
   });
 
   final String area;
   final String inspector;
   final String inspectionDate;
+  final bool pendingSync;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -743,12 +810,20 @@ class _EsEwListCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                area.isEmpty ? '-' : area,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      area.isEmpty ? '-' : area,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SaveStatusBadge(isPending: pendingSync),
+                ],
               ),
               const SizedBox(height: 12),
               Row(
