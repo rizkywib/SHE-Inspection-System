@@ -19,8 +19,38 @@ import 'package:she_inspection_mobile/screens/safety_talk/safety_talk_form_scree
 import 'package:she_inspection_mobile/screens/safety_talk/safety_talk_screen.dart';
 import 'package:she_inspection_mobile/services/api_service.dart';
 import 'package:she_inspection_mobile/services/auth_service.dart';
+import 'package:she_inspection_mobile/services/connectivity_service.dart';
+import 'package:she_inspection_mobile/services/offline_storage_service.dart';
+import 'package:she_inspection_mobile/services/sync_service.dart';
 
 void main() {
+  setUp(() async {
+    await OfflineStorageService.instance.init();
+  });
+
+  Widget wrapTestApp({
+    ApiService? api,
+    required Widget home,
+    Map<String, WidgetBuilder> routes = const {},
+  }) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ApiService>.value(
+          value: api ?? _FakeApiService(),
+        ),
+        ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(
+          create: (context) => SyncService(
+            api: context.read<ApiService>(),
+            connectivity: context.read<ConnectivityService>(),
+          ),
+        ),
+      ],
+      child: MaterialApp(home: home, routes: routes),
+    );
+  }
+
   testWidgets('App menampilkan splash screen', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
@@ -63,13 +93,7 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: _FakeApiService()),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(home: HomeScreen()),
-      ),
+      wrapTestApp(home: const HomeScreen()),
     );
     await tester.pumpAndSettle();
 
@@ -94,18 +118,12 @@ void main() {
   testWidgets('Menu Inspection membuka list inspection',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: _FakeApiService()),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: MaterialApp(
-          home: const HomeScreen(),
-          routes: {
-            '/incidents': (_) => const IncidentListScreen(),
-            '/incident-form': (_) => const IncidentFormScreen(),
-          },
-        ),
+      wrapTestApp(
+        home: const HomeScreen(),
+        routes: {
+          '/incidents': (_) => const IncidentListScreen(),
+          '/incident-form': (_) => const IncidentFormScreen(),
+        },
       ),
     );
     await tester.pumpAndSettle();
@@ -137,13 +155,7 @@ void main() {
   testWidgets('Fire Hydrant List hanya menampilkan tiga field',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: _FakeApiService()),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(home: FireHydrantScreen()),
-      ),
+      wrapTestApp(home: const FireHydrantScreen()),
     );
     await tester.pumpAndSettle();
 
@@ -179,10 +191,7 @@ void main() {
   testWidgets('Form awal Fire Hydrant hanya menampilkan tanggal dan location',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider<ApiService>.value(
-        value: _FakeApiService(),
-        child: const MaterialApp(home: FireHydrantSetupScreen()),
-      ),
+      wrapTestApp(home: const FireHydrantSetupScreen()),
     );
     await tester.pumpAndSettle();
 
@@ -204,24 +213,18 @@ void main() {
   testWidgets('QR Fire Hydrant mengisi Hydrant Detail otomatis',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: _FakeApiService()),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(
-          home: FireHydrantCreateScreen(
-            inspectionDate: '2026-07-24',
-            locationId: 1,
-            locationName: 'Area Produksi',
-            scannedQr: 'POINT-7-TEST',
-            point: {
-              'id': 7,
-              'name_point': 'FH-007',
-              'ket1': 'Hydrant Gedung A',
-              'ket2': 'Lantai 1 dekat pintu utama',
-            },
-          ),
+      wrapTestApp(
+        home: const FireHydrantCreateScreen(
+          inspectionDate: '2026-07-24',
+          locationId: 1,
+          locationName: 'Area Produksi',
+          scannedQr: 'POINT-7-TEST',
+          point: {
+            'id': 7,
+            'name_point': 'FH-007',
+            'ket1': 'Hydrant Gedung A',
+            'ket2': 'Lantai 1 dekat pintu utama',
+          },
         ),
       ),
     );
@@ -247,12 +250,9 @@ void main() {
     });
     final api = _FakeFireExtinguisherApiService();
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: api),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(home: FireExtinguisherScreen()),
+      wrapTestApp(
+        api: api,
+        home: const FireExtinguisherScreen(),
       ),
     );
     await tester.pumpAndSettle();
@@ -291,9 +291,9 @@ void main() {
   testWidgets('Form awal Fire Extinguisher mempertahankan Scan QR di awal',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider<ApiService>.value(
-        value: _FakeFireExtinguisherApiService(),
-        child: const MaterialApp(home: FireExtinguisherCreateScreen()),
+      wrapTestApp(
+        api: _FakeFireExtinguisherApiService(),
+        home: const FireExtinguisherCreateScreen(),
       ),
     );
     await tester.pumpAndSettle();
@@ -312,24 +312,19 @@ void main() {
       (WidgetTester tester) async {
     final api = _FakeFireExtinguisherApiService();
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: api),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(
-          home: FireExtinguisherQrFormScreen(
-            inspectionDate: '2026-07-23',
-            locationId: 8,
-            locationName: 'Area APAR',
-            scannedQr: 'POINT-101-TEST',
-            point: {
-              'id': 101,
-              'name_point': 'APAR-101',
-              'ket1': 'DC - SP - 9 Kg',
-              'ket2': 'Gedung A dekat pintu utama',
-            },
-          ),
+      wrapTestApp(
+        api: api,
+        home: const FireExtinguisherQrFormScreen(
+          inspectionDate: '2026-07-23',
+          locationId: 8,
+          locationName: 'Area APAR',
+          scannedQr: 'POINT-101-TEST',
+          point: {
+            'id': 101,
+            'name_point': 'APAR-101',
+            'ket1': 'DC - SP - 9 Kg',
+            'ket2': 'Gedung A dekat pintu utama',
+          },
         ),
       ),
     );
@@ -359,12 +354,9 @@ void main() {
     });
     final api = _FakeEsEwApiService();
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: api),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(home: EsEwScreen()),
+      wrapTestApp(
+        api: api,
+        home: const EsEwScreen(),
       ),
     );
     await tester.pumpAndSettle();
@@ -401,9 +393,9 @@ void main() {
   testWidgets('Form awal ES/EW mempertahankan Scan QR di awal',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider<ApiService>.value(
-        value: _FakeEsEwApiService(),
-        child: const MaterialApp(home: EsEwSetupScreen()),
+      wrapTestApp(
+        api: _FakeEsEwApiService(),
+        home: const EsEwSetupScreen(),
       ),
     );
     await tester.pumpAndSettle();
@@ -422,24 +414,19 @@ void main() {
       (WidgetTester tester) async {
     final api = _FakeEsEwApiService();
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ApiService>.value(value: api),
-          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-        ],
-        child: const MaterialApp(
-          home: EsEwCreateScreen(
-            inspectionDate: '2026-08-05',
-            areaId: 14,
-            areaName: 'Area 4',
-            scannedQr: 'POINT-2275-TEST',
-            point: {
-              'id': 2275,
-              'name_point': 'ES & EW - 54',
-              'ket1': 'UTILITY ICW EOB3',
-              'ket2': '732',
-            },
-          ),
+      wrapTestApp(
+        api: api,
+        home: const EsEwCreateScreen(
+          inspectionDate: '2026-08-05',
+          areaId: 14,
+          areaName: 'Area 4',
+          scannedQr: 'POINT-2275-TEST',
+          point: {
+            'id': 2275,
+            'name_point': 'ES & EW - 54',
+            'ket1': 'UTILITY ICW EOB3',
+            'ket2': '732',
+          },
         ),
       ),
     );

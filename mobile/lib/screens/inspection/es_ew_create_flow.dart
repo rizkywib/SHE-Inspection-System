@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 import 'es_ew_common.dart';
 
 class EsEwSetupScreen extends StatefulWidget {
@@ -36,7 +39,17 @@ class _EsEwSetupScreenState extends State<EsEwSetupScreen> {
       _error = null;
     });
     try {
-      final master = await context.read<ApiService>().getEsEwMasterData();
+      final connectivity = context.read<ConnectivityService>();
+      Map<String, dynamic> master;
+      if (connectivity.isOnline) {
+        master = await context.read<ApiService>().getEsEwMasterData();
+        unawaited(OfflineStorageService.instance
+            .saveCacheJson('es_ew_master', master));
+      } else {
+        master = await OfflineStorageService.instance
+                .readCacheSingle('es_ew_master') ??
+            {};
+      }
       if (!mounted) return;
       setState(() {
         _areas = esEwList(master['areas']);
@@ -190,10 +203,17 @@ class _EsEwQrScannerScreenState extends State<EsEwQrScannerScreen> {
 
   Future<void> _loadPointsAndStart() async {
     try {
-      final values = await context.read<ApiService>().getPoints();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> points;
+      if (connectivity.isOnline) {
+        points = await context.read<ApiService>().getPoints();
+        unawaited(OfflineStorageService.instance.saveCache('points', points));
+      } else {
+        points = await OfflineStorageService.instance.readCache('points') ?? [];
+      }
       if (!mounted) return;
       setState(() {
-        _points = values.where(isEsEwPoint).toList(growable: false);
+        _points = points.where(isEsEwPoint).toList(growable: false);
         _isLoading = false;
         _error = null;
       });
@@ -424,7 +444,39 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
     };
 
     try {
-      final response = await context.read<ApiService>().createEsEw(
+      final connectivity = context.read<ConnectivityService>();
+      final api = context.read<ApiService>();
+
+      if (!connectivity.isOnline) {
+        final fileMap = <String, String>{
+          if (_eyeWashPhoto != null)
+            'items[0][photo_before]': _eyeWashPhoto!.path,
+          if (_emergencyShowerPhoto != null)
+            'items[0][photo_after]': _emergencyShowerPhoto!.path,
+        };
+        await OfflineStorageService.instance.enqueueDraft(
+          endpoint: '/es-ew',
+          method: 'POST',
+          fields: fields,
+          files: fileMap,
+          displayName: 'ES/EW ${esEwText(widget.point['name_point'])}',
+        );
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Offline: inspeksi ES/EW disimpan sebagai draft. '
+              'Akan disinkronkan saat online.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pop(context, true);
+        return;
+      }
+
+      final response = await api.createEsEw(
             fields,
             eyeWashPhoto: _eyeWashPhoto,
             emergencyShowerPhoto: _emergencyShowerPhoto,

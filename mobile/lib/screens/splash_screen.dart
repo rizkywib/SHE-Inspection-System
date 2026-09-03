@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_storage_service.dart';
+import '../services/sync_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,20 +16,27 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    _initialize();
   }
 
-  Future<void> _checkAuth() async {
+  Future<void> _initialize() async {
+    final connectivity = context.read<ConnectivityService>();
+    final sync = context.read<SyncService>();
     final auth = context.read<AuthService>();
-    await auth.init();
+    final navigator = Navigator.of(context);
+
+    await OfflineStorageService.instance.init();
+    await connectivity.init();
+    await sync.init();
+    await auth.init(offlineMode: !connectivity.isOnline);
 
     if (!mounted) return;
 
     Future.delayed(const Duration(seconds: 2), () {
       if (auth.isLoggedIn) {
-        Navigator.pushReplacementNamed(context, '/home');
+        navigator.pushReplacementNamed('/home');
       } else {
-        Navigator.pushReplacementNamed(context, '/login');
+        navigator.pushReplacementNamed('/login');
       }
     });
   }

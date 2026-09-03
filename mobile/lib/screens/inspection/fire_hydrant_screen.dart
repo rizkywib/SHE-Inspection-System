@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 import 'fire_hydrant_create_flow.dart';
 
 class FireHydrantScreen extends StatefulWidget {
@@ -559,7 +561,35 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
     Map<String, String> fields,
     Map<String, File?> files,
   ) async {
+    final connectivity = context.read<ConnectivityService>();
     final api = context.read<ApiService>();
+
+    if (!connectivity.isOnline) {
+      final fileMap = <String, String>{
+        for (final entry in files.entries)
+          if (entry.value != null) entry.key: entry.value!.path,
+      };
+      final id = item == null ? null : _intValue(item['id']);
+      await OfflineStorageService.instance.enqueueDraft(
+        endpoint: id == null ? '/fire-hydrants' : '/fire-hydrants/$id',
+        method: id == null ? 'POST' : 'PUT',
+        fields: fields,
+        files: fileMap,
+        displayName: id == null ? 'Fire Hydrant (baru)' : 'Fire Hydrant (edit #$id)',
+      );
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Offline: inspeksi Fire Hydrant disimpan sebagai draft. '
+            'Akan disinkronkan saat online.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return true;
+    }
+
     final response = item == null
         ? await api.createFireHydrantWithPhotos(fields, files)
         : await api.updateFireHydrantWithPhotos(

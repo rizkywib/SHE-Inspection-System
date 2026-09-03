@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 import 'fire_extinguisher_create_screen.dart';
 
 class FireExtinguisherScreen extends StatefulWidget {
@@ -579,8 +581,42 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                               };
                               final id = _intValue(inspection['id']);
                               if (id == null) return;
-                              final response = await context
-                                  .read<ApiService>()
+                              final connectivity =
+                                  context.read<ConnectivityService>();
+                              final api = context.read<ApiService>();
+
+                              if (!connectivity.isOnline) {
+                                final fileMap = <String, String>{
+                                  if (newPhotoBefore != null)
+                                    'item[photo_before]':
+                                        newPhotoBefore!.path,
+                                  if (newPhotoAfter != null)
+                                    'item[photo_after]': newPhotoAfter!.path,
+                                };
+                                await OfflineStorageService.instance
+                                    .enqueueDraft(
+                                  endpoint: '/fire-extinguishers/$id',
+                                  method: 'PUT',
+                                  fields: fields,
+                                  files: fileMap,
+                                  displayName: 'APAR (edit #$id)',
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Offline: perubahan APAR disimpan '
+                                      'sebagai draft. Akan disinkronkan saat online.',
+                                    ),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                didSave = true;
+                                Navigator.pop(sheetContext);
+                                return;
+                              }
+
+                              final response = await api
                                   .updateFireExtinguisherWithPhotos(
                                     id,
                                     fields,

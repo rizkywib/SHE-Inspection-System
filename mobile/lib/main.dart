@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/connectivity_service.dart';
+import 'services/sync_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
@@ -20,7 +22,8 @@ import 'screens/qr_scanner_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/master_data/master_data_config.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -33,6 +36,13 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => ApiService()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(
+          create: (context) => SyncService(
+            api: context.read<ApiService>(),
+            connectivity: context.read<ConnectivityService>(),
+          ),
+        ),
       ],
       child: MaterialApp(
         title: 'SHE Inspection',

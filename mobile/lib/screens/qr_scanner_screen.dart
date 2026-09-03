@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
+import '../services/offline_storage_service.dart';
+import '../services/connectivity_service.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -36,20 +38,39 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     _isScanning = true;
 
     try {
+      final connectivity = context.read<ConnectivityService>();
+      final navigator = Navigator.of(context);
+      final api = context.read<ApiService>();
+
       // Get current location
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      final api = context.read<ApiService>();
-      final result = await api.scanQrCode(qrData);
+      Map<String, dynamic>? result;
+
+      if (connectivity.isOnline) {
+        result = await api.scanQrCode(qrData);
+      } else {
+        // Offline: resolve QR dari cache points lokal.
+        result = await _resolveOfflineQr(qrData);
+      }
 
       if (!mounted) return;
+
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memproses QR Code (hasil kosong).'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
       if (result['status'] == 'success') {
         final data = result['data'];
         final assetType = data['asset_type'];
-        final assetId = data['asset_id'];
 
         // Navigate to appropriate inspection form
         String route;
@@ -77,7 +98,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           ),
         );
 
-        Navigator.pushNamed(context, route, arguments: {
+        navigator.pushNamed(route, arguments: {
           'qr_data': data,
           'latitude': position.latitude,
           'longitude': position.longitude,
@@ -101,6 +122,58 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     } finally {
       _isScanning = false;
     }
+  }
+
+  /// Resolusi QR offline menggunakan cache point lokal.
+  Future<Map<String, dynamic>?> _resolveOfflineQr(String qrData) async {
+    final points = await OfflineStorageService.instance.readCache('points');
+    if (points == null || points.isEmpty) {
+      return {
+        'status': 'error',
+        'message': 'Offline: data point belum di-cache. '
+            'Hubungkan ke internet lalu buka aplikasi sekali untuk meng-cache.',
+      };
+    }
+
+    final normalized = qrData.trim().toUpperCase();
+    for (final raw in points) {
+      final point = raw is Map ? Map<String, dynamic>.from(raw) : null;
+      if (point == null) continue;
+      final qr = point['qr_code']?.toString().trim().toUpperCase() ?? '';
+      if (qr.isNotEmpty && qr == normalized) {
+        return {
+          'status': 'success',
+          'data': {
+            'asset_type': _assetTypeFor(point),
+            'asset_id': point['id'],
+            'asset_name': point['name_point'],
+            'point': point,
+          },
+        };
+      }
+    }
+    return {
+      'status': 'error',
+      'message': 'QR Code tidak terdaftar di cache local.',
+    };
+  }
+
+  String _assetTypeFor(Map<String, dynamic> point) {
+    final type = point['ket1']?.toString().trim().toUpperCase() ?? '';
+    if (type.contains('KG') ||
+        type.contains('APAR') ||
+        RegExp(r'^(?:DC|CO2?|CA|HF)(?:\s|[-–])').hasMatch(type)) {
+      return 'fire_extinguisher';
+    }
+    if (point['name_point']?.toString().toLowerCase().contains('hydrant') ==
+        true) {
+      return 'fire_hydrant';
+    }
+    if (point['name_point']?.toString().toLowerCase().contains('alarm') ==
+        true) {
+      return 'fire_alarm';
+    }
+    return 'checklist';
   }
 
   @override

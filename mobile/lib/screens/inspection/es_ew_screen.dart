@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 import 'es_ew_common.dart';
 import 'es_ew_create_flow.dart';
 
@@ -436,7 +438,39 @@ class _EsEwEditScreenState extends State<EsEwEditScreen> {
         'items[0][${entry.key}]': entry.value ? '1' : '0',
     };
     try {
-      final response = await context.read<ApiService>().updateEsEw(
+      final connectivity = context.read<ConnectivityService>();
+      final api = context.read<ApiService>();
+
+      if (!connectivity.isOnline) {
+        final fileMap = <String, String>{
+          if (_eyeWashPhoto != null)
+            'items[0][photo_before]': _eyeWashPhoto!.path,
+          if (_emergencyShowerPhoto != null)
+            'items[0][photo_after]': _emergencyShowerPhoto!.path,
+        };
+        await OfflineStorageService.instance.enqueueDraft(
+          endpoint: '/es-ew/$id',
+          method: 'PUT',
+          fields: fields,
+          files: fileMap,
+          displayName: 'ES/EW (edit #$id)',
+        );
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Offline: perubahan ES/EW disimpan sebagai draft. '
+              'Akan disinkronkan saat online.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pop(context, 'saved');
+        return;
+      }
+
+      final response = await api.updateEsEw(
             id,
             fields,
             eyeWashPhoto: _eyeWashPhoto,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +9,8 @@ import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 
 class FireExtinguisherCreateScreen extends StatefulWidget {
   const FireExtinguisherCreateScreen({super.key});
@@ -39,8 +42,18 @@ class _FireExtinguisherCreateScreenState
     });
 
     try {
-      final locations =
-          await context.read<ApiService>().getFireExtinguisherLocations();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> locations;
+      if (connectivity.isOnline) {
+        locations =
+            await context.read<ApiService>().getFireExtinguisherLocations();
+        unawaited(OfflineStorageService.instance
+            .saveCache('extinguisher_locations', locations));
+      } else {
+        locations = await OfflineStorageService.instance
+                .readCache('extinguisher_locations') ??
+            [];
+      }
       if (!mounted) return;
       setState(() {
         _locations = locations;
@@ -212,7 +225,16 @@ class _FireExtinguisherQrScannerScreenState
 
   Future<void> _loadPointsAndStart() async {
     try {
-      final points = await context.read<ApiService>().getPoints();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> points;
+      if (connectivity.isOnline) {
+        points = await context.read<ApiService>().getPoints();
+        unawaited(OfflineStorageService.instance.saveCache('points', points));
+      } else {
+        // Offline: gunakan cache master data.
+        points =
+            await OfflineStorageService.instance.readCache('points') ?? [];
+      }
       final extinguisherPoints = points
           .map(_asMap)
           .where(_isFireExtinguisherPoint)
@@ -539,12 +561,42 @@ class _FireExtinguisherQrFormScreenState
     };
 
     try {
-      final response =
-          await context.read<ApiService>().createFireExtinguisherWithPhotos(
-                fields,
-                photoBefore: _photoBefore,
-                photoAfter: _photoAfter,
-              );
+      final connectivity = context.read<ConnectivityService>();
+      final api = context.read<ApiService>();
+
+      if (!connectivity.isOnline) {
+        // Mode offline: simpan sebagai draft untuk disinkronkan nanti.
+        final fileMap = <String, String>{
+          if (_photoBefore != null) 'item[photo_before]': _photoBefore!.path,
+          if (_photoAfter != null) 'item[photo_after]': _photoAfter!.path,
+        };
+        await OfflineStorageService.instance.enqueueDraft(
+          endpoint: '/fire-extinguishers',
+          method: 'POST',
+          fields: fields,
+          files: fileMap,
+          displayName: 'APAR $_assetName',
+        );
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Offline: inspeksi APAR disimpan sebagai draft. '
+              'Akan disinkronkan saat online.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pop(context, true);
+        return;
+      }
+
+      final response = await api.createFireExtinguisherWithPhotos(
+            fields,
+            photoBefore: _photoBefore,
+            photoAfter: _photoAfter,
+          );
       if (!mounted) return;
       if (response.containsKey('error')) {
         setState(() => _isSaving = false);

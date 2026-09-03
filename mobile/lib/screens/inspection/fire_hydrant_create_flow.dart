@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +9,8 @@ import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 
 class FireHydrantSetupScreen extends StatefulWidget {
   const FireHydrantSetupScreen({super.key});
@@ -37,8 +40,18 @@ class _FireHydrantSetupScreenState extends State<FireHydrantSetupScreen> {
     });
 
     try {
-      final locations =
-          await context.read<ApiService>().getFireHydrantLocations();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> locations;
+      if (connectivity.isOnline) {
+        locations =
+            await context.read<ApiService>().getFireHydrantLocations();
+        unawaited(OfflineStorageService.instance
+            .saveCache('hydrant_locations', locations));
+      } else {
+        locations = await OfflineStorageService.instance
+                .readCache('hydrant_locations') ??
+            [];
+      }
       if (!mounted) return;
       setState(() {
         _locations = locations;
@@ -212,7 +225,14 @@ class _FireHydrantQrScannerScreenState
 
   Future<void> _loadPointsAndStart() async {
     try {
-      final points = await context.read<ApiService>().getPoints();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> points;
+      if (connectivity.isOnline) {
+        points = await context.read<ApiService>().getPoints();
+        unawaited(OfflineStorageService.instance.saveCache('points', points));
+      } else {
+        points = await OfflineStorageService.instance.readCache('points') ?? [];
+      }
       if (!mounted) return;
       setState(() {
         _points = points;
@@ -531,11 +551,40 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
     };
 
     try {
-      final response =
-          await context.read<ApiService>().createFireHydrantWithPhotos(
-                fields,
-                files,
-              );
+      final connectivity = context.read<ConnectivityService>();
+      final api = context.read<ApiService>();
+
+      if (!connectivity.isOnline) {
+        final fileMap = <String, String>{
+          if (_photoBefore != null) 'items[0][photo_before]': _photoBefore!.path,
+          if (_photoAfter != null) 'items[0][photo_after]': _photoAfter!.path,
+        };
+        await OfflineStorageService.instance.enqueueDraft(
+          endpoint: '/fire-hydrants',
+          method: 'POST',
+          fields: fields,
+          files: fileMap,
+          displayName: 'Fire Hydrant $_hydrantNumber',
+        );
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Offline: inspeksi Fire Hydrant disimpan sebagai draft. '
+              'Akan disinkronkan saat online.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pop(context, true);
+        return;
+      }
+
+      final response = await api.createFireHydrantWithPhotos(
+            fields,
+            files,
+          );
       if (!mounted) return;
 
       if (response.containsKey('error')) {

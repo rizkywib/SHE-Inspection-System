@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_storage_service.dart';
+import '../services/sync_service.dart';
 import '../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,13 +24,51 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _connectivity = context.read<ConnectivityService>();
     _loadInspections();
+    _refreshPendingCount();
+    _wasOnline = _connectivity.isOnline;
+    _connectivity.addListener(_onConnectivityChanged);
+  }
+
+  late final ConnectivityService _connectivity;
+  bool _wasOnline = true;
+
+  Future<void> _onConnectivityChanged() async {
+    final connectivity = _connectivity;
+    if (!_wasOnline && connectivity.isOnline) {
+      // Koneksi pulih: cache master data & kirim antrian draft.
+      final sync = context.read<SyncService>();
+      await sync.cacheMasterData();
+      await sync.syncAll();
+      _loadInspections();
+      _refreshPendingCount();
+    }
+    _wasOnline = connectivity.isOnline;
   }
 
   @override
   void dispose() {
+    _connectivity.removeListener(_onConnectivityChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  int _pendingDraftCount = 0;
+
+  Future<void> _refreshPendingCount() async {
+    final drafts = await OfflineStorageService.instance.getPendingDrafts();
+    if (!mounted) return;
+    setState(() => _pendingDraftCount = drafts.length);
+  }
+
+  Future<void> _syncNow() async {
+    final sync = context.read<SyncService>();
+    if (context.read<ConnectivityService>().isOnline) {
+      await sync.cacheMasterData();
+      await sync.syncAll();
+    }
+    await _refreshPendingCount();
   }
 
   Future<void> _loadInspections() async {
@@ -35,7 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = _inspections.isEmpty;
       _error = null;
     });
-
     final api = context.read<ApiService>();
     final loaded = <_InspectionItem>[];
     final loaders = [
@@ -175,6 +215,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (!context.watch<ConnectivityService>().isOnline)
+                        _OfflineBanner(
+                          pendingCount: _pendingDraftCount,
+                          onSync: _syncNow,
+                        ),
                       _WelcomeCard(userName: user?['name']?.toString()),
                       const SizedBox(height: 16),
                       Row(
@@ -1730,4 +1775,63 @@ String _todayLabel() {
   final today = DateTime.now();
   return '${days[today.weekday - 1]}, ${today.day} '
       '${months[today.month - 1]} ${today.year}';
+}
+
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner({required this.pendingCount, required this.onSync});
+
+  final int pendingCount;
+  final VoidCallback onSync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3DC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEDC984)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off, color: Color(0xFFB66A13)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mode Offline',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF7A4A0B),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  pendingCount == 0
+                      ? 'Anda tidak terhubung ke server. Data akan tersimpan lokal.'
+                      : '$pendingCount draft inspeksi menunggu sinkronisasi.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF7A4A0B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (pendingCount > 0)
+            TextButton.icon(
+              onPressed: onSync,
+              icon: const Icon(Icons.sync, size: 18),
+              label: const Text('Kirim'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF7A4A0B),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
