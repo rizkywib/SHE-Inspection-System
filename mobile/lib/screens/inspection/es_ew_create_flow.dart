@@ -212,6 +212,15 @@ class _EsEwQrScannerScreenState extends State<EsEwQrScannerScreen> {
         points = await OfflineStorageService.instance.readCache('points') ?? [];
       }
       if (!mounted) return;
+      if (!connectivity.isOnline && points.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Mode offline: data titik belum di-cache. '
+              'Hubungkan ke internet lalu buka aplikasi sekali '
+              'agar data QR Code tersimpan lokal.';
+        });
+        return;
+      }
       setState(() {
         _points = points.where(isEsEwPoint).toList(growable: false);
         _isLoading = false;

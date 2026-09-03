@@ -223,7 +223,7 @@ class _FireExtinguisherQrScannerScreenState
     _loadPointsAndStart();
   }
 
-  Future<void> _loadPointsAndStart() async {
+Future<void> _loadPointsAndStart() async {
     try {
       final connectivity = context.read<ConnectivityService>();
       List<dynamic> points;
@@ -231,9 +231,17 @@ class _FireExtinguisherQrScannerScreenState
         points = await context.read<ApiService>().getPoints();
         unawaited(OfflineStorageService.instance.saveCache('points', points));
       } else {
-        // Offline: gunakan cache master data.
-        points =
-            await OfflineStorageService.instance.readCache('points') ?? [];
+        points = await OfflineStorageService.instance.readCache('points') ?? [];
+      }
+      if (!mounted) return;
+      if (!connectivity.isOnline && points.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Mode offline: data titik belum di-cache. '
+              'Hubungkan ke internet lalu buka aplikasi sekali '
+              'agar data QR Code tersimpan lokal.';
+        });
+        return;
       }
       final extinguisherPoints = points
           .map(_asMap)

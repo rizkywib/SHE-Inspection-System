@@ -27,8 +27,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
     await OfflineStorageService.instance.init();
     await connectivity.init();
-    await sync.init();
     await auth.init(offlineMode: !connectivity.isOnline);
+    await sync.init();
 
     if (!mounted) return;
 

@@ -27,12 +27,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _connectivity = context.read<ConnectivityService>();
     _loadInspections();
     _refreshPendingCount();
+    _warmCache();
     _wasOnline = _connectivity.isOnline;
     _connectivity.addListener(_onConnectivityChanged);
   }
 
   late final ConnectivityService _connectivity;
   bool _wasOnline = true;
+
+  Future<void> _warmCache() async {
+    if (!_connectivity.isOnline) return;
+    try {
+      await context.read<SyncService>().cacheMasterData();
+    } catch (_) {
+      // Gagal caching tidak memblokir dashboard.
+    }
+  }
 
   Future<void> _onConnectivityChanged() async {
     final connectivity = _connectivity;
