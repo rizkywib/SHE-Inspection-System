@@ -484,7 +484,6 @@ class _FireExtinguisherQrFormScreenState
     extends State<FireExtinguisherQrFormScreen> {
   final ImagePicker _picker = ImagePicker();
   late final TextEditingController _remarkController;
-  late final TextEditingController _expiryDateController;
   bool _pressureCondition = true;
   bool _sealCondition = true;
   bool _nozzleCondition = true;
@@ -501,28 +500,12 @@ class _FireExtinguisherQrFormScreenState
   void initState() {
     super.initState();
     _remarkController = TextEditingController();
-    _expiryDateController = TextEditingController();
   }
 
   @override
   void dispose() {
     _remarkController.dispose();
-    _expiryDateController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickExpiryDate() async {
-    final current = DateTime.tryParse(_expiryDateController.text) ??
-        DateTime(DateTime.now().year + 1);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      _expiryDateController.text = picked.toIso8601String().split('T').first;
-    }
   }
 
   Future<void> _pickPhoto(bool isBefore) async {
@@ -565,7 +548,6 @@ class _FireExtinguisherQrFormScreenState
       'item[seal_condition]': _sealCondition ? '1' : '0',
       'item[nozzle_condition]': _nozzleCondition ? '1' : '0',
       'item[remark]': _nullIfEmpty(_remarkController.text) ?? '',
-      'item[expiry_date]': _nullIfEmpty(_expiryDateController.text) ?? '',
     };
 
     try {
@@ -725,16 +707,6 @@ class _FireExtinguisherQrFormScreenState
                       value: _nozzleCondition,
                       onChanged: (value) =>
                           setState(() => _nozzleCondition = value),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _expiryDateController,
-                      readOnly: true,
-                      onTap: _pickExpiryDate,
-                      decoration: const InputDecoration(
-                        labelText: 'Expiry Date',
-                        prefixIcon: Icon(Icons.event_outlined),
-                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
