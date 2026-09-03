@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 
 class IncidentFormScreen extends StatefulWidget {
   const IncidentFormScreen({super.key, this.inspection});
@@ -78,7 +81,18 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
 
     try {
       final api = context.read<ApiService>();
-      final result = await api.getIncidentTypes();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> result;
+      if (connectivity.isOnline) {
+        result = await api.getIncidentTypes();
+        unawaited(
+          OfflineStorageService.instance.saveCache('incident_types', result),
+        );
+      } else {
+        result = await OfflineStorageService.instance
+                .readCache('incident_types') ??
+            [];
+      }
       if (!mounted) return;
 
       setState(() {
@@ -167,6 +181,36 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
       'status': _status,
     };
     final api = context.read<ApiService>();
+    final connectivity = context.read<ConnectivityService>();
+
+    if (!connectivity.isOnline) {
+      final fileMap = <String, String>{
+        if (_image != null) 'image': _image!.path,
+        if (_repairImage != null) 'repair_photo': _repairImage!.path,
+      };
+      final id = _isEdit ? _asInt(widget.inspection!['id']) : null;
+      await OfflineStorageService.instance.enqueueDraft(
+        endpoint: id == null ? '/incidents' : '/incidents/$id',
+        method: id == null ? 'POST' : 'PUT',
+        fields: payload,
+        files: fileMap,
+        displayName: id == null ? 'Inspection (baru)' : 'Inspection (edit #$id)',
+      );
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Offline: Inspection disimpan sebagai draft. '
+            'Akan disinkronkan saat online.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      Navigator.pop(context, true);
+      return;
+    }
+
     final result = _isEdit
         ? await api.updateIncident(
             _asInt(widget.inspection!['id'])!,

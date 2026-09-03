@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/offline_storage_service.dart';
 
 class IncidentListScreen extends StatefulWidget {
   const IncidentListScreen({super.key});
@@ -29,7 +33,17 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
     });
 
     try {
-      final rows = await context.read<ApiService>().getIncidents();
+      final api = context.read<ApiService>();
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> rows;
+      if (connectivity.isOnline) {
+        rows = await api.getIncidents();
+        unawaited(
+          OfflineStorageService.instance.saveCache('incidents', rows),
+        );
+      } else {
+        rows = await OfflineStorageService.instance.readCache('incidents') ?? [];
+      }
       if (!mounted) return;
       setState(() {
         _inspections = rows.map(_mapFrom).toList();

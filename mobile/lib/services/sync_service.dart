@@ -145,6 +145,28 @@ class SyncService extends ChangeNotifier {
       );
     }
 
+    // --- Inspection (Incident) ---
+    if (endpoint.startsWith('/incidents')) {
+      final id = _extractId(endpoint);
+      final image = files['image'] == null ? null : File(files['image']!);
+      final repairPhoto = files['repair_photo'] == null
+          ? null
+          : File(files['repair_photo']!);
+      if (id != null) {
+        return api.updateIncident(
+          id,
+          fields,
+          image: image,
+          repairPhoto: repairPhoto,
+        );
+      }
+      return api.createIncident(
+        fields,
+        image: image,
+        repairPhoto: repairPhoto,
+      );
+    }
+
     return {'error': 'Endpoint tidak didukung untuk sinkronisasi: $endpoint'};
   }
 
@@ -169,6 +191,12 @@ class SyncService extends ChangeNotifier {
 
       final esEwMaster = await api.getEsEwMasterData();
       await _storage.saveCacheJson('es_ew_master', esEwMaster);
+
+      final incidentTypes = await api.getIncidentTypes();
+      await _storage.saveCache('incident_types', incidentTypes);
+
+      final incidents = await api.getIncidents();
+      await _storage.saveCache('incidents', incidents);
     } catch (error) {
       debugPrint('[Sync] Gagal cache master data: $error');
     }

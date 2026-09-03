@@ -61,10 +61,7 @@ void main() {
   testWidgets('Form Inspection memuat field dan master data',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider<ApiService>.value(
-        value: _FakeApiService(),
-        child: const MaterialApp(home: IncidentFormScreen()),
-      ),
+      wrapTestApp(home: const IncidentFormScreen()),
     );
     await tester.pumpAndSettle();
 
