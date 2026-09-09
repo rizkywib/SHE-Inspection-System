@@ -113,8 +113,8 @@ function fillSelect(id, data, emptyLabel, fallbackPrefix) {
     document.getElementById(id).innerHTML = `<option value="">${emptyLabel}</option>` + data.map(item => `<option value="${item.id}">${escapeHtml(optionLabel(item, fallbackPrefix))}</option>`).join('');
 }
 async function loadReferenceData() {
-    const [locations, users] = await Promise.all([fetchList('/locations?simple=1'), fetchList('/users')]);
-    fillSelect('location_id', locations, '- Select Location -', 'Location');
+    const [locations, users] = await Promise.all([fetchList('/fire-alarm-locations'), fetchList('/users')]);
+    document.getElementById('location_id').innerHTML = `<option value="">- Select Location -</option>` + locations.map(item => `<option value="${item.id_location}">${escapeHtml(item.name)}</option>`).join('');
     fillSelect('inspector_id', users, '- Current User -', 'User');
     fillSelect('assigned_to', users, '- Not Assigned -', 'User');
 }

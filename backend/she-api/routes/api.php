@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PointController;
 use App\Http\Controllers\Api\FireHydrantLocationController;
 use App\Http\Controllers\Api\FireExtinguisherLocationController;
+use App\Http\Controllers\Api\FireAlarmLocationController;
 use App\Http\Controllers\Api\AreaController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\IncidentTypeController;
@@ -79,6 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('fire-hydrant-locations', FireHydrantLocationController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::apiResource('fire-extinguisher-locations', FireExtinguisherLocationController::class)->only(['index', 'show']);
     Route::apiResource('fire-extinguisher-locations', FireExtinguisherLocationController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+    Route::apiResource('fire-alarm-locations', FireAlarmLocationController::class)->only(['index', 'show']);
+    Route::apiResource('fire-alarm-locations', FireAlarmLocationController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::apiResource('areas', AreaController::class)->only(['index', 'show']);
     Route::apiResource('areas', AreaController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::apiResource('es-ew-areas', EsEwAreaController::class)->only(['index', 'show']);

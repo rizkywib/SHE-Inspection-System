@@ -47,6 +47,19 @@ MasterDataScreen esEwAreasScreen() => MasterDataScreen(
       ],
     );
 
+MasterDataScreen fireAlarmLocationsScreen() => MasterDataScreen(
+      title: 'Fire Alarm Locations',
+      icon: Icons.location_on_outlined,
+      idKey: 'id_location',
+      loader: (api) => api.getFireAlarmLocations(),
+      creater: (api, data) => api.createFireAlarmLocation(data),
+      updater: (api, id, data) => api.updateFireAlarmLocation(id, data),
+      deleter: (api, id) => api.deleteFireAlarmLocation(id),
+      fields: const [
+        FieldConfig(key: 'name', label: 'Name'),
+      ],
+    );
+
 MasterDataScreen usersScreen() => MasterDataScreen(
       title: 'Users',
       icon: Icons.person_outline,

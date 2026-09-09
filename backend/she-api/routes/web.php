@@ -96,6 +96,10 @@ Route::middleware('web')->group(function () {
         return view('pages.fire_extinguisher_locations');
     });
 
+    Route::get('/dashboard/fire-alarm-locations', function () {
+        return view('pages.fire_alarm_locations');
+    });
+
     Route::get('/dashboard/incident-types', function () {
         return view('pages.incident_types');
     });

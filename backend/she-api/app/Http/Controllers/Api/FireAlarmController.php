@@ -25,7 +25,7 @@ class FireAlarmController extends Controller
         $validator = Validator::make($request->all(), [
             'reference_no' => 'required|string|max:40|unique:fire_alarm_inspections,reference_no',
             'inspection_date' => 'required|date',
-            'location_id' => 'nullable|exists:locations,id',
+            'location_id' => 'nullable|exists:fire_alarm_locations,id_location',
             'area_id' => 'nullable|exists:areas,id',
             'qr_code_id' => 'nullable|exists:asset_qr_codes,id',
             'inspector_id' => 'nullable|exists:users,id',
@@ -87,7 +87,7 @@ class FireAlarmController extends Controller
         $validator = Validator::make($request->all(), [
             'reference_no' => 'required|string|max:40|unique:fire_alarm_inspections,reference_no,' . $id,
             'inspection_date' => 'required|date',
-            'location_id' => 'nullable|exists:locations,id',
+            'location_id' => 'nullable|exists:fire_alarm_locations,id_location',
             'area_id' => 'nullable|exists:areas,id',
             'qr_code_id' => 'nullable|exists:asset_qr_codes,id',
             'inspector_id' => 'nullable|exists:users,id',

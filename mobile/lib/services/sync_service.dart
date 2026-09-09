@@ -46,8 +46,8 @@ class SyncService extends ChangeNotifier {
     try {
       final drafts = await _storage.getPendingDrafts();
       for (final draft in drafts) {
-        final success = await _syncOne(draft);
-        if (!success) break; // hentikan bila koneksi kembali putus
+        if (!connectivity.isOnline) break; // hentikan bila koneksi putus
+        await _syncOne(draft); // lanjutkan walau ada draft yang gagal
       }
     } finally {
       _isSyncing = false;
@@ -188,6 +188,9 @@ class SyncService extends ChangeNotifier {
 
       final hydrantLocations = await api.getFireHydrantLocations();
       await _storage.saveCache('hydrant_locations', hydrantLocations);
+
+      final fireAlarmLocations = await api.getFireAlarmLocations();
+      await _storage.saveCache('fire_alarm_locations', fireAlarmLocations);
 
       final esEwMaster = await api.getEsEwMasterData();
       await _storage.saveCacheJson('es_ew_master', esEwMaster);

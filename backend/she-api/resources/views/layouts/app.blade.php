@@ -100,6 +100,10 @@
                     <i class="fas fa-location-crosshairs w-5"></i>
                     <span>Extinguisher Locations</span>
                 </a>
+                <a href="/dashboard/fire-alarm-locations" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-fire-alarm-locations', '')">
+                    <i class="fas fa-location-dot w-5"></i>
+                    <span>Fire Alarm Locations</span>
+                </a>
                 <a href="/dashboard/incident-types" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-incident-types', '')">
                     <i class="fas fa-exclamation-triangle w-5"></i>
                     <span>Incident Types</span>
@@ -180,6 +184,7 @@
                     <a href="/dashboard/points" class="block py-2 text-gray-600 hover:text-gray-900">Points</a>
                     <a href="/dashboard/fire-hydrant-locations" class="block py-2 text-gray-600 hover:text-gray-900">Hydrant Locations</a>
                     <a href="/dashboard/fire-extinguisher-locations" class="block py-2 text-gray-600 hover:text-gray-900">Extinguisher Locations</a>
+                    <a href="/dashboard/fire-alarm-locations" class="block py-2 text-gray-600 hover:text-gray-900">Fire Alarm Locations</a>
                     <a href="/dashboard/incident-types" class="block py-2 text-gray-600 hover:text-gray-900">Incident Types</a>
                     <a href="/dashboard/es-ew-areas" class="block py-2 text-gray-600 hover:text-gray-900">ES&EW Areas</a>
                     <a href="/dashboard/supervision-areas" class="block py-2 text-gray-600 hover:text-gray-900">Area Pengawasan</a>

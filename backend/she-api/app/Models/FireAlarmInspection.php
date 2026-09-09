@@ -33,7 +33,7 @@ class FireAlarmInspection extends Model
 
     public function location()
     {
-        return $this->belongsTo(Location::class);
+        return $this->belongsTo(FireAlarmLocation::class, 'location_id', 'id_location');
     }
 
     public function area()

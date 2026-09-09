@@ -50,7 +50,15 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   void didPopNext() {
     // Kembali ke dashboard (misal selesai membuat inspeksi): muat ulang
-    // termasuk draft offline yang baru dibuat.
+    // termasuk draft offline yang baru dibuat, dan kirim ke server bila online.
+    _afterPop();
+  }
+
+  Future<void> _afterPop() async {
+    final connectivity = context.read<ConnectivityService>();
+    final sync = context.read<SyncService>();
+    if (connectivity.isOnline) await sync.syncAll();
+    if (!mounted) return;
     _refreshPendingCount();
     _loadInspections();
   }
@@ -104,6 +112,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       await sync.cacheMasterData();
       await sync.syncAll();
     }
+    await _refreshPendingCount();
+  }
+
+  /// Muat ulang data dari server. Bila online, cache master data & kirim
+  /// antrian draft tertunda terlebih dahulu.
+  Future<void> _refreshFromServer() async {
+    final connectivity = context.read<ConnectivityService>();
+    final sync = context.read<SyncService>();
+    if (connectivity.isOnline) {
+      await sync.cacheMasterData();
+      await sync.syncAll();
+    }
+    await _loadInspections();
     await _refreshPendingCount();
   }
 
@@ -251,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         actions: [
           IconButton(
             tooltip: 'Refresh dashboard',
-            onPressed: _loadInspections,
+            onPressed: _refreshFromServer,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -259,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       drawer: _buildDrawer(context, user),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadInspections,
+          onRefresh: _refreshFromServer,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -857,6 +878,14 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/master-hydrant-locations');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_outlined),
+              title: const Text('Fire Alarm Locations'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/master-fire-alarm-locations');
               },
             ),
             ListTile(

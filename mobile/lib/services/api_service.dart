@@ -359,6 +359,11 @@ class ApiService extends ChangeNotifier {
     return _dataList(response);
   }
 
+  Future<List<dynamic>> getFireAlarmLocations() async {
+    final response = await _getWithFallback('/fire-alarm-locations');
+    return _dataList(response);
+  }
+
   Future<Map<String, dynamic>> getFireExtinguisher(int id) async {
     final response = await _getWithFallback('/fire-extinguishers/$id');
     if (response.statusCode >= 400) {
@@ -736,6 +741,28 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> deleteFireHydrantLocation(int id) async {
     final response = await _deleteWithFallback('/fire-hydrant-locations/$id');
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  // Master data: Fire Alarm Locations
+  Future<Map<String, dynamic>> createFireAlarmLocation(
+      Map<String, dynamic> data) async {
+    final response = await _postJsonWithFallback('/fire-alarm-locations', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> updateFireAlarmLocation(
+      int id, Map<String, dynamic> data) async {
+    final response =
+        await _putJsonWithFallback('/fire-alarm-locations/$id', data);
+    if (response.statusCode >= 400) return {'error': _errorMessage(response)};
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> deleteFireAlarmLocation(int id) async {
+    final response = await _deleteWithFallback('/fire-alarm-locations/$id');
     if (response.statusCode >= 400) return {'error': _errorMessage(response)};
     return jsonDecode(response.body);
   }

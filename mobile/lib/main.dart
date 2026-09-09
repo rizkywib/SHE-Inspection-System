@@ -117,6 +117,9 @@ class MyApp extends StatelessWidget {
             case '/master-es-ew-areas':
               page = esEwAreasScreen();
               break;
+            case '/master-fire-alarm-locations':
+              page = fireAlarmLocationsScreen();
+              break;
             case '/master-users':
               page = usersScreen();
               break;
