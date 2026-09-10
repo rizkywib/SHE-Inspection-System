@@ -180,7 +180,7 @@ async function loadAlarms() {
         tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
         return;
     }
-    tbody.innerHTML = alarms.map((a, i) => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${i + 1}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium"><a href="/dashboard/fire-alarms/${a.id}/items" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml((a.location && a.location.name) || (a.area && a.area.name) || '-')}</a></td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(a.inspection_date))}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml((a.inspector && a.inspector.name) || '-')}</td><td class="px-6 py-4 text-sm"><button onclick="editItem(${a.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${a.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button></td></tr>`).join('');
+    tbody.innerHTML = alarms.map((a, i) => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${i + 1}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium"><a href="/dashboard/fire-alarms/${a.id}/items" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml((a.location && a.location.name) || (a.area && a.area.name) || '-')}</a></td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(a.inspection_date))}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml((a.inspector && a.inspector.name) || '-')}</td><td class="px-6 py-4 text-sm"><button onclick="printItem(${a.id})" class="text-purple-600 hover:text-purple-800 mr-3 font-medium"><i class="fas fa-print mr-1"></i>Print</button><button onclick="editItem(${a.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${a.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button></td></tr>`).join('');
 }
 function openForm() {
     document.getElementById('formCard').classList.remove('hidden');
@@ -235,9 +235,150 @@ async function deleteItem(id) {
     const res = await fetch(`${API_URL}/fire-alarms/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
     if (res.ok) loadAlarms();
 }
+function conditionMark(value) {
+    return boolValue(value) ? '<span class="check">&#10003;</span>' : '<span class="check">X</span>';
+}
+function signatureDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok'
+    }).format(date);
+}
+function printLogoHtml() {
+    return '<img src="/images/ecogreen-logo-print.png" class="print-company-logo" alt="Ecogreen Oleochemicals">';
+}
+function signatureImage(path) {
+    if (!path) return '<div class="print-sign-space"></div>';
+    const url = `/${String(path).replace(/^\/+/, '')}`;
+    return `<img src="${escapeHtml(url)}" class="print-sign-image" alt="Signature">`;
+}
+function alarmReport(detail) {
+    const locationName = (detail.location && detail.location.name) || (detail.area && detail.area.name) || detail.location_id || '-';
+    const inspectorName = (detail.inspector && detail.inspector.name) || detail.inspector_id || '-';
+    const inspectorPosition = (detail.inspector && detail.inspector.position) || 'Safety Inspector';
+    const signer = detail.signer || null;
+    const signerName = (signer && signer.name) || 'Belum di ttd';
+    const signerPosition = (signer && signer.position) || 'Safety Supervisor';
+    const signedDate = signer ? signatureDate(detail.signed_at) : '';
+    const itemRows = (detail.items || []).map((item, index) => `<tr>
+        <td class="center">${index + 1}</td>
+        <td>${escapeHtml(item.name || '-')}</td>
+        <td>${escapeHtml(item.alarm_number || '-')}</td>
+        <td>${escapeHtml(item.type || '-')}</td>
+        <td>${escapeHtml(item.location_detail || '-')}</td>
+        <td class="center">${conditionMark(item.condition_good)}</td>
+        <td class="center">${conditionMark(item.correction_needed)}</td>
+        <td>${escapeHtml(item.remark || '-')}</td>
+    </tr>`).join('');
+
+    return `<div class="print-page">
+        <div class="print-top">
+            <div class="print-brand">${printLogoHtml()}<span>PT. Ecogreen Oleochemicals</span></div>
+            <div class="print-doc-code">EOB-Saf-004 Rev. 4 31/12/2018</div>
+        </div>
+        <div class="print-meta">
+            <div>Batam Plant</div>
+            <div>Location : <strong>${escapeHtml(locationName)}</strong></div>
+            <div>Date Inspected : <strong>${escapeHtml(formatDatePrint(detail.inspection_date))}</strong></div>
+        </div>
+        <table class="print-table">
+            <thead>
+                <tr class="print-title-row"><th colspan="8">FIRE ALARM MONTHLY INSPECTION</th></tr>
+                <tr>
+                    <th>No</th>
+                    <th>Name</th>
+                    <th>Alarm Number</th>
+                    <th>Type</th>
+                    <th>Specified Location</th>
+                    <th>Condition Good</th>
+                    <th>Correction Needed</th>
+                    <th>Remark</th>
+                </tr>
+            </thead>
+            <tbody>${itemRows || '<tr><td colspan="8" class="center">No items</td></tr>'}</tbody>
+        </table>
+        <div class="print-notes">
+            <div>Note :</div>
+            <div><div>&#8730; = Function Well</div><div>X = Need Correction</div></div>
+        </div>
+        <div class="print-signatures">
+            <div class="print-sign-block">
+                <div>Inspected by,</div>
+                ${signatureImage(detail.inspector && detail.inspector.signature_path)}
+                <div class="print-sign-name">${escapeHtml(inspectorName)}</div>
+                <div>${escapeHtml(inspectorPosition)}</div>
+            </div>
+            <div class="print-sign-block right">
+                <div>Noted by,</div>
+                <div class="print-signature-line">
+                    ${signatureImage(signer && signer.signature_path)}
+                    ${signedDate ? `<span class="print-sign-date">${escapeHtml(signedDate)}</span>` : ''}
+                </div>
+                <div class="print-sign-name">${escapeHtml(signerName)}</div>
+                <div>${escapeHtml(signerPosition)}</div>
+            </div>
+        </div>
+    </div>`;
+}
+function reportStyles() {
+    return `@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{margin:0;padding:8mm;background:#e5e7eb}.print-page{font-family:Arial,sans-serif;color:#000;width:100%;font-size:11px;line-height:1.25;background:#fff}.print-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}.print-brand{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}.print-company-logo{width:38px;height:50px;object-fit:contain;display:block}.print-doc-code{font-size:11px;text-align:right}.print-meta{margin-bottom:20px}.print-meta div{margin:4px 0}.print-table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:10px}.print-table th,.print-table td{border:1px solid #000;padding:3px 4px;vertical-align:middle}.print-table th{font-weight:700;text-align:center}.print-title-row th{background:#000;color:#fff;font-size:14px;padding:4px 0}.center{text-align:center}.check{font-size:17px;font-weight:700;line-height:1}.print-notes{display:flex;justify-content:flex-end;gap:70px;margin-top:4px}.print-signatures{display:flex;justify-content:space-between;margin-top:54px}.print-sign-block{width:260px}.print-sign-block.right{margin-right:38px}.print-sign-image{height:42px;max-width:120px;object-fit:contain;display:block;margin:12px 0 4px 8px}.print-signature-line{display:flex;align-items:flex-end;gap:8px;min-height:58px}.print-sign-date{font-size:8px;margin-bottom:5px;white-space:nowrap}.print-sign-space{height:58px}.print-sign-name{font-weight:700;text-decoration:underline}`;
+}
+function formatDatePrint(value) {
+    if (!value) return '';
+    const date = new Date(String(value).slice(0, 10));
+    if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+    return new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok'
+    }).format(date);
+}
+async function alarmDetail(id) {
+    const res = await fetch(`${API_URL}/fire-alarms/${id}`, { cache: 'no-store', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || 'Gagal memuat inspection');
+    return json.data;
+}
+async function exportItem(id) {
+    try {
+        const detail = await alarmDetail(id);
+        const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><style>${reportStyles()}</style></head><body>${alarmReport(detail)}</body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `fire_alarm_inspection_${detail.reference_no || id}.xls`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        alert(error.message || 'Export failed');
+    }
+}
+async function printItem(id) {
+    const preview = window.open('', '_blank');
+    if (!preview) {
+        alert('Pop-up diblokir. Izinkan pop-up untuk membuka print preview.');
+        return;
+    }
+    preview.document.write('<p style="font-family:Arial;padding:24px">Preparing print preview...</p>');
+    try {
+        const detail = await alarmDetail(id);
+        preview.document.open();
+        preview.document.write(`<!DOCTYPE html><html><head><title>Fire Alarm Inspection</title><style>${reportStyles()}@media print{body{padding:0}}</style></head><body>${alarmReport(detail)}</body></html>`);
+        preview.document.close();
+        preview.focus();
+        preview.print();
+    } catch (error) {
+        preview.document.body.innerHTML = `<p style="color:#b91c1c;font-family:Arial;padding:24px">${escapeHtml(error.message)}</p>`;
+    }
+}
 function logout() {
     fetch(`${API_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }).finally(() => { localStorage.clear(); window.location.href='/'; });
 }
+window.printItem = printItem;
+window.exportItem = exportItem;
 loadReferenceData();
 loadAlarms();
 </script>
