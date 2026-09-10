@@ -130,10 +130,6 @@
 
     function formatDate(value) { return value ? String(value).slice(0, 10) : ''; }
     function getRadioValue(name) { return document.querySelector(`input[name="${name}"]:checked`)?.value ?? null; }
-    function setRadio(name, value) {
-        const radio = document.querySelector(`input[name="${name}"][value="${value ? 1 : 0}"]`);
-        if (radio) radio.checked = true;
-    }
     function validationMessage(json, fallback) {
         const errors = json?.errors ? Object.values(json.errors).flat() : [];
         return errors.length ? errors.join('\n') : (json?.message || fallback);
@@ -180,7 +176,6 @@
             ).join('');
 
             const inspection = inspectionJson.data || {};
-            const item = (Array.isArray(inspection.items) && inspection.items[0]) || {};
 
             document.getElementById('reference_no').value = inspection.reference_no || '';
             document.getElementById('inspection_date').value = formatDate(inspection.inspection_date);
@@ -188,19 +183,6 @@
             document.getElementById('inspector_id').value = inspection.inspector_id || '';
             document.getElementById('location_name').value = (inspection.location && inspection.location.name) || '-';
             document.getElementById('inspector_name').value = (inspection.inspector && inspection.inspector.name) || '-';
-
-            const matchingPoint = points.find(point =>
-                point.name_point === item.name &&
-                (point.ket1 || '') === (item.type || '') &&
-                (point.ket2 || '') === (item.location_detail || '')
-            );
-            document.getElementById('item_name').value = matchingPoint?.id || '';
-            document.getElementById('item_alarm_number').value = item.alarm_number || '';
-            document.getElementById('item_type').value = item.type || '';
-            document.getElementById('item_location_detail').value = item.location_detail || '';
-            document.getElementById('item_remark').value = item.remark || '';
-            setRadio('condition_good', item.condition_good);
-            setRadio('correction_needed', item.correction_needed);
         } catch (error) {
             alert(error.message || 'Gagal memuat form');
         }
