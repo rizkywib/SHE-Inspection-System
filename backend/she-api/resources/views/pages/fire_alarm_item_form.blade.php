@@ -199,17 +199,13 @@
         try {
             const formData = new FormData();
             const values = {
-                reference_no: document.getElementById('reference_no').value,
-                inspection_date: document.getElementById('inspection_date').value,
-                location_id: document.getElementById('location_id').value,
-                inspector_id: document.getElementById('inspector_id').value,
-                'items[0][name]': (points.find(row => Number(row.id) === Number(document.getElementById('item_name').value)) || {}).name_point || '',
-                'items[0][alarm_number]': document.getElementById('item_alarm_number').value,
-                'items[0][type]': document.getElementById('item_type').value,
-                'items[0][location_detail]': document.getElementById('item_location_detail').value,
-                'items[0][condition_good]': getRadioValue('condition_good'),
-                'items[0][correction_needed]': getRadioValue('correction_needed'),
-                'items[0][remark]': document.getElementById('item_remark').value
+                name: (points.find(row => Number(row.id) === Number(document.getElementById('item_name').value)) || {}).name_point || '',
+                alarm_number: document.getElementById('item_alarm_number').value,
+                type: document.getElementById('item_type').value,
+                location_detail: document.getElementById('item_location_detail').value,
+                condition_good: getRadioValue('condition_good'),
+                correction_needed: getRadioValue('correction_needed'),
+                remark: document.getElementById('item_remark').value
             };
             Object.entries(values).forEach(([key, value]) => {
                 if (value !== null && value !== undefined && value !== '') formData.append(key, value);
@@ -217,11 +213,10 @@
 
             const beforePhoto = document.getElementById('item_photo_before').files[0];
             const afterPhoto = document.getElementById('item_photo_after').files[0];
-            if (beforePhoto) formData.append('items[0][photo_before]', beforePhoto);
-            if (afterPhoto) formData.append('items[0][photo_after]', afterPhoto);
-            formData.append('_method', 'PUT');
+            if (beforePhoto) formData.append('photo_before', beforePhoto);
+            if (afterPhoto) formData.append('photo_after', afterPhoto);
 
-            const response = await apiFetch(`/fire-alarms/${inspectionId}`, { method: 'POST', body: formData });
+            const response = await apiFetch(`/fire-alarms/${inspectionId}/items`, { method: 'POST', body: formData });
             const json = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(validationMessage(json, `Save failed (${response.status})`));
             window.location.href = `/dashboard/fire-alarms/${inspectionId}/items`;

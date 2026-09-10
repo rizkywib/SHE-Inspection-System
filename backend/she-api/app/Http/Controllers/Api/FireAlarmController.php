@@ -81,6 +81,35 @@ class FireAlarmController extends Controller
         return response()->json(['data' => $item]);
     }
 
+    public function storeItem(Request $request, $id)
+    {
+        $inspection = FireAlarmInspection::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:100',
+            'alarm_number' => 'nullable|string|max:200',
+            'type' => 'nullable|string|max:200',
+            'location_detail' => 'nullable|string|max:299',
+            'condition_good' => 'nullable|boolean',
+            'correction_needed' => 'nullable|boolean',
+            'remark' => 'nullable|string',
+            'photo_before' => 'nullable|image|max:5120',
+            'photo_after' => 'nullable|image|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $data['photo_before'] = $this->storeItemPhoto($request, 'photo_before');
+        $data['photo_after'] = $this->storeItemPhoto($request, 'photo_after');
+
+        $item = $inspection->items()->create($data);
+
+        return response()->json(['data' => $item], 201);
+    }
+
     public function update(Request $request, $id)
     {
         $inspection = FireAlarmInspection::findOrFail($id);
@@ -173,6 +202,29 @@ class FireAlarmController extends Controller
         } while (FireAlarmInspection::where('reference_no', $referenceNo)->exists());
 
         return $referenceNo;
+    }
+
+    private function storeItemPhoto(Request $request, string $field): ?string
+    {
+        if (!$request->hasFile($field) || !$request->file($field)->isValid()) {
+            return null;
+        }
+
+        $targetPath = public_path('images');
+        File::ensureDirectoryExists($targetPath);
+
+        $file = $request->file($field);
+        $extension = $file->getClientOriginalExtension() ?: 'jpg';
+        $filename = sprintf(
+            'fire_alarm_%s_%s.%s',
+            $field === 'photo_before' ? 'before' : 'after',
+            now()->format('YmdHisv'),
+            $extension
+        );
+
+        $file->move($targetPath, $filename);
+
+        return 'images/' . $filename;
     }
 
     private function storeItemPhotos(Request $request): void
