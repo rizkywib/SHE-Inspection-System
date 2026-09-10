@@ -56,15 +56,14 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Inspected</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inspected By</th>
                     </tr>
                 </thead>
                 <tbody id="alarmTable" class="bg-white divide-y divide-gray-200">
-                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                    <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -177,10 +176,10 @@ async function loadAlarms() {
     const tbody = document.getElementById('alarmTable');
     alarms = Array.isArray(json.data) ? json.data : [];
     if (alarms.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
         return;
     }
-    tbody.innerHTML = alarms.map(a => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(a.id)}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml(a.reference_no)}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(a.inspection_date))}</td><td class="px-6 py-4 text-sm"><span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full ${a.status==='completed'?'bg-green-100 text-green-800':a.status==='signed'?'bg-blue-100 text-blue-800':'bg-yellow-100 text-yellow-800'}">${escapeHtml(a.status)}</span></td><td class="px-6 py-4 text-sm"><button onclick="editItem(${a.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${a.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button></td></tr>`).join('');
+    tbody.innerHTML = alarms.map((a, i) => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${i + 1}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium">${escapeHtml((a.location && a.location.name) || (a.area && a.area.name) || '-')}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(a.inspection_date))}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml((a.inspector && a.inspector.name) || '-')}</td></tr>`).join('');
 }
 function openForm() {
     document.getElementById('formCard').classList.remove('hidden');
