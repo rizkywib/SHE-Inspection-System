@@ -28,16 +28,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Inspection Date</label><input id="inspection_date" type="date" required class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Location ID</label><select id="location_id" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">- Select Location -</option></select></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="status" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="draft">Draft</option><option value="completed">Completed</option><option value="signed">Signed</option></select></div>
                     </div>
                 </div>
                 <div class="xl:col-span-6 space-y-5">
                     <div class="border-b border-gray-200 pb-3">
-                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Assignment & Notes</h3>
+                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Assignment</h3>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">User</label><select id="inspector_id" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">- Current User -</option></select></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea id="notes" rows="7" class="w-full border border-gray-300 rounded-lg px-4 py-2"></textarea></div>
                     </div>
                 </div>
             </div>
@@ -177,7 +175,6 @@ function openForm() {
     document.getElementById('formTitle').textContent = 'Create Inspection';
     document.getElementById('alarmForm').reset();
     document.getElementById('aid_id').value = '';
-    document.getElementById('status').value = 'draft';
     document.getElementById('inspector_id').value = user.id || '';
     resetItems();
 }
@@ -192,8 +189,6 @@ async function editItem(id) {
     document.getElementById('inspection_date').value = formatDateOnly(a.inspection_date);
     document.getElementById('location_id').value = a.location_id || '';
     document.getElementById('inspector_id').value = a.inspector_id || '';
-    document.getElementById('notes').value = a.notes || '';
-    document.getElementById('status').value = a.status || 'draft';
     resetItems(Array.isArray(a.items) ? a.items : []);
 }
 document.getElementById('alarmForm').addEventListener('submit', async ev => {
@@ -206,8 +201,6 @@ document.getElementById('alarmForm').addEventListener('submit', async ev => {
         inspector_id: document.getElementById('inspector_id').value || null,
         checkin_lat: coords ? coords.lat : null,
         checkin_lng: coords ? coords.lng : null,
-        notes: document.getElementById('notes').value || null,
-        status: document.getElementById('status').value,
     };
     const formData = new FormData();
     Object.entries(payload).forEach(([key, value]) => { if (value !== null && value !== undefined) formData.append(key, value); });
