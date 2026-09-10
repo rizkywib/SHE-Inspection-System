@@ -15,6 +15,9 @@
                 <p id="inspectionInfo" class="text-gray-600 mt-1">Memuat data...</p>
             </div>
         </div>
+        <a id="createItemButton" href="#" class="btn-primary inline-flex items-center justify-center text-white px-6 py-3 rounded-lg shadow-md">
+            <i class="fas fa-plus mr-2"></i>Create Fire Alarm Item
+        </a>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -112,6 +115,7 @@
             const inspectorName = (inspection.inspector && inspection.inspector.name) || '-';
             document.getElementById('inspectionInfo').textContent =
                 `${locationName} - ${formatDate(inspection.inspection_date)} (Inspected by: ${inspectorName})`;
+            document.getElementById('createItemButton').href = `/dashboard/fire-alarms/${inspection.id}/items/create`;
 
             const items = Array.isArray(inspection.items) ? inspection.items : [];
             document.getElementById('itemCount').textContent = `${items.length} item`;
@@ -136,7 +140,7 @@
                     ${photoLink(item.photo_after, 'Foto Sesudah')}
                 </div></td>
                 <td class="px-4 py-4 text-sm whitespace-nowrap">
-                    <a href="/dashboard/fire-alarms" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</a>
+                    <a href="/dashboard/fire-alarms/${inspection.id}/items/create" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</a>
                     <button type="button" onclick="deleteInspection(${inspection.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>
                 </td>
             </tr>`).join('');

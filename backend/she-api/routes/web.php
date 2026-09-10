@@ -60,6 +60,12 @@ Route::middleware('web')->group(function () {
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     })->whereNumber('id');
 
+    Route::get('/dashboard/fire-alarms/{id}/items/create', function (int $id) {
+        return response()
+            ->view('pages.fire_alarm_item_form', ['inspectionId' => $id])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    })->whereNumber('id');
+
     Route::prefix('/dashboard/es-ew-inspections')->name('es-ew-inspections.')->group(function () {
         Route::get('/', fn () => view('pages.es_ew_inspections.index'))->name('index');
         Route::get('/create', fn () => view('pages.es_ew_inspections.create'))->name('create');
