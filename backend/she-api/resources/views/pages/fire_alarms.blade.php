@@ -41,12 +41,6 @@
             </div>
 
             <div class="border-t border-gray-200 pt-6">
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Fire Alarm Item</h3>
-                        <p class="text-sm text-gray-500 mt-1">Isi item alarm sesuai kolom database.</p>
-                    </div>
-                </div>
                 <div id="alarmItems" class="space-y-4"></div>
             </div>
 
@@ -133,7 +127,6 @@ function addAlarmItem(item = {}) {
     const seq = ++itemSeq;
     card.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50 alarm-item';
     card.innerHTML = `
-        <div class="flex items-center justify-between gap-3 mb-4"><h4 class="font-semibold text-gray-900">Item Alarm <span class="item-number"></span></h4><button type="button" onclick="removeItem(this)" class="text-red-600 hover:text-red-800 text-sm font-medium"><i class="fas fa-trash mr-1"></i>Remove</button></div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Alarm Number</label><input data-field="alarm_number" value="${escapeHtml(item.alarm_number || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Name</label><select data-field="name" required onchange="onPointChange(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2">${pointOptions()}</select></div>
@@ -153,10 +146,7 @@ function addAlarmItem(item = {}) {
             onPointChange(nameSelect);
         }
     }
-    renumberItems();
 }
-function removeItem(button) { button.closest('.alarm-item').remove(); renumberItems(); }
-function renumberItems() { document.querySelectorAll('#alarmItems .item-number').forEach((el, i) => el.textContent = i + 1); }
 function resetItems(items = []) { document.getElementById('alarmItems').innerHTML = ''; (items.length ? items : [{}]).forEach(item => addAlarmItem(item)); }
 function collectItems() {
     return Array.from(document.querySelectorAll('#alarmItems .alarm-item')).map(card => {
