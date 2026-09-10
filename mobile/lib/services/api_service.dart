@@ -453,11 +453,56 @@ class ApiService extends ChangeNotifier {
 
   // Fire Alarm
   Future<List<dynamic>> getFireAlarms() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/fire-alarms'),
-      headers: headers,
+    final response = await _getWithFallback('/fire-alarms');
+    return _dataList(response);
+  }
+
+  Future<Map<String, dynamic>> getFireAlarm(int id) async {
+    final response = await _getWithFallback('/fire-alarms/$id');
+    if (response.statusCode >= 400) {
+      throw Exception(_errorMessage(response));
+    }
+    final body = jsonDecode(response.body);
+    return Map<String, dynamic>.from(body['data'] ?? {});
+  }
+
+  Future<Map<String, dynamic>> createFireAlarmWithPhotos(
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/fire-alarms',
+      fields,
+      files,
     );
-    return jsonDecode(response.body)['data'] ?? [];
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> updateFireAlarmWithPhotos(
+    int id,
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) async {
+    final response = await _postMultipartFilesWithFallback(
+      '/fire-alarms/$id',
+      {...fields, '_method': 'PUT'},
+      files,
+    );
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> deleteFireAlarm(int id) async {
+    final response = await _deleteWithFallback('/fire-alarms/$id');
+    if (response.statusCode >= 400) {
+      return {'error': _errorMessage(response)};
+    }
+    return jsonDecode(response.body);
   }
 
   // ES/EW

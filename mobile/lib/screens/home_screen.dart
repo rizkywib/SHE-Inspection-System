@@ -1776,6 +1776,7 @@ List<_InspectionItem> _draftItems(List<Map<String, dynamic>> drafts) {
 String _draftType(String endpoint) {
   if (endpoint.startsWith('/fire-hydrants')) return 'Hydrant';
   if (endpoint.startsWith('/fire-extinguishers')) return 'Fire Extinguisher';
+  if (endpoint.startsWith('/fire-alarms')) return 'Fire Alarm';
   if (endpoint.startsWith('/es-ew')) return 'ES/EW';
   if (endpoint.startsWith('/incidents')) return 'Inspection';
   return 'Draft';
@@ -1784,6 +1785,7 @@ String _draftType(String endpoint) {
 String _draftDetailPath(String endpoint) {
   if (endpoint.startsWith('/fire-hydrants')) return 'fire-hydrants';
   if (endpoint.startsWith('/fire-extinguishers')) return 'fire-extinguishers';
+  if (endpoint.startsWith('/fire-alarms')) return 'fire-alarms';
   if (endpoint.startsWith('/es-ew')) return 'es-ew';
   if (endpoint.startsWith('/incidents')) return 'incidents';
   return '';
@@ -1792,6 +1794,7 @@ String _draftDetailPath(String endpoint) {
 String _draftRoute(String endpoint) {
   if (endpoint.startsWith('/fire-hydrants')) return '/fire-hydrant';
   if (endpoint.startsWith('/fire-extinguishers')) return '/fire-extinguisher';
+  if (endpoint.startsWith('/fire-alarms')) return '/fire-alarm';
   if (endpoint.startsWith('/es-ew')) return '/es-ew';
   if (endpoint.startsWith('/incidents')) return '/incident-form';
   return '';
@@ -1802,6 +1805,7 @@ Color _draftColor(String endpoint) {
   if (endpoint.startsWith('/fire-extinguishers')) {
     return const Color(0xFF177245);
   }
+  if (endpoint.startsWith('/fire-alarms')) return const Color(0xFF238653);
   if (endpoint.startsWith('/es-ew')) return const Color(0xFF329566);
   if (endpoint.startsWith('/incidents')) return const Color(0xFF4AA878);
   return AppColors.primaryDark;
@@ -1811,6 +1815,9 @@ IconData _draftIcon(String endpoint) {
   if (endpoint.startsWith('/fire-hydrants')) return Icons.fire_hydrant;
   if (endpoint.startsWith('/fire-extinguishers')) {
     return Icons.fire_extinguisher;
+  }
+  if (endpoint.startsWith('/fire-alarms')) {
+    return Icons.notifications_active_outlined;
   }
   if (endpoint.startsWith('/es-ew')) return Icons.shower_outlined;
   if (endpoint.startsWith('/incidents')) return Icons.assignment_outlined;

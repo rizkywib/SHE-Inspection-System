@@ -13,6 +13,7 @@ import 'screens/inspection/fire_hydrant_screen.dart';
 import 'screens/inspection/fire_extinguisher_screen.dart';
 import 'screens/inspection/fire_extinguisher_create_screen.dart';
 import 'screens/inspection/fire_alarm_screen.dart';
+import 'screens/inspection/fire_alarm_create_flow.dart';
 import 'screens/inspection/es_ew_screen.dart';
 import 'screens/permit_matrix/permit_matrix_screen.dart';
 import 'screens/safety_talk/safety_talk_screen.dart';
@@ -84,7 +85,10 @@ class MyApp extends StatelessWidget {
               page = const FireExtinguisherCreateScreen();
               break;
             case '/fire-alarm':
-              page = const FireAlarmScreen();
+              page = FireAlarmScreen(initialId: idArg);
+              break;
+            case '/fire-alarm-create':
+              page = const FireAlarmSetupScreen();
               break;
             case '/es-ew':
               page = EsEwScreen(initialId: idArg);
