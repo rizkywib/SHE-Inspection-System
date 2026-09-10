@@ -84,6 +84,7 @@ let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || '{}');
 let alarms = [];
 let points = [];
+let itemSeq = 0;
 
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
@@ -113,8 +114,10 @@ async function loadReferenceData() {
     document.getElementById('location_id').innerHTML = `<option value="">- Select Location -</option>` + locations.map(item => `<option value="${item.id_location}">${escapeHtml(item.name)}</option>`).join('');
     fillSelect('inspector_id', users, '- Current User -', 'User');
 }
-function conditionCheckbox(field, label, item) {
-    return `<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700"><input data-field="${field}" type="checkbox" ${boolValue(item[field]) ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"><span>${label}</span></label>`;
+function conditionRadios(field, label, item, seq) {
+    const isYes = boolValue(item[field]);
+    const isNo = !isYes && item[field] !== undefined && item[field] !== null && item[field] !== '';
+    return `<div><label class="block text-sm font-medium text-gray-700 mb-1">${label}</label><div class="flex items-center gap-4 bg-white border border-gray-200 rounded-lg px-3 py-2"><label class="flex items-center gap-1 text-sm text-gray-700"><input type="radio" name="${field}_${seq}" data-field="${field}" value="1" ${isYes ? 'checked' : ''} class="text-blue-600 focus:ring-blue-500">Yes</label><label class="flex items-center gap-1 text-sm text-gray-700"><input type="radio" name="${field}_${seq}" data-field="${field}" value="0" ${isNo ? 'checked' : ''} class="text-blue-600 focus:ring-blue-500">No</label></div></div>`;
 }
 function pointOptions() {
     return `<option value="">- Select Point -</option>` + points.map(p => `<option value="${p.id}">${escapeHtml(p.name_point)}</option>`).join('');
@@ -128,6 +131,7 @@ function onPointChange(select) {
 function addAlarmItem(item = {}) {
     const container = document.getElementById('alarmItems');
     const card = document.createElement('div');
+    const seq = ++itemSeq;
     card.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50 alarm-item';
     card.innerHTML = `
         <div class="flex items-center justify-between gap-3 mb-4"><h4 class="font-semibold text-gray-900">Item Alarm <span class="item-number"></span></h4><button type="button" onclick="removeItem(this)" class="text-red-600 hover:text-red-800 text-sm font-medium"><i class="fas fa-trash mr-1"></i>Remove</button></div>
@@ -136,10 +140,9 @@ function addAlarmItem(item = {}) {
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Alarm Number</label><input data-field="alarm_number" value="${escapeHtml(item.alarm_number || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Type</label><input data-field="type" readonly value="${escapeHtml(item.type || '')}" class="w-full border border-gray-300 bg-gray-100 rounded-lg px-4 py-2"></div>
             <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Location Detail</label><input data-field="location_detail" readonly value="${escapeHtml(item.location_detail || '')}" class="w-full border border-gray-300 bg-gray-100 rounded-lg px-4 py-2"></div>
-            <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-2">Condition</label><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${conditionCheckbox('condition_good', 'Condition Good', item)}${conditionCheckbox('correction_needed', 'Correction Needed', item)}</div></div>
+            <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-2">Condition</label><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${conditionRadios('condition_good', 'Condition Good', item, seq)}${conditionRadios('correction_needed', 'Correction Needed', item, seq)}</div></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Photo Before</label><input data-field="photo_before" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Photo After</label><input data-field="photo_after" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"></div>
-            <div class="grid grid-cols-2 gap-3"><div><label class="block text-sm font-medium text-gray-700 mb-1">Latitude</label><input data-field="item_lat" type="number" step="any" value="${escapeHtml(item.item_lat || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Longitude</label><input data-field="item_lng" type="number" step="any" value="${escapeHtml(item.item_lng || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div></div>
             <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea data-field="remark" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2">${escapeHtml(item.remark || '')}</textarea></div>
         </div>`;
     container.appendChild(card);
@@ -160,18 +163,17 @@ function collectItems() {
     return Array.from(document.querySelectorAll('#alarmItems .alarm-item')).map(card => {
         const nameSelect = card.querySelector('[data-field="name"]');
         const selectedPoint = points.find(point => point.id === Number(nameSelect.value));
+        const radioValue = field => { const el = card.querySelector(`[data-field="${field}"]:checked`); return el ? el.value === '1' : false; };
         const item = {
             name: selectedPoint ? selectedPoint.name_point : nameSelect.value,
             alarm_number: card.querySelector('[data-field="alarm_number"]').value || null,
             type: card.querySelector('[data-field="type"]').value || null,
             location_detail: card.querySelector('[data-field="location_detail"]').value || null,
-            condition_good: card.querySelector('[data-field="condition_good"]').checked,
-            correction_needed: card.querySelector('[data-field="correction_needed"]').checked,
+            condition_good: radioValue('condition_good'),
+            correction_needed: radioValue('correction_needed'),
             remark: card.querySelector('[data-field="remark"]').value || null,
             photo_before: card.querySelector('[data-field="photo_before"]').files[0] || null,
             photo_after: card.querySelector('[data-field="photo_after"]').files[0] || null,
-            item_lat: card.querySelector('[data-field="item_lat"]').value || null,
-            item_lng: card.querySelector('[data-field="item_lng"]').value || null,
         };
         return Object.values(item).some(Boolean) ? item : null;
     }).filter(Boolean);
