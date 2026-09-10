@@ -23,7 +23,7 @@ class FireAlarmController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'reference_no' => 'required|string|max:40|unique:fire_alarm_inspections,reference_no',
+            'reference_no' => 'nullable|string|max:40|unique:fire_alarm_inspections,reference_no',
             'inspection_date' => 'required|date',
             'location_id' => 'nullable|exists:fire_alarm_locations,id_location',
             'area_id' => 'nullable|exists:areas,id',
@@ -57,6 +57,7 @@ class FireAlarmController extends Controller
         unset($data['items']);
 
         $this->storeItemPhotos($request);
+        $data['reference_no'] = $data['reference_no'] ?? $this->generateReferenceNo();
         $data['inspector_id'] = $data['inspector_id'] ?? $request->user()->id;
         $data['status'] = $data['status'] ?? 'draft';
         $data['checked_in_at'] = now();
@@ -85,7 +86,7 @@ class FireAlarmController extends Controller
         $inspection = FireAlarmInspection::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'reference_no' => 'required|string|max:40|unique:fire_alarm_inspections,reference_no,' . $id,
+            'reference_no' => 'nullable|string|max:40|unique:fire_alarm_inspections,reference_no,' . $id,
             'inspection_date' => 'required|date',
             'location_id' => 'nullable|exists:fire_alarm_locations,id_location',
             'area_id' => 'nullable|exists:areas,id',
@@ -119,6 +120,9 @@ class FireAlarmController extends Controller
         unset($data['items']);
 
         $this->storeItemPhotos($request);
+        if (blank($data['reference_no'] ?? null)) {
+            unset($data['reference_no']);
+        }
         if (array_key_exists('checkin_lat', $data) && $data['checkin_lat'] === null) {
             unset($data['checkin_lat']);
         }
@@ -157,6 +161,18 @@ class FireAlarmController extends Controller
                 'item_lng' => $item['item_lng'] ?? null,
             ]);
         }
+    }
+
+    private function generateReferenceNo(): string
+    {
+        $nextId = (int) FireAlarmInspection::max('id') + 1;
+
+        do {
+            $referenceNo = 'FA-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
+            $nextId++;
+        } while (FireAlarmInspection::where('reference_no', $referenceNo)->exists());
+
+        return $referenceNo;
     }
 
     private function storeItemPhotos(Request $request): void

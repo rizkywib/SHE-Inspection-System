@@ -26,11 +26,8 @@
                         <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Inspection Data</h3>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Reference No</label><input id="reference_no" required class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Inspection Date</label><input id="inspection_date" type="date" required class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Location ID</label><select id="location_id" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">- Select Location -</option></select></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Area ID</label><input id="area_id" type="number" min="1" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">QR Code ID</label><input id="qr_code_id" type="number" min="1" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="status" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="draft">Draft</option><option value="completed">Completed</option><option value="signed">Signed</option></select></div>
                     </div>
                 </div>
@@ -39,8 +36,7 @@
                         <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Assignment & Notes</h3>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Inspector ID</label><select id="inspector_id" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">- Current User -</option></select></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Assigned To</label><select id="assigned_to" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">- Not Assigned -</option></select></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">User</label><select id="inspector_id" class="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">- Current User -</option></select></div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea id="notes" rows="7" class="w-full border border-gray-300 rounded-lg px-4 py-2"></textarea></div>
                     </div>
                 </div>
@@ -116,7 +112,6 @@ async function loadReferenceData() {
     const [locations, users] = await Promise.all([fetchList('/fire-alarm-locations'), fetchList('/users')]);
     document.getElementById('location_id').innerHTML = `<option value="">- Select Location -</option>` + locations.map(item => `<option value="${item.id_location}">${escapeHtml(item.name)}</option>`).join('');
     fillSelect('inspector_id', users, '- Current User -', 'User');
-    fillSelect('assigned_to', users, '- Not Assigned -', 'User');
 }
 function conditionCheckbox(field, label, item) {
     return `<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700"><input data-field="${field}" type="checkbox" ${boolValue(item[field]) ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"><span>${label}</span></label>`;
@@ -194,13 +189,9 @@ async function editItem(id) {
     openForm();
     document.getElementById('formTitle').textContent = 'Edit Inspection';
     document.getElementById('aid_id').value = a.id || '';
-    document.getElementById('reference_no').value = a.reference_no || '';
     document.getElementById('inspection_date').value = formatDateOnly(a.inspection_date);
     document.getElementById('location_id').value = a.location_id || '';
-    document.getElementById('area_id').value = a.area_id || '';
-    document.getElementById('qr_code_id').value = a.qr_code_id || '';
     document.getElementById('inspector_id').value = a.inspector_id || '';
-    document.getElementById('assigned_to').value = a.assigned_to || '';
     document.getElementById('notes').value = a.notes || '';
     document.getElementById('status').value = a.status || 'draft';
     resetItems(Array.isArray(a.items) ? a.items : []);
@@ -210,13 +201,9 @@ document.getElementById('alarmForm').addEventListener('submit', async ev => {
     const id = document.getElementById('aid_id').value;
     const coords = await getCurrentCoordinates();
     const payload = {
-        reference_no: document.getElementById('reference_no').value,
         inspection_date: document.getElementById('inspection_date').value,
         location_id: document.getElementById('location_id').value || null,
-        area_id: document.getElementById('area_id').value || null,
-        qr_code_id: document.getElementById('qr_code_id').value || null,
         inspector_id: document.getElementById('inspector_id').value || null,
-        assigned_to: document.getElementById('assigned_to').value || null,
         checkin_lat: coords ? coords.lat : null,
         checkin_lng: coords ? coords.lng : null,
         notes: document.getElementById('notes').value || null,
