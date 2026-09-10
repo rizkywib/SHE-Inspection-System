@@ -83,6 +83,7 @@ const API_URL = '/api';
 let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || '{}');
 let alarms = [];
+let points = [];
 
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
@@ -107,12 +108,22 @@ function fillSelect(id, data, emptyLabel, fallbackPrefix) {
     document.getElementById(id).innerHTML = `<option value="">${emptyLabel}</option>` + data.map(item => `<option value="${item.id}">${escapeHtml(optionLabel(item, fallbackPrefix))}</option>`).join('');
 }
 async function loadReferenceData() {
-    const [locations, users] = await Promise.all([fetchList('/fire-alarm-locations'), fetchList('/users')]);
+    const [locations, users, pointData] = await Promise.all([fetchList('/fire-alarm-locations'), fetchList('/users'), fetchList('/points')]);
+    points = pointData;
     document.getElementById('location_id').innerHTML = `<option value="">- Select Location -</option>` + locations.map(item => `<option value="${item.id_location}">${escapeHtml(item.name)}</option>`).join('');
     fillSelect('inspector_id', users, '- Current User -', 'User');
 }
 function conditionCheckbox(field, label, item) {
     return `<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700"><input data-field="${field}" type="checkbox" ${boolValue(item[field]) ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"><span>${label}</span></label>`;
+}
+function pointOptions() {
+    return `<option value="">- Select Point -</option>` + points.map(p => `<option value="${p.id}">${escapeHtml(p.name_point)}</option>`).join('');
+}
+function onPointChange(select) {
+    const card = select.closest('.alarm-item');
+    const p = points.find(point => point.id === Number(select.value));
+    card.querySelector('[data-field="type"]').value = p ? (p.ket1 || '') : '';
+    card.querySelector('[data-field="location_detail"]').value = p ? (p.ket2 || '') : '';
 }
 function addAlarmItem(item = {}) {
     const container = document.getElementById('alarmItems');
@@ -121,10 +132,10 @@ function addAlarmItem(item = {}) {
     card.innerHTML = `
         <div class="flex items-center justify-between gap-3 mb-4"><h4 class="font-semibold text-gray-900">Item Alarm <span class="item-number"></span></h4><button type="button" onclick="removeItem(this)" class="text-red-600 hover:text-red-800 text-sm font-medium"><i class="fas fa-trash mr-1"></i>Remove</button></div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Name</label><input data-field="name" required value="${escapeHtml(item.name || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Name</label><select data-field="name" required onchange="onPointChange(this)" class="w-full border border-gray-300 rounded-lg px-4 py-2">${pointOptions()}</select></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Alarm Number</label><input data-field="alarm_number" value="${escapeHtml(item.alarm_number || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Type</label><input data-field="type" value="${escapeHtml(item.type || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
-            <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Location Detail</label><input data-field="location_detail" value="${escapeHtml(item.location_detail || '')}" class="w-full border border-gray-300 rounded-lg px-4 py-2"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Type</label><input data-field="type" readonly value="${escapeHtml(item.type || '')}" class="w-full border border-gray-300 bg-gray-100 rounded-lg px-4 py-2"></div>
+            <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Location Detail</label><input data-field="location_detail" readonly value="${escapeHtml(item.location_detail || '')}" class="w-full border border-gray-300 bg-gray-100 rounded-lg px-4 py-2"></div>
             <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-2">Condition</label><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${conditionCheckbox('condition_good', 'Condition Good', item)}${conditionCheckbox('correction_needed', 'Correction Needed', item)}</div></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Photo Before</label><input data-field="photo_before" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"></div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Photo After</label><input data-field="photo_after" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"></div>
@@ -132,6 +143,14 @@ function addAlarmItem(item = {}) {
             <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Remark</label><textarea data-field="remark" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2">${escapeHtml(item.remark || '')}</textarea></div>
         </div>`;
     container.appendChild(card);
+    if (item.name) {
+        const nameSelect = card.querySelector('[data-field="name"]');
+        const p = points.find(point => point.name_point === item.name);
+        if (p) {
+            nameSelect.value = p.id;
+            onPointChange(nameSelect);
+        }
+    }
     renumberItems();
 }
 function removeItem(button) { button.closest('.alarm-item').remove(); renumberItems(); }
@@ -139,8 +158,10 @@ function renumberItems() { document.querySelectorAll('#alarmItems .item-number')
 function resetItems(items = []) { document.getElementById('alarmItems').innerHTML = ''; (items.length ? items : [{}]).forEach(item => addAlarmItem(item)); }
 function collectItems() {
     return Array.from(document.querySelectorAll('#alarmItems .alarm-item')).map(card => {
+        const nameSelect = card.querySelector('[data-field="name"]');
+        const selectedPoint = points.find(point => point.id === Number(nameSelect.value));
         const item = {
-            name: card.querySelector('[data-field="name"]').value,
+            name: selectedPoint ? selectedPoint.name_point : nameSelect.value,
             alarm_number: card.querySelector('[data-field="alarm_number"]').value || null,
             type: card.querySelector('[data-field="type"]').value || null,
             location_detail: card.querySelector('[data-field="location_detail"]').value || null,
