@@ -597,13 +597,20 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
       if (!mounted) return;
 
       if (response.containsKey('error')) {
+        debugPrint('[HydrantCreate] Server error: ${response['error']}');
+        await _enqueueRetry(fields, files);
+        if (!mounted) return;
+        setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['error'].toString()),
-            backgroundColor: Colors.red,
+            content: Text(
+              '${response['error']}\nData disimpan sebagai draft, '
+              'akan disinkronkan otomatis.',
+            ),
+            backgroundColor: Colors.orange,
           ),
         );
-        setState(() => _isSaving = false);
+        Navigator.pop(context, true);
         return;
       }
 
@@ -615,15 +622,38 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
       );
       Navigator.pop(context, true);
     } catch (error) {
+      debugPrint('[HydrantCreate] Exception: $error');
+      await _enqueueRetry(fields, files);
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menyimpan inspeksi: $error'),
-          backgroundColor: Colors.red,
+          content: Text(
+            'Gagal terkirim ($error), data disimpan sebagai draft. '
+            'Akan disinkronkan otomatis saat online.',
+          ),
+          backgroundColor: Colors.orange,
         ),
       );
+      Navigator.pop(context, true);
     }
+  }
+
+  Future<void> _enqueueRetry(
+    Map<String, String> fields,
+    Map<String, File?> files,
+  ) async {
+    final fileMap = <String, String>{
+      for (final entry in files.entries)
+        if (entry.value != null) entry.key: entry.value!.path,
+    };
+    await OfflineStorageService.instance.enqueueDraft(
+      endpoint: '/fire-hydrants',
+      method: 'POST',
+      fields: fields,
+      files: fileMap,
+      displayName: 'Fire Hydrant $_hydrantNumber',
+    );
   }
 
   @override

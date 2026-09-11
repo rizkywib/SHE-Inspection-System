@@ -211,28 +211,71 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
       return;
     }
 
-    final result = _isEdit
-        ? await api.updateIncident(
-            _asInt(widget.inspection!['id'])!,
-            payload,
-            image: _image,
-            repairPhoto: _repairImage,
-          )
-        : await api.createIncident(
-            payload,
-            image: _image,
-            repairPhoto: _repairImage,
-          );
+    final id = _isEdit ? _asInt(widget.inspection!['id']) : null;
+    final fileMap = <String, String>{
+      if (_image != null) 'image': _image!.path,
+      if (_repairImage != null) 'repair_photo': _repairImage!.path,
+    };
+    Future<void> enqueueAsDraft() async {
+      await OfflineStorageService.instance.enqueueDraft(
+        endpoint: id == null ? '/incidents' : '/incidents/$id',
+        method: id == null ? 'POST' : 'PUT',
+        fields: payload,
+        files: fileMap,
+        displayName: id == null
+            ? 'Inspection (baru)'
+            : 'Inspection (edit #$id)',
+      );
+    }
+
+    Map<String, dynamic> result;
+    try {
+      result = _isEdit
+          ? await api.updateIncident(
+              id!,
+              payload,
+              image: _image,
+              repairPhoto: _repairImage,
+            )
+          : await api.createIncident(
+              payload,
+              image: _image,
+              repairPhoto: _repairImage,
+            );
+    } catch (_) {
+      // Koneksi terputus saat mengirim: simpan sebagai draft agar otomatis
+      // disinkronkan saat koneksi pulih.
+      await enqueueAsDraft();
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal terkirim, data disimpan sebagai draft. '
+            'Akan disinkronkan otomatis saat online.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      Navigator.pop(context, true);
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _isSaving = false);
     if (result['error'] != null) {
+      await enqueueAsDraft();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['error'].toString()),
-          backgroundColor: Colors.red.shade700,
+          content: Text(
+            '${result['error']}\nData disimpan sebagai draft, '
+            'akan disinkronkan otomatis.',
+          ),
+          backgroundColor: Colors.orange,
         ),
       );
+      Navigator.pop(context, true);
       return;
     }
 

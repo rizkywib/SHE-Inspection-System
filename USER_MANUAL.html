@@ -1,0 +1,364 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>USER MANUAL - SHE Inspection System</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; }
+  h1 { font-size: 20pt; color: #145f3a; }
+  h2 { font-size: 14pt; color: #145f3a; }
+  h3 { font-size: 12pt; color: #177245; }
+  table { border-collapse: collapse; }
+  td, th { border: 1px solid #888888; padding: 4pt 6pt; }
+</style>
+</head>
+<body>
+
+<h1 style="text-align:center;">USER MANUAL</h1>
+<h2 style="text-align:center;">SHE Inspection System</h2>
+<p style="text-align:center;">Sistem Inspeksi Safety, Health, and Environment (SHE)</p>
+<p style="text-align:center;">Versi: 1.0.0 &nbsp;|&nbsp; September 2026 &nbsp;|&nbsp; PT. Ecogreen Oleochemicals Indonesia</p>
+
+<br style="page-break-after: always;">
+
+<h2>Daftar Isi</h2>
+<ol>
+  <li>Pendahuluan</li>
+  <li>Persyaratan Sistem</li>
+  <li>Login dan Logout</li>
+  <li>Dashboard</li>
+  <li>Menu dan Navigasi</li>
+  <li>Mode Offline dan Sinkronisasi Otomatis</li>
+  <li>Inspeksi Fire Hydrant</li>
+  <li>Inspeksi Fire Extinguisher (APAR)</li>
+  <li>Inspeksi Fire Alarm</li>
+  <li>Inspeksi ES/EW (Emergency Shower / Eye Wash)</li>
+  <li>Checklist Umum</li>
+  <li>Permit Matrix</li>
+  <li>Safety Talk / Training</li>
+  <li>Inspection / Incident</li>
+  <li>Scanner QR Code</li>
+  <li>Check-in GPS dan Tanda Tangan Digital</li>
+  <li>Master Data (Administrator)</li>
+  <li>Troubleshooting dan FAQ</li>
+  <li>Dukungan Teknis</li>
+</ol>
+
+<br style="page-break-after: always;">
+
+<h1>1. Pendahuluan</h1>
+<p>SHE Inspection System adalah aplikasi Android untuk melakukan inspeksi keselamatan, kesehatan, dan lingkungan (Safety, Health, and Environment). Aplikasi digunakan oleh inspector untuk:</p>
+<ul>
+  <li>Melakukan inspeksi peralatan pemadam kebakaran (hydrant, APAR, fire alarm).</li>
+  <li>Melakukan inspeksi Emergency Shower / Eye Wash (ES/EW).</li>
+  <li>Melakukan inspeksi checklist umum berdasarkan kategori.</li>
+  <li>Mencatat kegiatan Safety Talk / Training di lapangan.</li>
+  <li>Mengisi form Permit Matrix (Safe Work Permit).</li>
+  <li>Melaporkan inspection/incident dengan foto.</li>
+  <li>Scan QR code asset untuk membuka form inspeksi secara cepat.</li>
+  <li>Check-in GPS dan tanda tangan digital.</li>
+  <li>Bekerja secara offline dengan sinkronisasi otomatis.</li>
+</ul>
+<p>Aplikasi terhubung ke server backend melalui API. Semua data disimpan di server dan dapat diakses kembali kapan pun.</p>
+
+<h1>2. Persyaratan Sistem</h1>
+<table>
+  <tr><th>Kebutuhan</th><th>Spesifikasi</th></tr>
+  <tr><td>Perangkat</td><td>Android (minimal API level 21 / Android 5.0)</td></tr>
+  <tr><td>Koneksi Internet</td><td>Dibutuhkan untuk sinkronisasi; inspeksi tetap bisa dibuat offline</td></tr>
+  <tr><td>GPS</td><td>Dibutuhkan untuk check-in lokasi dan scan QR</td></tr>
+  <tr><td>Kamera</td><td>Dibutuhkan untuk foto temuan dan scan QR</td></tr>
+  <tr><td>Aplikasi</td><td>File APK <b>SHE-Inspection-System.apk</b></td></tr>
+</table>
+<p>Akun pengguna (username dan password) disediakan oleh administrator. Login menggunakan <b>username</b>, bukan email.</p>
+
+<h1>3. Login dan Logout</h1>
+
+<h2>3.1 Login</h2>
+<ol>
+  <li>Buka aplikasi SHE Inspection.</li>
+  <li>Masukkan <b>Username</b> pada kolom Username.</li>
+  <li>Masukkan <b>Password</b> pada kolom Password.</li>
+  <li>Tekan tombol <b>Sign In</b>.</li>
+  <li>Jika berhasil, aplikasi menampilkan Dashboard.</li>
+</ol>
+<p><b>Catatan:</b> Jika username atau password salah, muncul pesan peringatan dan Anda tetap berada di halaman login. Jika kolom kosong, validasi form akan muncul dan permintaan tidak dikirim.</p>
+
+<h2>3.2 Restore Sesi</h2>
+<p>Saat aplikasi ditutup dan dibuka kembali, jika Anda masih login, aplikasi langsung masuk ke Dashboard tanpa perlu login ulang.</p>
+
+<h2>3.3 Logout</h2>
+<ol>
+  <li>Buka menu samping (Drawer) dengan menekan ikon menu di kiri atas.</li>
+  <li>Pilih menu <b>Logout</b> (berwarna merah).</li>
+  <li>Aplikasi kembali ke halaman login dan token dihapus.</li>
+</ol>
+
+<h1>4. Dashboard</h1>
+<p>Dashboard adalah halaman utama setelah login. Isinya:</p>
+<ul>
+  <li><b>Kartu selamat datang</b> &mdash; sapaan berdasarkan waktu dan nama pengguna.</li>
+  <li><b>Ringkasan statistik</b> &mdash; Total Data, Tindak Lanjut, dan Selesai.</li>
+  <li><b>Akses Cepat</b> &mdash; tombol pintasan ke modul inspeksi (Hydrant, APAR, Fire Alarm, ES/EW, Permit, Safety Talk, Inspection).</li>
+  <li><b>Aktivitas Terbaru</b> &mdash; daftar inspeksi dari seluruh modul.</li>
+</ul>
+
+<h2>4.1 Pencarian dan Filter</h2>
+<ul>
+  <li>Gunakan kolom pencarian (ikon kaca pembesar) untuk mencari berdasarkan nama inspector atau remark.</li>
+  <li>Gunakan chip filter status: Semua, Baru, Selesai, Signed, Open, Close.</li>
+  <li>Tekan ikon <b>Refresh</b> di kanan atas atau tarik layar ke bawah (pull-to-refresh) untuk memuat ulang data.</li>
+</ul>
+
+<h2>4.2 Melihat Detail Aktivitas</h2>
+<p>Tekan salah satu item pada daftar Aktivitas Terbaru untuk melihat detail inspeksi, termasuk item inspeksi dan foto.</p>
+
+<h1>5. Menu dan Navigasi</h1>
+<p>Menu utama dapat diakses melalui tombol menu (Drawer) di kiri atas:</p>
+<table>
+  <tr><th>Menu</th><th>Keterangan</th></tr>
+  <tr><td>Dashboard</td><td>Kembali ke halaman utama</td></tr>
+  <tr><td>Hydrant</td><td>Inspeksi fire hydrant</td></tr>
+  <tr><td>Fire Extinguisher</td><td>Inspeksi APAR</td></tr>
+  <tr><td>Fire Alarm</td><td>Inspeksi fire alarm</td></tr>
+  <tr><td>ES/EW</td><td>Inspeksi Emergency Shower / Eye Wash</td></tr>
+  <tr><td>Permit Matrix</td><td>Inspeksi Safe Work Permit</td></tr>
+  <tr><td>Safety Talk/Training</td><td>Kegiatan safety talk / training</td></tr>
+  <tr><td>Inspection</td><td>Daftar dan pelaporan inspection/incident</td></tr>
+  <tr><td>Master Data (admin)</td><td>Hydrant Locations, Incident Types, ES&amp;EW Areas, Users</td></tr>
+  <tr><td>Logout</td><td>Keluar dari aplikasi</td></tr>
+</table>
+<p>Menu <b>Master Data</b> hanya tampil untuk pengguna dengan peran admin atau super admin.</p>
+
+<h1>6. Mode Offline dan Sinkronisasi Otomatis</h1>
+<p>Aplikasi mendukung bekerja tanpa koneksi internet (offline).</p>
+
+<h2>6.1 Menyimpan Data Saat Offline</h2>
+<ol>
+  <li>Pastikan perangkat dalam mode pesawat / tanpa koneksi.</li>
+  <li>Buat inspeksi (Hydrant, APAR, ES/EW, atau Inspection) lengkap dengan foto.</li>
+  <li>Tekan Simpan.</li>
+  <li>Muncul pesan <b>"Offline: disimpan sebagai draft"</b> dan Anda kembali ke Dashboard.</li>
+</ol>
+
+<h2>6.2 Menandai Draft (Badge)</h2>
+<p>Item yang tersimpan offline ditandai dengan badge oranye <b>"Menunggu sinkronisasi"</b>. Banner Mode Offline menampilkan jumlah draft yang tertunda.</p>
+
+<h2>6.3 Sinkronisasi Otomatis</h2>
+<p>Draft akan otomatis terkirim ke server saat:</p>
+<ul>
+  <li>Koneksi internet kembali (mode pesawat dimatikan).</li>
+  <li>Aplikasi dibuka kembali (app start).</li>
+  <li>Dashboard di-refresh.</li>
+</ul>
+<p>Jika pengiriman gagal (misalnya server error), data tidak hilang &mdash; data otomatis disimpan kembali sebagai draft.</p>
+
+<h2>6.4 Tombol Kirim pada Banner</h2>
+<p>Saat offline dan ada draft, tekan <b>Kirim</b> pada banner. Jika masih offline, draft tetap tersimpan; setelah online, draft akan terkirim.</p>
+
+<h1>7. Inspeksi Fire Hydrant</h1>
+
+<h2>7.1 Membuat Inspeksi Baru</h2>
+<ol>
+  <li>Buka menu <b>Hydrant</b> dari Dashboard (Akses Cepat) atau Drawer.</li>
+  <li>Tekan tombol untuk membuat inspeksi baru (<b>New Fire Hydrant Inspection</b>).</li>
+  <li>Pilih <b>Location</b>.</li>
+  <li>Pilih cara pengisian data:
+    <ul>
+      <li><b>Scan QR</b>: scan QR hydrant agar detail terisi otomatis.</li>
+      <li><b>Manual</b>: isi form lengkap (tanggal, lokasi, dan item hydrant).</li>
+    </ul>
+  </li>
+  <li>Isi seluruh field yang wajib.</li>
+  <li>Tambahkan foto jika diperlukan.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+<p>Jika berhasil, muncul pesan sukses dan data tersimpan.</p>
+
+<h2>7.2 Melihat Detail</h2>
+<ul>
+  <li>Pilih inspeksi dari daftar untuk melihat detail, item, dan foto.</li>
+  <li>Khusus pembuat data atau admin/super admin, tersedia tombol <b>Edit</b>.</li>
+</ul>
+
+<h2>7.3 Hak Akses Edit/Hapus</h2>
+<p>Hanya pembuat inspeksi (creator) atau pengguna dengan peran admin/super admin yang dapat mengedit atau menghapus data. Pengguna lain hanya dapat melihat.</p>
+
+<h1>8. Inspeksi Fire Extinguisher (APAR)</h1>
+<ol>
+  <li>Buka menu <b>Fire Extinguisher</b> (Akses Cepat APAR) atau Drawer.</li>
+  <li>Buat inspeksi baru.</li>
+  <li>Pilih cara pengisian:
+    <ul>
+      <li><b>Scan QR</b>: scan QR APAR agar detail terisi otomatis.</li>
+      <li><b>Manual</b>: isi form (tekanan, segel, nozzle, dan lainnya).</li>
+    </ul>
+  </li>
+  <li>Tambahkan foto before/after jika diperlukan.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+<p>Data yang disimpan akan tampil di daftar APAR dan Dashboard.</p>
+
+<h1>9. Inspeksi Fire Alarm</h1>
+<ol>
+  <li>Buka menu <b>Fire Alarm</b>.</li>
+  <li>Buat inspeksi baru atau buka inspeksi yang sudah ada.</li>
+  <li>Isi form sesuai kondisi alarm kebakaran.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+
+<h1>10. Inspeksi ES/EW (Emergency Shower / Eye Wash)</h1>
+<ol>
+  <li>Buka menu <b>ES/EW</b>.</li>
+  <li>Buat inspeksi baru.</li>
+  <li>Pilih cara pengisian:
+    <ul>
+      <li><b>Scan QR</b>: scan QR point ES/EW agar point terisi otomatis.</li>
+      <li><b>Manual</b>: isi area, point, kondisi, dan foto.</li>
+    </ul>
+  </li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+
+<h1>11. Checklist Umum</h1>
+<ol>
+  <li>Buka menu <b>Checklist</b>.</li>
+  <li>Pilih <b>kategori</b> checklist.</li>
+  <li>Isi item checklist sesuai kondisi di lapangan.</li>
+  <li>Lakukan <b>check-in</b> bila diperlukan.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+<p><b>Catatan:</b> menu Checklist saat ini tersedia di sisi backend; pada versi mobile tertentu halaman ini mungkin menampilkan "Checklist belum tersedia".</p>
+
+<h1>12. Permit Matrix</h1>
+<p>Permit Matrix adalah inspeksi Safe Work Permit. Kolom <b>Job Performance</b> berupa dropdown yang isiannya dikelola dari website (backend).</p>
+
+<h2>12.1 Membuat Permit Matrix</h2>
+<ol>
+  <li>Buka menu <b>Permit Matrix</b> (Akses Cepat Permit) atau Drawer.</li>
+  <li>Tekan tombol buat baru.</li>
+  <li>Isi form: main area, sub area, job performance, dan data lainnya.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+
+<h2>12.2 Hak Akses</h2>
+<ul>
+  <li>Semua pengguna dengan permission dapat melihat dan membuat.</li>
+  <li>Edit dan hapus khusus admin/super admin.</li>
+  <li>Non-admin tidak melihat tombol edit/hapus.</li>
+</ul>
+
+<h2>12.3 Export Excel</h2>
+<p>Pada halaman index (website/backend), tersedia tombol <b>Export Excel</b> untuk mengunduh seluruh data hasil filter ke file <b>.xls</b>.</p>
+
+<h1>13. Safety Talk / Training</h1>
+<ol>
+  <li>Buka menu <b>Safety Talk/Training</b>.</li>
+  <li>Tekan tombol buat baru.</li>
+  <li>Isi form kegiatan (topik, tanggal, lokasi).</li>
+  <li>Hitung jumlah peserta.</li>
+  <li>Upload foto kegiatan.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+<p>Edit dan hapus khusus admin/super admin. Export Excel tersedia di halaman index (website/backend).</p>
+
+<h1>14. Inspection / Incident</h1>
+<p>Modul ini untuk melaporkan inspection/incident.</p>
+
+<h2>14.1 Membuat Laporan Baru</h2>
+<ol>
+  <li>Buka menu <b>Inspection</b>.</li>
+  <li>Tekan tombol buat laporan baru.</li>
+  <li>Isi form:
+    <ul>
+      <li>Tanggal dan waktu kejadian.</li>
+      <li>Lokasi.</li>
+      <li>Tipe inspeksi/insiden (dropdown).</li>
+      <li>Deskripsi.</li>
+    </ul>
+  </li>
+  <li>Pilih <b>Foto Temuan Awal</b> (wajib) &mdash; ambil dari kamera atau galeri.</li>
+  <li>Opsional: tambahkan <b>Foto Perbaikan</b>.</li>
+  <li>Tekan <b>Simpan</b>.</li>
+</ol>
+<p>Jika foto temuan awal tidak dipilih, muncul validasi <b>"Foto temuan awal wajib dipilih"</b> dan data tidak terkirim.</p>
+
+<h2>14.2 Edit Laporan</h2>
+<ul>
+  <li>Pembuat laporan atau admin/super admin dapat mengedit.</li>
+  <li>Perubahan tersimpan online atau menjadi draft saat offline.</li>
+</ul>
+
+<h1>15. Scanner QR Code</h1>
+<ol>
+  <li>Pastikan GPS aktif dan izin lokasi diberikan.</li>
+  <li>Buka halaman <b>Scan QR Code</b>.</li>
+  <li>Arahkan kamera ke QR code asset (hydrant, APAR, ES/EW, dll).</li>
+  <li>Aplikasi membaca lokasi GPS dan memproses QR.</li>
+  <li>Jika asset ditemukan, form inspeksi terbuka dengan detail terisi otomatis.</li>
+  <li>Jika QR tidak dikenal, muncul pesan data tidak ditemukan (aplikasi tidak crash).</li>
+</ol>
+<p>Scanner QR juga bisa bekerja offline menggunakan cache data point lokal, selama aplikasi pernah dibuka dalam kondisi online.</p>
+
+<h1>16. Check-in GPS dan Tanda Tangan Digital</h1>
+
+<h2>16.1 Check-in GPS</h2>
+<p>Pada form inspeksi, lakukan <b>check-in</b> untuk menyimpan koordinat dan waktu kehadiran. Pastikan GPS aktif dan izin lokasi diberikan.</p>
+
+<h2>16.2 Tanda Tangan Digital</h2>
+<p>Lakukan <b>sign</b> (tanda tangan digital) pada inspeksi. Data tanda tangan tersimpan di server.</p>
+<p><b>Catatan:</b> tanda tangan digital yang disimpan adalah tanda tangan milik user yang melakukan sign (diambil dari profil user di server).</p>
+
+<h1>17. Master Data (Administrator)</h1>
+<p>Menu Master Data hanya tersedia untuk admin/super admin. Melalui drawer, tersedia:</p>
+<table>
+  <tr><th>Menu</th><th>Fungsi</th></tr>
+  <tr><td>Hydrant Locations</td><td>Kelola lokasi hydrant</td></tr>
+  <tr><td>Incident Types</td><td>Kelola tipe insiden</td></tr>
+  <tr><td>ES&amp;EW Areas</td><td>Kelola area ES/EW</td></tr>
+  <tr><td>Users</td><td>Kelola pengguna aplikasi</td></tr>
+</table>
+<p>Untuk masing-masing data, Anda dapat menambah, mengedit, dan menghapus sesuai izin. Data user baru dapat dibuat agar bisa login.</p>
+
+<h1>18. Troubleshooting dan FAQ</h1>
+
+<h2>Aplikasi tidak bisa login</h2>
+<ul>
+  <li>Pastikan koneksi internet aktif.</li>
+  <li>Pastikan username dan password benar (login memakai username, bukan email).</li>
+  <li>Hubungi administrator jika lupa password.</li>
+</ul>
+
+<h2>Data tidak tersinkron</h2>
+<ul>
+  <li>Pastikan perangkat online.</li>
+  <li>Tekan <b>Kirim</b> pada banner draft, atau refresh Dashboard.</li>
+  <li>Sinkronisasi berjalan otomatis saat koneksi kembali.</li>
+</ul>
+
+<h2>Scan QR gagal</h2>
+<ul>
+  <li>Pastikan GPS aktif dan izin lokasi diberikan.</li>
+  <li>Pastikan QR code terdaftar di server.</li>
+  <li>Saat offline, pastikan aplikasi pernah dibuka dalam kondisi online agar cache point tersedia.</li>
+</ul>
+
+<h2>Foto tidak muncul</h2>
+<p>Foto disimpan di server; pastikan koneksi aktif saat melihat detail.</p>
+
+<h2>Saya tidak bisa edit/hapus data</h2>
+<p>Edit/hapus hanya untuk pembuat data atau admin/super admin. Hubungi administrator bila diperlukan.</p>
+
+<h2>Error koneksi server</h2>
+<ul>
+  <li>Pastikan URL API benar: <b>http://172.16.16.51:83/api</b>.</li>
+  <li>Hubungi tim IT.</li>
+</ul>
+
+<h1>19. Dukungan Teknis</h1>
+<p>Untuk pertanyaan, kendala, atau permintaan akun, hubungi tim IT PT. Ecogreen Oleochemicals Indonesia.</p>
+
+<p>&copy; 2026 PT. Ecogreen Oleochemicals Indonesia. Seluruh hak cipta dilindungi.</p>
+
+</body>
+</html>

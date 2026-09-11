@@ -2,6 +2,11 @@
 
 Sistem pemeriksaan Safety, Health, dan Environment (SHE) yang komprehensif untuk mengelola inspeksi peralatan pemadam api, pelaporan insiden, dan audit keselamatan kerja.
 
+> Dokumentasi ini merujuk pada README root [`../README.md`](../README.md) untuk
+> gambaran proyek secara keseluruhan. Route dan perilaku endpoint aktual selalu
+> bersumber dari `routes/api.php`, controller, dan migration — bukan dari
+> dokumentasi semata.
+
 ## Technology Stack
 
 - **Framework**: Laravel 11.x
@@ -102,7 +107,7 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    APP_ENV=local
    APP_KEY=base64:GENERATE_KEY_USING_PHP_ARTISAN_KEY_GENERATE
    APP_DEBUG=true
-   APP_URL=http://eoblas10.ecogreenoleo.co.id:82
+APP_URL=http://172.16.16.51:83
 
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
@@ -111,7 +116,7 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    DB_USERNAME=root
    DB_PASSWORD=
 
-   SANCTUM_STATEFUL_DOMAINS=eoblas10.ecogreenoleo.co.id:82
+   SANCTUM_STATEFUL_DOMAINS=172.16.16.51:83
    ```
 
 4. **Generate Application Key**
@@ -128,7 +133,7 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    
    Opsi B - Menggunakan SQL schema lengkap:
    ```bash
-   mysql -u root -p < ../../schema.sql
+   mysql -u root -p < ../schema.sql
    ```
 
 6. **Storage Link (Opsional)**
@@ -147,12 +152,20 @@ Lihat [schema.sql](./schema.sql) untuk struktur lengkap.
    .\start-she-server.ps1
    ```
 
-Server akan berjalan di `http://172.16.16.51:83` (deployment Docker saat ini).
+Server berjalan di `http://172.16.16.51:83` (deployment Docker saat ini).
 Dokumentasi lama merujuk ke `http://eoblas10.ecogreenoleo.co.id:82`.
+
+### Deployment Docker (saat ini)
+
+Backend dan database dijalankan sebagai container Docker:
+
+- `she-inspection-system` - Aplikasi Laravel, port host `83` → container `80`
+- `she-inspection-db` - MySQL 8.4, port host `3307` → container `3306`
+- Sumber kode di server: `/home/it/she-inspection-system/backend/she-api`
 
 ## API Documentation
 
-Base URL: `http://eoblas10.ecogreenoleo.co.id:82/api`
+Base URL: `http://172.16.16.51:83/api`
 
 ### Autentikasi
 
@@ -282,6 +295,22 @@ php artisan optimize:clear
 php artisan migrate:fresh --seed
 ```
 
+### Error: SQLSTATE 1364 - Field 'reference_no' doesn't have a default value
+
+Terjadi saat `POST /fire-hydrants` (dan module inspeksi lain) gagal dengan
+`SQLSTATE[HY000]: 1364 Field 'reference_no' doesn't have a default value`.
+Penyebab: kolom `reference_no` pada tabel inspeksi berstatus `NOT NULL` tanpa
+default (umumnya warisan schema lama), sedangkan controller Fire Hydrant mengisi
+`reference_no` **setelah** INSERT (`assignReferenceNo`).
+
+Perbaikan — jadikan kolom nullable sesuai definisi migration:
+```sql
+ALTER TABLE fire_hydrant_inspections MODIFY reference_no VARCHAR(40) NULL;
+```
+
+Migration `2026_07_02_000002_add_reference_no_to_fire_hydrant_inspections_table`
+tidak memperbaiki kolom yang sudah ada karena di-guard `Schema::hasColumn()`.
+
 ### Permission denied pada storage
 ```bash
 # Windows (PowerShell as Administrator)
@@ -376,4 +405,4 @@ Untuk pertanyaan atau issue, silakan hubungi tim IT Ecogreen.
 ---
 
 **Version**: 1.0.0  
-**Last Updated**: July 2026
+**Last Updated**: September 2026

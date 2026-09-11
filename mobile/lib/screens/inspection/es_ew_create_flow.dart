@@ -492,13 +492,19 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
           );
       if (!mounted) return;
       if (response.containsKey('error')) {
+        await _enqueueRetry(fields);
+        if (!mounted) return;
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['error'].toString()),
-            backgroundColor: Colors.red,
+            content: Text(
+              '${response['error']}\nData disimpan sebagai draft, '
+              'akan disinkronkan otomatis.',
+            ),
+            backgroundColor: Colors.orange,
           ),
         );
+        Navigator.pop(context, true);
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -509,15 +515,36 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
       );
       Navigator.pop(context, true);
     } catch (error) {
+      await _enqueueRetry(fields);
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menyimpan inspeksi: $error'),
-          backgroundColor: Colors.red,
+          content: Text(
+            'Gagal terkirim ($error), data disimpan sebagai draft. '
+            'Akan disinkronkan otomatis saat online.',
+          ),
+          backgroundColor: Colors.orange,
         ),
       );
+      Navigator.pop(context, true);
     }
+  }
+
+  Future<void> _enqueueRetry(Map<String, String> fields) async {
+    final fileMap = <String, String>{
+      if (_eyeWashPhoto != null)
+        'items[0][photo_before]': _eyeWashPhoto!.path,
+      if (_emergencyShowerPhoto != null)
+        'items[0][photo_after]': _emergencyShowerPhoto!.path,
+    };
+    await OfflineStorageService.instance.enqueueDraft(
+      endpoint: '/es-ew',
+      method: 'POST',
+      fields: fields,
+      files: fileMap,
+      displayName: 'ES/EW ${esEwText(widget.point['name_point'])}',
+    );
   }
 
   @override

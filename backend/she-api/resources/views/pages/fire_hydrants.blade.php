@@ -305,6 +305,15 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function isAdminRole() {
+    return user.role === 'admin' || user.role === 'super_admin';
+}
+
+function canModify(record) {
+    if (isAdminRole()) return true;
+    return String(record.inspector_id) === String(user.id);
+}
+
 function formatDateOnly(value) {
     if (!value) return '';
     return String(value).slice(0, 10);
@@ -773,9 +782,9 @@ function renderTable() {
                     <button onclick="signItem(${h.id})" ${h.signed_by ? 'disabled' : ''} class="mr-3 font-medium ${h.signed_by ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'}" title="${h.signed_by ? 'Signed by ' + escapeHtml(h.signer?.name || '-') : 'Sign this inspection'}">
                         <i class="fas fa-signature mr-1"></i>${h.signed_by ? 'Signed' : 'Signature'}
                     </button>
-                    <button onclick="deleteItem(${h.id})" class="text-red-600 hover:text-red-800 font-medium">
+                    ${canModify(h) ? `<button onclick="deleteItem(${h.id})" class="text-red-600 hover:text-red-800 font-medium">
                         <i class="fas fa-trash mr-1"></i>Delete
-                    </button>
+                    </button>` : ''}
                 </td>
             </tr>
         `).join('');
@@ -861,6 +870,7 @@ async function showLocationDetail(locationId) {
                 allItems.push({
                     ...item,
                     inspection_id: inspection.id,
+                    inspector_id: inspection.inspector_id,
                     item_index: itemIndex,
                     inspection_date: inspection.inspection_date
                 });
@@ -907,9 +917,9 @@ async function showLocationDetail(locationId) {
                 <td class="px-4 py-3 text-sm text-center">${photoAfter}</td>
                 <td class="px-4 py-3 text-sm text-gray-500">${lastInspection}</td>
                 <td class="px-4 py-3 text-sm text-center">
-                    <a href="/dashboard/fire-hydrants/edit?id=${item.inspection_id}&item=${item.item_index}&location_id=${encodeURIComponent(locationId)}&inspection_id=${item.inspection_id}" class="text-blue-600 hover:text-blue-800 font-medium">
+                    ${canModify(item) ? `<a href="/dashboard/fire-hydrants/edit?id=${item.inspection_id}&item=${item.item_index}&location_id=${encodeURIComponent(locationId)}&inspection_id=${item.inspection_id}" class="text-blue-600 hover:text-blue-800 font-medium">
                         <i class="fas fa-edit mr-1"></i>Edit
-                    </a>
+                    </a>` : '-'}
                 </td>
             </tr>
         `;

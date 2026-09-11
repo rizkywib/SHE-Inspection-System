@@ -67,6 +67,11 @@
     }
     document.getElementById('userName').textContent = user.name || 'User';
 
+    function canModify(inspection) {
+        if (user.role === 'admin' || user.role === 'super_admin') return true;
+        return String(inspection.inspector_id) === String(user.id);
+    }
+
     function escapeHtml(value) {
         const div = document.createElement('div');
         div.textContent = String(value ?? '');
@@ -152,8 +157,8 @@
                     ${photoLink(item.photo_after, 'Foto Sesudah')}
                 </div></td>
                 <td class="px-4 py-4 text-sm whitespace-nowrap">
-                    <a href="/dashboard/fire-extinguishers/${inspection.id}/edit" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</a>
-                    <button type="button" onclick="deleteInspection(${inspection.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>
+                    ${canModify(inspection) ? `<a href="/dashboard/fire-extinguishers/${inspection.id}/edit" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</a>
+                    <button type="button" onclick="deleteInspection(${inspection.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>` : '-'}
                 </td>
             </tr>`).join('');
         } catch (error) {

@@ -30,6 +30,7 @@ void main() {
 
   Widget wrapTestApp({
     ApiService? api,
+    AuthService? auth,
     required Widget home,
     Map<String, WidgetBuilder> routes = const {},
   }) {
@@ -38,7 +39,9 @@ void main() {
         ChangeNotifierProvider<ApiService>.value(
           value: api ?? _FakeApiService(),
         ),
-        ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        ChangeNotifierProvider<AuthService>.value(
+          value: auth ?? _FakeAuthService(),
+        ),
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(
           create: (context) => SyncService(
@@ -611,8 +614,13 @@ void main() {
     });
     final api = _FakeSafetyTalkApiService();
     await tester.pumpWidget(
-      ChangeNotifierProvider<ApiService>.value(
-        value: api,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ApiService>.value(value: api),
+          ChangeNotifierProvider<AuthService>.value(
+            value: _FakeAuthService(),
+          ),
+        ],
         child: const MaterialApp(home: SafetyTalkScreen()),
       ),
     );

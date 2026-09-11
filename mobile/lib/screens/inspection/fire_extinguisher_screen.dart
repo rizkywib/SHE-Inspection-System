@@ -285,17 +285,19 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                         label: const Text('Close'),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          _showEditForm(detail);
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit'),
+                    if (_canModify(detail)) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _showEditForm(detail);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
@@ -592,17 +594,18 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(sheetContext);
-                              _confirmDelete(inspection);
-                            },
-                            icon: const Icon(Icons.delete_outline),
-                            label: const Text('Delete'),
+                        if (_canModify(inspection))
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(sheetContext);
+                                _confirmDelete(inspection);
+                              },
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                        if (_canModify(inspection)) const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () async {
@@ -675,22 +678,63 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                                 return;
                               }
 
-                              final response = await api
-                                  .updateFireExtinguisherWithPhotos(
-                                    id,
-                                    fields,
-                                    photoBefore: newPhotoBefore,
-                                    photoAfter: newPhotoAfter,
+                              Future<void> saveAsDraft() async {
+                                final fileMap = <String, String>{
+                                  if (newPhotoBefore != null)
+                                    'item[photo_before]':
+                                        newPhotoBefore!.path,
+                                  if (newPhotoAfter != null)
+                                    'item[photo_after]': newPhotoAfter!.path,
+                                };
+                                await OfflineStorageService.instance
+                                    .enqueueDraft(
+                                  endpoint: '/fire-extinguishers/$id',
+                                  method: 'PUT',
+                                  fields: fields,
+                                  files: fileMap,
+                                  displayName: 'APAR (edit #$id)',
+                                );
+                              }
+
+                              try {
+                                final response = await api
+                                    .updateFireExtinguisherWithPhotos(
+                                      id,
+                                      fields,
+                                      photoBefore: newPhotoBefore,
+                                      photoAfter: newPhotoAfter,
+                                    );
+                                if (!context.mounted) return;
+                                if (response.containsKey('error')) {
+                                  await saveAsDraft();
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${response['error']}\nData disimpan '
+                                        'sebagai draft, akan disinkronkan otomatis.',
+                                      ),
+                                      backgroundColor: Colors.orange,
+                                    ),
                                   );
-                              if (!context.mounted) return;
-                              if (response.containsKey('error')) {
+                                  didSave = true;
+                                  Navigator.pop(sheetContext);
+                                  return;
+                                }
+                              } catch (_) {
+                                await saveAsDraft();
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text(response['error'].toString()),
-                                    backgroundColor: Colors.red,
+                                  const SnackBar(
+                                    content: Text(
+                                      'Gagal terkirim, data disimpan sebagai '
+                                      'draft. Akan disinkronkan otomatis.',
+                                    ),
+                                    backgroundColor: Colors.orange,
                                   ),
                                 );
+                                didSave = true;
+                                Navigator.pop(sheetContext);
                                 return;
                               }
                               didSave = true;
@@ -723,6 +767,15 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
       setState(() => _isLoading = true);
       await _loadInspections();
     }
+  }
+
+  bool _canModify(Map<String, dynamic> record) {
+    final currentUser = _mapFrom(context.read<AuthService>().user);
+    final role = currentUser['role']?.toString();
+    if (role == 'admin' || role == 'super_admin') return true;
+    final inspectorId = _intValue(record['inspector_id']);
+    final userId = _intValue(currentUser['id']);
+    return inspectorId != null && userId != null && inspectorId == userId;
   }
 
   Future<void> _confirmDelete(Map<String, dynamic> inspection) async {
@@ -823,7 +876,7 @@ class _FireExtinguisherScreenState extends State<FireExtinguisherScreen> {
                                 _dateOnly(inspection['inspection_date']) ?? '',
                             pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(inspection),
-                            onLongPress: isDraft
+                            onLongPress: isDraft || !_canModify(inspection)
                                 ? null
                                 : () => _confirmDelete(inspection),
                           );

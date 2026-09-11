@@ -24,6 +24,7 @@
 <script>
 const token = localStorage.getItem('token');
 const inspectionId = @json($inspectionId);
+let currentUser = {};
 if (!token) window.location.href = '/';
 
 const escapeHtml = value => String(value ?? '-').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
@@ -38,12 +39,8 @@ async function loadDetail() {
         return window.location.href = '/';
     }
     if (profileResponse.ok) {
-        const user = await profileResponse.json();
-        const permissions = Array.isArray(user.permissions) ? user.permissions : [];
-        localStorage.setItem('user', JSON.stringify(user));
-        if (user.role === 'super_admin' || user.role === 'admin') {
-            document.getElementById('editButton').classList.remove('hidden');
-        }
+        currentUser = await profileResponse.json();
+        localStorage.setItem('user', JSON.stringify(currentUser));
     }
 
     const response = await fetch(`/api/safe-work-permit-inspections/${inspectionId}`, {
@@ -58,6 +55,10 @@ async function loadDetail() {
     }
 
     const data = (await response.json()).data;
+    const canModify = currentUser.role === 'super_admin' || currentUser.role === 'admin' || String(data.inspector_id) === String(currentUser.id);
+    if (canModify) {
+        document.getElementById('editButton').classList.remove('hidden');
+    }
     const withFinding = data.finding_status === 'Ada Temuan';
     document.getElementById('detailCard').innerHTML = `
         <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">

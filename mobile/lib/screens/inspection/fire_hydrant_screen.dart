@@ -213,7 +213,7 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                                 _dateOnly(item['inspection_date']) ?? '',
                             pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(item),
-                            onLongPress: isDraft
+                            onLongPress: isDraft || !_canModify(item)
                                 ? null
                                 : () => _confirmDelete(item),
                           );
@@ -286,17 +286,19 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                         label: const Text('Close'),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showInspectionForm(item: detail);
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit'),
+                    if (_canModify(detail)) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _showInspectionForm(item: detail);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
@@ -528,7 +530,7 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        if (isEdit)
+                        if (isEdit && _canModify(item))
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
@@ -539,7 +541,7 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
                               label: const Text('Delete'),
                             ),
                           ),
-                        if (isEdit) const SizedBox(width: 12),
+                        if (isEdit && _canModify(item)) const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () async {
@@ -654,26 +656,58 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
       return true;
     }
 
-    final response = item == null
-        ? await api.createFireHydrantWithPhotos(fields, files)
-        : await api.updateFireHydrantWithPhotos(
-            _intValue(item['id'])!,
-            fields,
-            files,
-          );
+    final id = item == null ? null : _intValue(item['id']);
 
-    if (!mounted) return false;
-    if (response.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response['error'].toString()),
-          backgroundColor: Colors.red,
-        ),
+    Future<void> saveAsDraft() async {
+      final fileMap = <String, String>{
+        for (final entry in files.entries)
+          if (entry.value != null) entry.key: entry.value!.path,
+      };
+      await OfflineStorageService.instance.enqueueDraft(
+        endpoint: id == null ? '/fire-hydrants' : '/fire-hydrants/$id',
+        method: id == null ? 'POST' : 'PUT',
+        fields: fields,
+        files: fileMap,
+        displayName:
+            id == null ? 'Fire Hydrant (baru)' : 'Fire Hydrant (edit #$id)',
       );
-      return false;
     }
 
-    return true;
+    try {
+      final response = item == null
+          ? await api.createFireHydrantWithPhotos(fields, files)
+          : await api.updateFireHydrantWithPhotos(id!, fields, files);
+
+      if (!mounted) return false;
+      if (response.containsKey('error')) {
+        await saveAsDraft();
+        if (!mounted) return false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${response['error']}\nData disimpan sebagai draft, '
+              'akan disinkronkan otomatis.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return true;
+      }
+      return true;
+    } catch (_) {
+      await saveAsDraft();
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal terkirim, data disimpan sebagai draft. '
+            'Akan disinkronkan otomatis.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return true;
+    }
   }
 
   Map<String, String> _hydrantItemFields(
@@ -751,6 +785,15 @@ class _FireHydrantScreenState extends State<FireHydrantScreen> {
   }
 
   String _today() => DateTime.now().toIso8601String().split('T').first;
+
+  bool _canModify(Map<String, dynamic> record) {
+    final currentUser = _mapFrom(context.read<AuthService>().user);
+    final role = currentUser['role']?.toString();
+    if (role == 'admin' || role == 'super_admin') return true;
+    final inspectorId = _intValue(record['inspector_id']);
+    final userId = _intValue(currentUser['id']);
+    return inspectorId != null && userId != null && inspectorId == userId;
+  }
 
   String _locationOption(Map<String, dynamic> location) {
     final id = location['id_location']?.toString() ?? '';

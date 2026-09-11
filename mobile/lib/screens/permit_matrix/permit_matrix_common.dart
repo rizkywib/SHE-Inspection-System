@@ -34,3 +34,14 @@ bool permitHasFinding(Map<String, dynamic> inspection) {
   if (permitText(inspection['finding_status']) == 'Ada Temuan') return true;
   return permitText(inspection['permit_findings']).isNotEmpty;
 }
+
+bool permitCanModify(
+  Map<String, dynamic> inspection,
+  Map<String, dynamic> currentUser,
+) {
+  final role = currentUser['role']?.toString();
+  if (role == 'admin' || role == 'super_admin') return true;
+  final inspectorId = permitInt(inspection['inspector_id']);
+  final userId = permitInt(currentUser['id']);
+  return inspectorId != null && userId != null && inspectorId == userId;
+}

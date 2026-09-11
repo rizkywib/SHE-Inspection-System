@@ -84,6 +84,12 @@ const conditions = [
 
 if (!token) window.location.href = '/';
 
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+function canModify(record) {
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
+    return String(record.inspector_id) === String(user.id);
+}
+
 function escapeHtml(value) {
     return String(value ?? '-').replace(/[&<>"']/g, character => ({
         '&': '&amp;',
@@ -202,12 +208,12 @@ async function loadItemDetail() {
             <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">${escapeHtml(inspectionDate)}</td>
             <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">${escapeHtml(inspectorName)}</td>
             <td class="px-4 py-3 text-sm text-center whitespace-nowrap">
-                <a href="/dashboard/es-ew-inspections/${inspectionId}/items/${item.id}/edit" class="text-blue-600 hover:text-blue-800 font-medium mr-2">
+                ${canModify(data) ? `<a href="/dashboard/es-ew-inspections/${inspectionId}/items/${item.id}/edit" class="text-blue-600 hover:text-blue-800 font-medium mr-2">
                     <i class="fas fa-edit mr-1"></i>Edit
                 </a>
                 <button onclick="deleteItem(${item.id})" class="text-red-600 hover:text-red-800 font-medium">
                     <i class="fas fa-trash-alt mr-1"></i>Delete
-                </button>
+                </button>` : '-'}
             </td>
         </tr>
         `;

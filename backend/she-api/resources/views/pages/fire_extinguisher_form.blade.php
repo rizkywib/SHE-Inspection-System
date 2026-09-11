@@ -242,6 +242,9 @@
             const json = await response.json();
             if (!response.ok) throw new Error(json.message || 'Data inspection tidak ditemukan');
             const inspection = json.data;
+            if (user.role !== 'admin' && user.role !== 'super_admin' && String(inspection.inspector_id) !== String(user.id)) {
+                throw new Error('Anda tidak memiliki izin untuk mengubah data ini.');
+            }
             const item = inspection.items?.[0] || {};
             const matchingPoint = points.find(point =>
                 point.name_point === item.name &&

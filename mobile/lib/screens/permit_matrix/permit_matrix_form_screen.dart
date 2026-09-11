@@ -269,6 +269,11 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canModify = !_isEdit ||
+        permitCanModify(
+          widget.inspection!,
+          permitMap(context.read<AuthService>().user),
+        );
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit Permit Matrix' : 'Tambah Permit Matrix'),
@@ -442,7 +447,7 @@ class _PermitMatrixFormScreenState extends State<PermitMatrixFormScreen> {
                           const SizedBox(height: 24),
                           Row(
                             children: [
-                              if (_isEdit) ...[
+                              if (_isEdit && canModify) ...[
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     key: const ValueKey('permit_delete'),

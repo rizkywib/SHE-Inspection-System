@@ -127,6 +127,11 @@ function boolValue(value) {
     return value === true || value === 1 || value === '1';
 }
 
+function canModifyInspection(record) {
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
+    return String(record.inspector_id) === String(user.id);
+}
+
 async function fetchList(path) {
     try {
         const res = await fetch(`${API_URL}${path}`, {
@@ -400,6 +405,10 @@ async function loadInspection() {
 
         const json = await res.json();
         inspectionData = json.data;
+
+        if (!canModifyInspection(inspectionData)) {
+            throw new Error('Anda tidak memiliki izin untuk mengubah data ini.');
+        }
 
         const items = Array.isArray(inspectionData.items) ? inspectionData.items : [];
         if (itemIndex < 0 || itemIndex >= items.length) {

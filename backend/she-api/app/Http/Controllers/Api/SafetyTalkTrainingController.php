@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Http\Requests\StoreSafetyTalkTrainingRequest;
 use App\Http\Requests\UpdateSafetyTalkTrainingRequest;
 use App\Models\SafetyTalkTraining;
@@ -16,6 +17,8 @@ use Throwable;
 
 class SafetyTalkTrainingController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index(Request $request): JsonResponse
     {
         $query = SafetyTalkTraining::query()
@@ -78,6 +81,11 @@ class SafetyTalkTrainingController extends Controller
     public function update(UpdateSafetyTalkTrainingRequest $request, int $id): JsonResponse
     {
         $training = SafetyTalkTraining::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $training, 'created_by')) {
+            return $forbidden;
+        }
+
         $data = $request->validated();
         unset($data['activity_photo']);
         $newPhotoPath = null;
@@ -110,9 +118,14 @@ class SafetyTalkTrainingController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $training = SafetyTalkTraining::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $training, 'created_by')) {
+            return $forbidden;
+        }
+
         $photoPath = $training->activity_photo_path;
 
         try {

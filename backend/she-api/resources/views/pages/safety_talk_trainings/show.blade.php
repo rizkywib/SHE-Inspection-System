@@ -38,14 +38,15 @@ async function init() {
     const permissions = Array.isArray(user.permissions) ? user.permissions : [];
     const can = permission => user.role === 'super_admin' || permissions.includes(permission);
     if (!can('safety-talk-training.view')) return error('Anda tidak memiliki izin melihat data ini.');
-    if (user.role === 'super_admin' || user.role === 'admin') {
-        document.getElementById('editButton').classList.remove('hidden');
-        document.getElementById('deleteButton').classList.remove('hidden');
-    }
 
     const response = await fetch(`/api/safety-talk-trainings/${trainingId}`, {headers});
     if (!response.ok) return error('Data Safety Talk tidak ditemukan.');
     const data = (await response.json()).data;
+    const canModify = user.role === 'super_admin' || user.role === 'admin' || String(data.created_by) === String(user.id);
+    if (canModify) {
+        document.getElementById('editButton').classList.remove('hidden');
+        document.getElementById('deleteButton').classList.remove('hidden');
+    }
     document.getElementById('detailCard').innerHTML = `
         <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             ${item('Pembicara', data.speaker?.name || data.legacy_speaker?.name)}

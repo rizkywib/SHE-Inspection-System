@@ -101,6 +101,7 @@
 
 <script>
 const token = localStorage.getItem('token');
+const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 const inspectionId = @json($inspectionId);
 const itemId = @json($itemId);
 const mode = @json($mode);
@@ -112,6 +113,8 @@ const headers = {
 let points = [];
 
 if (!token) window.location.href = '/';
+
+const canModifyHeader = record => currentUser.role === 'admin' || currentUser.role === 'super_admin' || String(record.inspector_id) === String(currentUser.id);
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -205,6 +208,12 @@ async function init() {
     const master = await masterResponse.json();
     const inspection = (await inspectionResponse.json()).data;
     points = Array.isArray(master.points) ? master.points : [];
+
+    if (!canModifyHeader(inspection)) {
+        showMessage('Anda tidak memiliki izin untuk mengubah data ini.');
+        document.getElementById('itemForm').classList.add('hidden');
+        return;
+    }
 
     document.getElementById('point_id').insertAdjacentHTML('beforeend', points.map(point =>
         `<option value="${point.id}">${escapeHtml(point.name_point)}</option>`

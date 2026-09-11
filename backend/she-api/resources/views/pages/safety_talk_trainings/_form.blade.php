@@ -116,12 +116,7 @@ async function initForm() {
     const user = await profileResponse.json();
     const permissions = Array.isArray(user.permissions) ? user.permissions : [];
     const needed = mode === 'create' ? 'safety-talk-training.create' : null;
-    if (mode === 'edit') {
-        if (user.role !== 'super_admin' && user.role !== 'admin') {
-            document.getElementById('trainingForm').classList.add('hidden');
-            return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
-        }
-    } else if (user.role !== 'super_admin' && !permissions.includes(needed)) {
+    if (mode === 'create' && user.role !== 'super_admin' && !permissions.includes(needed)) {
         document.getElementById('trainingForm').classList.add('hidden');
         return showMessage('Anda tidak memiliki izin untuk tindakan ini.');
     }
@@ -136,7 +131,13 @@ async function initForm() {
     if (mode === 'edit') {
         const response = await fetch(`/api/safety-talk-trainings/${trainingId}`, {headers: authHeaders});
         if (!response.ok) return showMessage('Data Safety Talk tidak dapat dimuat.');
-        fillForm((await response.json()).data);
+        const data = (await response.json()).data;
+        const isAdmin = user.role === 'super_admin' || user.role === 'admin';
+        if (!isAdmin && String(data.created_by) !== String(user.id)) {
+            document.getElementById('trainingForm').classList.add('hidden');
+            return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
+        }
+        fillForm(data);
     }
 }
 

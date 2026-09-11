@@ -95,6 +95,7 @@ let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 let permissions = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
 const can = permission => currentUser.role === 'super_admin' || permissions.includes(permission);
 const isAdmin = () => currentUser.role === 'super_admin' || currentUser.role === 'admin';
+const canModify = record => isAdmin() || String(record.inspector_id) === String(currentUser.id);
 let masterData = {};
 
 if (!token) window.location.href = '/';
@@ -178,8 +179,8 @@ function renderTable(result) {
         body.innerHTML = result.data.map((row, index) => {
             const actions = [
                 can('safe-work-permit-inspection.view') ? `<a href="/dashboard/permit-matrix/${row.id}" class="text-blue-600 hover:text-blue-800" title="Detail"><i class="fas fa-eye"></i></a>` : '',
-                isAdmin() ? `<a href="/dashboard/permit-matrix/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
-                isAdmin() ? `<button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
+                canModify(row) ? `<a href="/dashboard/permit-matrix/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
+                canModify(row) ? `<button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
             ].join('');
             const withFinding = row.finding_status === 'Ada Temuan';
             return `<tr class="hover:bg-gray-50">

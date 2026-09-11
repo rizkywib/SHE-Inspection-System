@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Models\FireAlarmInspection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 
 class FireAlarmController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index(Request $request)
     {
         $data = FireAlarmInspection::with(['inspector', 'location', 'area'])
@@ -85,6 +88,10 @@ class FireAlarmController extends Controller
     {
         $inspection = FireAlarmInspection::findOrFail($id);
 
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
             'alarm_number' => 'nullable|string|max:200',
@@ -113,6 +120,10 @@ class FireAlarmController extends Controller
     public function update(Request $request, $id)
     {
         $inspection = FireAlarmInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
 
         $validator = Validator::make($request->all(), [
             'reference_no' => 'nullable|string|max:40|unique:fire_alarm_inspections,reference_no,' . $id,
@@ -258,9 +269,14 @@ class FireAlarmController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $inspection = FireAlarmInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $inspection->delete();
 
         return response()->json(['message' => 'Deleted successfully']);

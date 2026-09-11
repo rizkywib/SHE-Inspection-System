@@ -79,6 +79,7 @@ let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 let permissions = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
 const can = permission => currentUser.role === 'super_admin' || permissions.includes(permission);
 const isAdmin = () => currentUser.role === 'super_admin' || currentUser.role === 'admin';
+const canModify = record => isAdmin() || String(record.created_by) === String(currentUser.id);
 const authHeaders = {'Authorization': `Bearer ${token}`, 'Accept': 'application/json'};
 const params = new URLSearchParams(window.location.search);
 if (!token) window.location.href = '/';
@@ -144,8 +145,8 @@ function renderTable(result) {
         body.innerHTML = result.data.map((row, index) => {
             const actions = [
                 `<a href="/dashboard/safety-talk-trainings/${row.id}" class="text-blue-600 hover:text-blue-800" title="Lihat"><i class="fas fa-eye"></i></a>`,
-                isAdmin() ? `<a href="/dashboard/safety-talk-trainings/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
-                isAdmin() ? `<button onclick="removeTraining(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
+                canModify(row) ? `<a href="/dashboard/safety-talk-trainings/${row.id}/edit" class="text-amber-600 hover:text-amber-800" title="Edit"><i class="fas fa-edit"></i></a>` : '',
+                canModify(row) ? `<button onclick="removeTraining(${row.id})" class="text-red-600 hover:text-red-800" title="Hapus"><i class="fas fa-trash"></i></button>` : '',
             ].join('');
             const topic = row.topic.length > 80 ? `${row.topic.slice(0, 80)}…` : row.topic;
             return `<tr class="hover:bg-gray-50">

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import 'safety_talk_common.dart';
 
 class SafetyTalkFormScreen extends StatefulWidget {
@@ -324,6 +325,11 @@ class _SafetyTalkFormScreenState extends State<SafetyTalkFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canModify = !_isEdit ||
+        safetyTalkCanModify(
+          widget.training!,
+          safetyTalkMap(context.read<AuthService>().user),
+        );
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -501,7 +507,7 @@ class _SafetyTalkFormScreenState extends State<SafetyTalkFormScreen> {
                           const SizedBox(height: 24),
                           Row(
                             children: [
-                              if (_isEdit) ...[
+                              if (_isEdit && canModify) ...[
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     key: const ValueKey('safety_delete'),

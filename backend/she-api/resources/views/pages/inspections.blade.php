@@ -223,6 +223,11 @@ if (!token) {
     document.getElementById('userName').textContent = currentUser.name || 'User';
 }
 
+function canModify(record) {
+    if (currentUser.role === 'admin' || currentUser.role === 'super_admin') return true;
+    return String(record.reporter_id) === String(currentUser.id);
+}
+
 function setCurrentDateTime() {
     const now = new Date();
     const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
@@ -390,12 +395,12 @@ function renderTable() {
                         <button type="button" onclick="viewInspection(${Number(item.id)})" class="text-sky-600 hover:text-sky-800 mr-3" title="Lihat">
                             <i class="fas fa-eye mr-1"></i>Lihat
                         </button>
-                        <button type="button" onclick="editInspection(${Number(item.id)})" class="text-blue-600 hover:text-blue-800 mr-3" title="Edit">
+                        ${canModify(item) ? `<button type="button" onclick="editInspection(${Number(item.id)})" class="text-blue-600 hover:text-blue-800 mr-3" title="Edit">
                             <i class="fas fa-edit mr-1"></i>Edit
                         </button>
                         <button type="button" onclick="deleteInspection(${Number(item.id)})" class="text-red-600 hover:text-red-800" title="Hapus">
                             <i class="fas fa-trash mr-1"></i>Hapus
-                        </button>
+                        </button>` : ''}
                     </td>
                 </tr>`;
         }).join('');

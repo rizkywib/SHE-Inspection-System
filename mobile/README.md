@@ -14,6 +14,7 @@ A Flutter-based Android mobile application for Safety, Health, and Environment (
 - **Safety Talk / Training** - On-site safety talk / training activity form and list
 - **Checklist Inspection** - Custom checklist-based inspections by category
 - **Inspection / Incident** - Report inspections/incidents with "Foto Temuan Awal" (mandatory) and "Perbaikan" (optional) photos; edit is only available to the creator and admin/super admin
+- **Offline Mode & Auto Sync** - Inspections (Hydrant, Fire Extinguisher, ES/EW, and Inspection/incident) can be saved as local drafts when offline. Drafts are automatically sent to the server when the connection returns, when the app starts, and when the dashboard is refreshed. If an online save fails (network error or server error), the data is automatically queued as a draft so it is never lost. Each item shows a save-status badge ("Menunggu sinkronisasi" while pending)
 - **QR Code Scanner** - Scan asset QR codes to quickly open inspection forms
 - **GPS Check-In** - Verify on-site presence with geolocation during inspections
 - **Master Data** - Manage points, locations, users, incident types, and ES&EW areas from the app
@@ -30,6 +31,8 @@ A Flutter-based Android mobile application for Safety, Health, and Environment (
 - **Cached Network Image** - Image caching
 - **Flutter SVG** - SVG rendering
 - **Intl** - Internationalization and date formatting
+- **Hive** - Local storage for offline master-data cache and pending draft queue
+- **Connectivity Plus** - Real-time network/connectivity status detection
 
 ## Prerequisites
 
@@ -43,8 +46,20 @@ A Flutter-based Android mobile application for Safety, Health, and Environment (
 # Install dependencies
 flutter pub get
 
+# Analyze and test
+flutter analyze
+flutter test
+
 # Run the app
 flutter run
+```
+
+## Test
+
+Basic widget/unit tests live in `test/`. Run them with:
+
+```bash
+flutter test
 ```
 
 ## Configuration
@@ -55,11 +70,18 @@ Default API endpoint is defined in `lib/services/api_service.dart`:
 http://172.16.16.51:83/api
 ```
 
+`ApiService` also implements a fallback base-URL candidate list so that if the
+default host is unreachable it attempts alternate candidates before failing.
+
 Override at build/run time with:
 
 ```bash
 flutter run --dart-define=API_URL=http://localhost:8000/api
 ```
+
+> Note: on the Android emulator `localhost` refers to the emulator itself, not
+> the host machine. Use the host's LAN address or `adb reverse tcp:8000 tcp:8000`
+> when running against a local backend.
 
 ## Project Structure
 
@@ -75,15 +97,13 @@ mobile/
 │   │   ├── permit_matrix/     # Permit Matrix modules
 │   │   ├── safety_talk/       # Safety Talk / Training modules
 │   │   └── master_data/       # Master data management
-│   ├── services/              # ApiService and AuthService
+│   ├── services/              # ApiService, AuthService, ConnectivityService, SyncService, OfflineStorageService
 │   └── theme/                 # Theme and colors
 ├── test/                      # Unit and widget tests
 └── pubspec.yaml               # Dependencies and assets
 ```
 
-## Backend API
-
-See [`../api-contract.md`](../api-contract.md) for the API contract.
+## Backend API reference
 
 Base URL:
 ```
@@ -94,6 +114,11 @@ Authentication uses Bearer tokens:
 ```
 Authorization: Bearer <token>
 ```
+
+See [`../backend/api-contract.md`](../backend/api-contract.md) for the API contract,
+and [`../backend/she-api/routes/api.php`](../backend/she-api/routes/api.php) as the
+source of truth for actual routes. See [`../README.md`](../README.md) for the full
+project overview.
 
 ## Supported Operations
 
@@ -107,6 +132,7 @@ Authorization: Bearer <token>
 - GPS check-in for inspection sites
 - Digital signature capture
 - Master data management
+- Offline inspection drafts with automatic synchronization (auto-sync on reconnect, app start, dashboard refresh, and returning to the dashboard)
 
 ## License
 

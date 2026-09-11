@@ -13,6 +13,14 @@ import '../../widgets/save_status_badge.dart';
 import 'es_ew_common.dart';
 import 'es_ew_create_flow.dart';
 
+bool esEwCanModify(Map<String, dynamic> record, Map<String, dynamic> currentUser) {
+  final role = currentUser['role']?.toString();
+  if (role == 'admin' || role == 'super_admin') return true;
+  final inspectorId = esEwInt(record['inspector_id']);
+  final userId = esEwInt(currentUser['id']);
+  return inspectorId != null && userId != null && inspectorId == userId;
+}
+
 class EsEwScreen extends StatefulWidget {
   const EsEwScreen({super.key, this.initialId});
 
@@ -190,6 +198,10 @@ class _EsEwScreenState extends State<EsEwScreen> {
   }
 
   void _openDetailSheet(Map<String, dynamic> detail) {
+    final canModify = esEwCanModify(
+      detail,
+      esEwMap(context.read<AuthService>().user),
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -247,17 +259,19 @@ class _EsEwScreenState extends State<EsEwScreen> {
                         label: const Text('Close'),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          _openEdit(detail);
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit'),
+                    if (canModify) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _openEdit(detail);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
@@ -387,7 +401,11 @@ class _EsEwScreenState extends State<EsEwScreen> {
                                 _dateOnly(inspection['inspection_date']),
                             pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(inspection),
-                            onLongPress: isDraft
+                            onLongPress: isDraft ||
+                                    !esEwCanModify(
+                                      inspection,
+                                      esEwMap(context.read<AuthService>().user),
+                                    )
                                 ? null
                                 : () => _confirmDelete(inspection),
                           );
@@ -543,26 +561,53 @@ class _EsEwEditScreenState extends State<EsEwEditScreen> {
           );
       if (!mounted) return;
       if (response.containsKey('error')) {
+        await _enqueueRetry(fields, id);
+        if (!mounted) return;
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['error'].toString()),
-            backgroundColor: Colors.red,
+            content: Text(
+              '${response['error']}\nData disimpan sebagai draft, '
+              'akan disinkronkan otomatis.',
+            ),
+            backgroundColor: Colors.orange,
           ),
         );
+        Navigator.pop(context, 'saved');
         return;
       }
       Navigator.pop(context, 'saved');
-    } catch (error) {
+    } catch (_) {
+      await _enqueueRetry(fields, id);
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memperbarui inspeksi: $error'),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Text(
+            'Gagal terkirim, data disimpan sebagai draft. '
+            'Akan disinkronkan otomatis.',
+          ),
+          backgroundColor: Colors.orange,
         ),
       );
+      Navigator.pop(context, 'saved');
     }
+  }
+
+  Future<void> _enqueueRetry(Map<String, String> fields, int id) async {
+    final fileMap = <String, String>{
+      if (_eyeWashPhoto != null)
+        'items[0][photo_before]': _eyeWashPhoto!.path,
+      if (_emergencyShowerPhoto != null)
+        'items[0][photo_after]': _emergencyShowerPhoto!.path,
+    };
+    await OfflineStorageService.instance.enqueueDraft(
+      endpoint: '/es-ew/$id',
+      method: 'PUT',
+      fields: fields,
+      files: fileMap,
+      displayName: 'ES/EW (edit #$id)',
+    );
   }
 
   Future<void> _delete() async {
@@ -602,6 +647,10 @@ class _EsEwEditScreenState extends State<EsEwEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canModify = esEwCanModify(
+      widget.inspection,
+      esEwMap(context.read<AuthService>().user),
+    );
     final selectedPoint = _selectedPoint;
     final inspector = _relationName(
       widget.inspection['inspector'],
@@ -737,14 +786,15 @@ class _EsEwEditScreenState extends State<EsEwEditScreen> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isSaving ? null : _delete,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete'),
+                  if (canModify)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isSaving ? null : _delete,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Delete'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                  if (canModify) const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _isSaving ? null : _save,

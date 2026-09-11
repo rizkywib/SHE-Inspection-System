@@ -51,6 +51,8 @@
 </div>
 <script>
 const token = localStorage.getItem('token');
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+const canModify = row => user.role === 'admin' || user.role === 'super_admin' || String(row.inspector_id) === String(user.id);
 const headers = {'Authorization': `Bearer ${token}`, 'Accept': 'application/json'};
 const params = new URLSearchParams(window.location.search);
 if (!token) window.location.href = '/';
@@ -94,9 +96,9 @@ function render(result) {
                 <button onclick="signInspection(${row.id})" ${row.signed_by ? 'disabled' : ''} class="${row.signed_by ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'} font-medium" title="${row.signed_by ? `Signed by ${escapeHtml(row.signer?.name || '-')}` : 'Sign this inspection'}">
                     <i class="fas fa-signature mr-1"></i>${row.signed_by ? 'Signed' : 'Signature'}
                 </button>
-                <button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800 font-medium" title="Delete">
+                ${canModify(row) ? `<button onclick="removeInspection(${row.id})" class="text-red-600 hover:text-red-800 font-medium" title="Delete">
                     <i class="fas fa-trash mr-1"></i>Delete
-                </button>
+                </button>` : ''}
             </div>
         </td>
     </tr>`).join('');

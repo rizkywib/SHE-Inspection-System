@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesOwnerOrAdmin;
 use App\Http\Requests\StoreSafeWorkPermitInspectionRequest;
 use App\Http\Requests\UpdateSafeWorkPermitInspectionRequest;
 use App\Models\PermitMainArea;
@@ -18,6 +19,8 @@ use Illuminate\Http\Request;
 
 class SafeWorkPermitInspectionController extends Controller
 {
+    use AuthorizesOwnerOrAdmin;
+
     public function index(Request $request): JsonResponse
     {
         $query = SafeWorkPermitInspection::query()
@@ -79,6 +82,11 @@ class SafeWorkPermitInspectionController extends Controller
     public function update(UpdateSafeWorkPermitInspectionRequest $request, int $id): JsonResponse
     {
         $inspection = SafeWorkPermitInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
         $inspection->update($request->validated());
 
         return response()->json([
@@ -87,9 +95,15 @@ class SafeWorkPermitInspectionController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        SafeWorkPermitInspection::findOrFail($id)->delete();
+        $inspection = SafeWorkPermitInspection::findOrFail($id);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
+        $inspection->delete();
 
         return response()->json(['message' => 'Data Permit Matrix berhasil dihapus.']);
     }

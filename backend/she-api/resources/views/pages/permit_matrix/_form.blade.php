@@ -155,16 +155,13 @@ function showErrors(errors) {
 }
 
 async function initForm() {
+    let currentUser = {};
     if (mode === 'edit') {
         const profileResponse = await fetch('/api/auth/me', {headers: authHeaders});
         if (profileResponse.status === 401) return window.location.href = '/';
         if (!profileResponse.ok) return showMessage('Profil pengguna gagal dimuat.');
-        const user = await profileResponse.json();
-        if (user.role !== 'super_admin' && user.role !== 'admin') {
-            document.getElementById('permitForm').classList.add('hidden');
-            return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
-        }
-        localStorage.setItem('user', JSON.stringify(user));
+        currentUser = await profileResponse.json();
+        localStorage.setItem('user', JSON.stringify(currentUser));
     }
 
     const masterResponse = await fetch('/api/safe-work-permit-inspections/master-data', {headers: authHeaders});
@@ -184,7 +181,13 @@ async function initForm() {
     if (mode === 'edit') {
         const response = await fetch(`/api/safe-work-permit-inspections/${inspectionId}`, {headers: authHeaders});
         if (!response.ok) return showMessage('Data Permit Matrix tidak dapat dimuat.');
-        fillForm((await response.json()).data);
+        const data = (await response.json()).data;
+        const isAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
+        if (!isAdmin && String(data.inspector_id) !== String(currentUser.id)) {
+            document.getElementById('permitForm').classList.add('hidden');
+            return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
+        }
+        fillForm(data);
     }
 }
 

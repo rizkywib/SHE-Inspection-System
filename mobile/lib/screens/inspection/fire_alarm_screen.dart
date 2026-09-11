@@ -213,7 +213,7 @@ class _FireAlarmScreenState extends State<FireAlarmScreen> {
                                 _dateOnly(item['inspection_date']) ?? '',
                             pendingSync: isDraft,
                             onTap: () => _showInspectionDetail(item),
-                            onLongPress: isDraft
+                            onLongPress: isDraft || !_canModify(item)
                                 ? null
                                 : () => _confirmDelete(item),
                           );
@@ -286,17 +286,19 @@ class _FireAlarmScreenState extends State<FireAlarmScreen> {
                         label: const Text('Close'),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showInspectionForm(item: detail);
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit'),
+                    if (_canModify(detail)) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _showInspectionForm(item: detail);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
@@ -521,7 +523,7 @@ class _FireAlarmScreenState extends State<FireAlarmScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        if (isEdit)
+                        if (isEdit && _canModify(item))
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
@@ -532,7 +534,7 @@ class _FireAlarmScreenState extends State<FireAlarmScreen> {
                               label: const Text('Delete'),
                             ),
                           ),
-                        if (isEdit) const SizedBox(width: 12),
+                        if (isEdit && _canModify(item)) const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () async {
@@ -716,6 +718,15 @@ class _FireAlarmScreenState extends State<FireAlarmScreen> {
       'items[$index][photo_before]': form.newPhotoBefore,
       'items[$index][photo_after]': form.newPhotoAfter,
     };
+  }
+
+  bool _canModify(Map<String, dynamic> record) {
+    final currentUser = _mapFrom(context.read<AuthService>().user);
+    final role = currentUser['role']?.toString();
+    if (role == 'admin' || role == 'super_admin') return true;
+    final inspectorId = _intValue(record['inspector_id']);
+    final userId = _intValue(currentUser['id']);
+    return inspectorId != null && userId != null && inspectorId == userId;
   }
 
   Future<void> _confirmDelete(Map<String, dynamic> item) async {

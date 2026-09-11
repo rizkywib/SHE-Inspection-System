@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -47,8 +46,8 @@ class _FireExtinguisherCreateScreenState
       if (connectivity.isOnline) {
         locations =
             await context.read<ApiService>().getFireExtinguisherLocations();
-        unawaited(OfflineStorageService.instance
-            .saveCache('extinguisher_locations', locations));
+        await OfflineStorageService.instance
+            .saveCache('extinguisher_locations', locations);
       } else {
         locations = await OfflineStorageService.instance
                 .readCache('extinguisher_locations') ??
@@ -223,25 +222,18 @@ class _FireExtinguisherQrScannerScreenState
     _loadPointsAndStart();
   }
 
-Future<void> _loadPointsAndStart() async {
+  Future<void> _loadPointsAndStart() async {
     try {
       final connectivity = context.read<ConnectivityService>();
       List<dynamic> points;
       if (connectivity.isOnline) {
         points = await context.read<ApiService>().getPoints();
-        unawaited(OfflineStorageService.instance.saveCache('points', points));
+        // Perbarui cache agar QR scan tetap berfungsi saat offline.
+        await OfflineStorageService.instance.saveCache('points', points);
       } else {
-        points = await OfflineStorageService.instance.readCache('points') ?? [];
-      }
-      if (!mounted) return;
-      if (!connectivity.isOnline && points.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _error = 'Mode offline: data titik belum di-cache. '
-              'Hubungkan ke internet lalu buka aplikasi sekali '
-              'agar data QR Code tersimpan lokal.';
-        });
-        return;
+        // Offline: gunakan cache master data.
+        points =
+            await OfflineStorageService.instance.readCache('points') ?? [];
       }
       final extinguisherPoints = points
           .map(_asMap)
@@ -484,6 +476,7 @@ class _FireExtinguisherQrFormScreenState
     extends State<FireExtinguisherQrFormScreen> {
   final ImagePicker _picker = ImagePicker();
   late final TextEditingController _remarkController;
+  late final TextEditingController _expiryDateController;
   bool _pressureCondition = true;
   bool _sealCondition = true;
   bool _nozzleCondition = true;
@@ -500,12 +493,28 @@ class _FireExtinguisherQrFormScreenState
   void initState() {
     super.initState();
     _remarkController = TextEditingController();
+    _expiryDateController = TextEditingController();
   }
 
   @override
   void dispose() {
     _remarkController.dispose();
+    _expiryDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickExpiryDate() async {
+    final current = DateTime.tryParse(_expiryDateController.text) ??
+        DateTime(DateTime.now().year + 1);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      _expiryDateController.text = picked.toIso8601String().split('T').first;
+    }
   }
 
   Future<void> _pickPhoto(bool isBefore) async {
@@ -548,6 +557,7 @@ class _FireExtinguisherQrFormScreenState
       'item[seal_condition]': _sealCondition ? '1' : '0',
       'item[nozzle_condition]': _nozzleCondition ? '1' : '0',
       'item[remark]': _nullIfEmpty(_remarkController.text) ?? '',
+      'item[expiry_date]': _nullIfEmpty(_expiryDateController.text) ?? '',
     };
 
     try {
@@ -707,6 +717,16 @@ class _FireExtinguisherQrFormScreenState
                       value: _nozzleCondition,
                       onChanged: (value) =>
                           setState(() => _nozzleCondition = value),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _expiryDateController,
+                      readOnly: true,
+                      onTap: _pickExpiryDate,
+                      decoration: const InputDecoration(
+                        labelText: 'Expiry Date',
+                        prefixIcon: Icon(Icons.event_outlined),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(

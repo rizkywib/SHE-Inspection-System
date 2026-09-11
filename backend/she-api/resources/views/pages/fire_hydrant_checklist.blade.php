@@ -98,6 +98,11 @@ function canPreviewImage(path) {
     return !/\.(heic|heif)$/i.test(String(path || '').split('?')[0]);
 }
 
+function canModify(record) {
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
+    return String(record.inspector_id) === String(user.id);
+}
+
 async function loadLocations() {
     locations = await fetchList('/fire-hydrant-locations');
 }
@@ -147,6 +152,7 @@ async function loadChecklist() {
             allItems.push({
                 ...item,
                 inspection_id: targetInspection.id,
+                inspector_id: targetInspection.inspector_id,
                 inspection_date: targetInspection.inspection_date
             });
         });
@@ -191,12 +197,12 @@ async function loadChecklist() {
                 <td class="px-4 py-3 text-sm text-center">${photoAfter}</td>
                 <td class="px-4 py-3 text-sm text-gray-500">${lastInspection}</td>
                 <td class="px-4 py-3 text-sm text-center">
-                    <a href="/dashboard/fire-hydrants/edit?id=${item.inspection_id}&item=${index}&location_id=${encodeURIComponent(locationId)}&inspection_id=${item.inspection_id}" class="text-blue-600 hover:text-blue-800 font-medium mr-2">
+                    ${canModify(item) ? `<a href="/dashboard/fire-hydrants/edit?id=${item.inspection_id}&item=${index}&location_id=${encodeURIComponent(locationId)}&inspection_id=${item.inspection_id}" class="text-blue-600 hover:text-blue-800 font-medium mr-2">
                         <i class="fas fa-edit mr-1"></i>Edit
                     </a>
                     <button onclick="confirmDeleteItem(${item.inspection_id}, ${index})" class="text-red-600 hover:text-red-800 font-medium">
                         <i class="fas fa-trash-alt mr-1"></i>Delete
-                    </button>
+                    </button>` : '-'}
                 </td>
             </tr>
         `;

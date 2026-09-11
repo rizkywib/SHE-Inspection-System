@@ -89,6 +89,11 @@
     }
     document.getElementById('userName').textContent = user.name || 'User';
 
+    function canModify(record) {
+        if (user.role === 'admin' || user.role === 'super_admin') return true;
+        return String(record.inspector_id) === String(user.id);
+    }
+
     function escapeHtml(value) {
         const div = document.createElement('div');
         div.textContent = String(value ?? '');
@@ -204,9 +209,9 @@
                         <button onclick="signItem(${inspection.id})" ${inspection.signed_at ? 'disabled' : ''} class="mr-3 font-medium ${inspection.signed_at ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'}">
                             <i class="fas fa-signature mr-1"></i>${inspection.signed_at ? 'Signed' : 'Signature'}
                         </button>
-                        <button onclick="deleteItem(${inspection.id})" class="text-red-600 hover:text-red-800 font-medium">
+                        ${canModify(inspection) ? `<button onclick="deleteItem(${inspection.id})" class="text-red-600 hover:text-red-800 font-medium">
                             <i class="fas fa-trash mr-1"></i>Delete
-                        </button>
+                        </button>` : ''}
                     </td>
                 </tr>`;
             }).join('')).join('');

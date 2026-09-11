@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import 'permit_matrix_common.dart';
 import 'permit_matrix_form_screen.dart';
 
@@ -121,6 +122,10 @@ class _PermitMatrixScreenState extends State<PermitMatrixScreen> {
   }
 
   void _openDetailSheet(Map<String, dynamic> detail) {
+    final canModify = permitCanModify(
+      detail,
+      permitMap(context.read<AuthService>().user),
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -208,17 +213,19 @@ class _PermitMatrixScreenState extends State<PermitMatrixScreen> {
                         label: const Text('Tutup'),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          _openForm(detail);
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit'),
+                    if (canModify) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _openForm(detail);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
@@ -357,7 +364,13 @@ class _PermitMatrixScreenState extends State<PermitMatrixScreen> {
                                   return _PermitCard(
                                     row: row,
                                     onTap: () => _showDetail(row),
-                                    onLongPress: () => _confirmDelete(row),
+                                    onLongPress: permitCanModify(
+                                      row,
+                                      permitMap(
+                                          context.read<AuthService>().user),
+                                    )
+                                        ? () => _confirmDelete(row)
+                                        : null,
                                   );
                                 },
                               ),
@@ -378,7 +391,7 @@ class _PermitCard extends StatelessWidget {
 
   final Map<String, dynamic> row;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {

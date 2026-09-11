@@ -82,6 +82,11 @@ let itemSeq = 0;
 if (!token) window.location.href = '/';
 document.getElementById('userName').textContent = user.name || 'User';
 
+function canModify(record) {
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
+    return String(record.inspector_id) === String(user.id);
+}
+
 function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
@@ -180,7 +185,7 @@ async function loadAlarms() {
         tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inspections found</td></tr>';
         return;
     }
-    tbody.innerHTML = alarms.map((a, i) => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${i + 1}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium"><a href="/dashboard/fire-alarms/${a.id}/items" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml((a.location && a.location.name) || (a.area && a.area.name) || '-')}</a></td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(a.inspection_date))}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml((a.inspector && a.inspector.name) || '-')}</td><td class="px-6 py-4 text-sm"><button onclick="exportItem(${a.id})" class="text-green-600 hover:text-green-800 mr-3 font-medium"><i class="fas fa-file-excel mr-1"></i>Export</button><button onclick="printItem(${a.id})" class="text-purple-600 hover:text-purple-800 mr-3 font-medium"><i class="fas fa-print mr-1"></i>Print</button><button onclick="editItem(${a.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${a.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button></td></tr>`).join('');
+    tbody.innerHTML = alarms.map((a, i) => `<tr class="hover:bg-gray-50 transition"><td class="px-6 py-4 text-sm text-gray-900">${i + 1}</td><td class="px-6 py-4 text-sm text-gray-900 font-medium"><a href="/dashboard/fire-alarms/${a.id}/items" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">${escapeHtml((a.location && a.location.name) || (a.area && a.area.name) || '-')}</a></td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(formatDateOnly(a.inspection_date))}</td><td class="px-6 py-4 text-sm text-gray-500">${escapeHtml((a.inspector && a.inspector.name) || '-')}</td><td class="px-6 py-4 text-sm"><button onclick="exportItem(${a.id})" class="text-green-600 hover:text-green-800 mr-3 font-medium"><i class="fas fa-file-excel mr-1"></i>Export</button><button onclick="printItem(${a.id})" class="text-purple-600 hover:text-purple-800 mr-3 font-medium"><i class="fas fa-print mr-1"></i>Print</button>${canModify(a) ? `<button onclick="editItem(${a.id})" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="deleteItem(${a.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>` : ''}</td></tr>`).join('');
 }
 function openForm() {
     document.getElementById('formCard').classList.remove('hidden');

@@ -77,9 +77,11 @@
 
 <script>
 const token=localStorage.getItem('token');
+const currentUser=JSON.parse(localStorage.getItem('user')||'{}');
 const mode=@json($mode),inspectionId=@json($inspectionId),conditionFields=@json($conditions);
 const headers={'Authorization':`Bearer ${token}`,'Accept':'application/json'};
 if(!token)window.location.href='/';
+const canModify=record=>currentUser.role==='admin'||currentUser.role==='super_admin'||String(record.inspector_id)===String(currentUser.id);
 let points=[];
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const photoUrl=value=>value?`/${String(value).replace(/^\/+/,'')}`:'';
@@ -118,6 +120,7 @@ async function init(){
     }
     const response=await fetch(`/api/es-ew/${inspectionId}`,{headers});if(!response.ok)return message('Inspection tidak ditemukan.');
     const data=(await response.json()).data,item=data.items[0]||{};
+    if(!canModify(data)){document.getElementById('inspectionForm').classList.add('hidden');return message('Anda tidak memiliki izin untuk mengubah data ini.');}
     ['inspection_date','area_id','inspector_id'].forEach(field=>document.getElementById(field).value=data[field]??'');
     const selectedPoint=points.find(point=>point.name_point===item.name&&String(point.ket1??'')===String(item.type??'')&&String(point.ket2??'')===String(item.location_detail??''))||points.find(point=>point.name_point===item.name);
     document.getElementById('point_id').value=selectedPoint?.id||'';

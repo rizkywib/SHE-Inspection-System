@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import 'safety_talk_common.dart';
 import 'safety_talk_form_screen.dart';
 
@@ -136,6 +137,10 @@ class _SafetyTalkScreenState extends State<SafetyTalkScreen> {
   }
 
   void _openDetailSheet(Map<String, dynamic> row) {
+    final canModify = safetyTalkCanModify(
+      row,
+      safetyTalkMap(context.read<AuthService>().user),
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -243,34 +248,35 @@ class _SafetyTalkScreenState extends State<SafetyTalkScreen> {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          _confirmDelete(row);
-                        },
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Hapus'),
+              if (canModify)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _confirmDelete(row);
+                          },
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Hapus'),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          _openForm(row);
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _openForm(row);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit'),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -514,7 +520,12 @@ class _SafetyTalkScreenState extends State<SafetyTalkScreen> {
                               number: entry.$1 + 1,
                               training: entry.$2,
                               onTap: () => _showDetail(entry.$2),
-                              onLongPress: () => _confirmDelete(entry.$2),
+                              onLongPress: safetyTalkCanModify(
+                                entry.$2,
+                                safetyTalkMap(context.read<AuthService>().user),
+                              )
+                                  ? () => _confirmDelete(entry.$2)
+                                  : null,
                             );
                           }),
                       ],
@@ -542,7 +553,7 @@ class _TrainingCard extends StatelessWidget {
   final int number;
   final Map<String, dynamic> training;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
