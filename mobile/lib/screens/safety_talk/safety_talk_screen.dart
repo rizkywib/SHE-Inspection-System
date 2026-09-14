@@ -137,10 +137,8 @@ class _SafetyTalkScreenState extends State<SafetyTalkScreen> {
   }
 
   void _openDetailSheet(Map<String, dynamic> row) {
-    final canModify = safetyTalkCanModify(
-      row,
-      safetyTalkMap(context.read<AuthService>().user),
-    );
+    final canModify =
+        safetyTalkCanModify(safetyTalkMap(context.read<AuthService>().user));
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -521,7 +519,6 @@ class _SafetyTalkScreenState extends State<SafetyTalkScreen> {
                               training: entry.$2,
                               onTap: () => _showDetail(entry.$2),
                               onLongPress: safetyTalkCanModify(
-                                entry.$2,
                                 safetyTalkMap(context.read<AuthService>().user),
                               )
                                   ? () => _confirmDelete(entry.$2)

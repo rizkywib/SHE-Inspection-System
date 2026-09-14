@@ -22,4 +22,15 @@ trait AuthorizesOwnerOrAdmin
             'message' => 'Anda tidak memiliki izin untuk mengubah data ini.',
         ], 403);
     }
+
+    protected function authorizeAdminOnly(Request $request): ?JsonResponse
+    {
+        if ($request->user()->isAdmin()) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => 'Hanya admin dan super admin yang dapat mengubah atau menghapus data ini.',
+        ], 403);
+    }
 }

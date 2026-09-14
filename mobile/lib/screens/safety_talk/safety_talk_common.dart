@@ -49,13 +49,7 @@ int safetyTalkTotalParticipants(Map<String, dynamic> row) {
           (safetyTalkInt(row['contractor_participants']) ?? 0);
 }
 
-bool safetyTalkCanModify(
-  Map<String, dynamic> row,
-  Map<String, dynamic> currentUser,
-) {
+bool safetyTalkCanModify(Map<String, dynamic> currentUser) {
   final role = currentUser['role']?.toString();
-  if (role == 'admin' || role == 'super_admin') return true;
-  final createdBy = safetyTalkInt(row['created_by']);
-  final userId = safetyTalkInt(currentUser['id']);
-  return createdBy != null && userId != null && createdBy == userId;
+  return role == 'admin' || role == 'super_admin';
 }

@@ -326,10 +326,7 @@ class _SafetyTalkFormScreenState extends State<SafetyTalkFormScreen> {
   @override
   Widget build(BuildContext context) {
     final canModify = !_isEdit ||
-        safetyTalkCanModify(
-          widget.training!,
-          safetyTalkMap(context.read<AuthService>().user),
-        );
+        safetyTalkCanModify(safetyTalkMap(context.read<AuthService>().user));
     return Scaffold(
       appBar: AppBar(
         title: Text(

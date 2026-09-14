@@ -55,7 +55,7 @@ async function loadDetail() {
     }
 
     const data = (await response.json()).data;
-    const canModify = currentUser.role === 'super_admin' || currentUser.role === 'admin' || String(data.inspector_id) === String(currentUser.id);
+    const canModify = currentUser.role === 'super_admin' || currentUser.role === 'admin';
     if (canModify) {
         document.getElementById('editButton').classList.remove('hidden');
     }

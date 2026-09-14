@@ -82,7 +82,7 @@ class SafetyTalkTrainingController extends Controller
     {
         $training = SafetyTalkTraining::findOrFail($id);
 
-        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $training, 'created_by')) {
+        if ($forbidden = $this->authorizeAdminOnly($request)) {
             return $forbidden;
         }
 
@@ -122,7 +122,7 @@ class SafetyTalkTrainingController extends Controller
     {
         $training = SafetyTalkTraining::findOrFail($id);
 
-        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $training, 'created_by')) {
+        if ($forbidden = $this->authorizeAdminOnly($request)) {
             return $forbidden;
         }
 

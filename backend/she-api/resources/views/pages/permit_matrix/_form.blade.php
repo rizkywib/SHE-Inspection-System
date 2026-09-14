@@ -183,7 +183,7 @@ async function initForm() {
         if (!response.ok) return showMessage('Data Permit Matrix tidak dapat dimuat.');
         const data = (await response.json()).data;
         const isAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
-        if (!isAdmin && String(data.inspector_id) !== String(currentUser.id)) {
+        if (!isAdmin) {
             document.getElementById('permitForm').classList.add('hidden');
             return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
         }

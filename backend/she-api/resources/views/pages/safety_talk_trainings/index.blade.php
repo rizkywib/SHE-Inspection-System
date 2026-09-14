@@ -79,7 +79,7 @@ let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 let permissions = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
 const can = permission => currentUser.role === 'super_admin' || permissions.includes(permission);
 const isAdmin = () => currentUser.role === 'super_admin' || currentUser.role === 'admin';
-const canModify = record => isAdmin() || String(record.created_by) === String(currentUser.id);
+const canModify = () => isAdmin();
 const authHeaders = {'Authorization': `Bearer ${token}`, 'Accept': 'application/json'};
 const params = new URLSearchParams(window.location.search);
 if (!token) window.location.href = '/';

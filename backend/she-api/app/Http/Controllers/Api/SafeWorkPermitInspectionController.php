@@ -83,7 +83,7 @@ class SafeWorkPermitInspectionController extends Controller
     {
         $inspection = SafeWorkPermitInspection::findOrFail($id);
 
-        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+        if ($forbidden = $this->authorizeAdminOnly($request)) {
             return $forbidden;
         }
 
@@ -99,7 +99,7 @@ class SafeWorkPermitInspectionController extends Controller
     {
         $inspection = SafeWorkPermitInspection::findOrFail($id);
 
-        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+        if ($forbidden = $this->authorizeAdminOnly($request)) {
             return $forbidden;
         }
 

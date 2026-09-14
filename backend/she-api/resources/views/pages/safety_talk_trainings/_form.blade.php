@@ -133,7 +133,7 @@ async function initForm() {
         if (!response.ok) return showMessage('Data Safety Talk tidak dapat dimuat.');
         const data = (await response.json()).data;
         const isAdmin = user.role === 'super_admin' || user.role === 'admin';
-        if (!isAdmin && String(data.created_by) !== String(user.id)) {
+        if (!isAdmin) {
             document.getElementById('trainingForm').classList.add('hidden');
             return showMessage('Anda tidak memiliki izin untuk mengedit data ini.');
         }

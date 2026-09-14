@@ -42,7 +42,7 @@ async function init() {
     const response = await fetch(`/api/safety-talk-trainings/${trainingId}`, {headers});
     if (!response.ok) return error('Data Safety Talk tidak ditemukan.');
     const data = (await response.json()).data;
-    const canModify = user.role === 'super_admin' || user.role === 'admin' || String(data.created_by) === String(user.id);
+    const canModify = user.role === 'super_admin' || user.role === 'admin';
     if (canModify) {
         document.getElementById('editButton').classList.remove('hidden');
         document.getElementById('deleteButton').classList.remove('hidden');

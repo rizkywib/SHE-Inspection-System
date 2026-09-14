@@ -122,10 +122,8 @@ class _PermitMatrixScreenState extends State<PermitMatrixScreen> {
   }
 
   void _openDetailSheet(Map<String, dynamic> detail) {
-    final canModify = permitCanModify(
-      detail,
-      permitMap(context.read<AuthService>().user),
-    );
+    final canModify =
+        permitCanModify(permitMap(context.read<AuthService>().user));
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -365,7 +363,6 @@ class _PermitMatrixScreenState extends State<PermitMatrixScreen> {
                                     row: row,
                                     onTap: () => _showDetail(row),
                                     onLongPress: permitCanModify(
-                                      row,
                                       permitMap(
                                           context.read<AuthService>().user),
                                     )
