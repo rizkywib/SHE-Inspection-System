@@ -41,6 +41,17 @@ class User extends Authenticatable
         'updated_at' => 'datetime',
     ];
 
+    private const ROLE_DEFAULT_PERMISSIONS = [
+        'admin' => [
+            'safe-work-permit-inspection' => ['view', 'create', 'update', 'delete'],
+            'safety-talk-training' => ['view', 'create', 'update', 'delete'],
+        ],
+        'inspector' => [
+            'safe-work-permit-inspection' => ['view', 'create'],
+            'safety-talk-training' => ['view', 'create'],
+        ],
+    ];
+
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -109,13 +120,17 @@ class User extends Authenticatable
 
         [$module, $action] = $this->parsePermission($permission);
 
+        if ($this->roleHasPermission($module, $action)) {
+            return true;
+        }
+
         return DB::table('user_group_members')
             ->join('user_groups', 'user_groups.id', '=', 'user_group_members.group_id')
             ->join('permissions', 'permissions.group_id', '=', 'user_group_members.group_id')
             ->where('user_group_members.user_id', $this->id)
             ->where('user_groups.is_active', true)
             ->where('permissions.module', $module)
-            ->where($action, true)
+            ->where($this->actionColumn($action), true)
             ->exists();
     }
 
@@ -134,27 +149,51 @@ class User extends Authenticatable
             ];
         }
 
-        $rows = DB::table('user_group_members')
+        $rolePermissions = collect(self::ROLE_DEFAULT_PERMISSIONS[$this->role] ?? [])
+            ->flatMap(fn (array $actions, string $module) => collect($actions)
+                ->map(fn (string $action) => "{$module}.{$action}"))
+            ->all();
+
+        $groupPermissions = DB::table('user_group_members')
             ->join('user_groups', 'user_groups.id', '=', 'user_group_members.group_id')
             ->join('permissions', 'permissions.group_id', '=', 'user_group_members.group_id')
             ->where('user_group_members.user_id', $this->id)
             ->where('user_groups.is_active', true)
-            ->get(['permissions.module', 'can_view', 'can_create', 'can_edit', 'can_delete']);
+            ->get(['permissions.module', 'can_view', 'can_create', 'can_edit', 'can_delete'])
+            ->flatMap(function ($row) {
+                return collect([
+                    'view' => 'can_view',
+                    'create' => 'can_create',
+                    'update' => 'can_edit',
+                    'delete' => 'can_delete',
+                ])->filter(fn (string $column) => (bool) $row->{$column})
+                    ->keys()
+                    ->map(fn (string $action) => "{$row->module}.{$action}");
+            })
+            ->all();
 
-        return $rows->flatMap(function ($row) {
-            return collect([
-                'view' => 'can_view',
-                'create' => 'can_create',
-                'update' => 'can_edit',
-                'delete' => 'can_delete',
-            ])->filter(fn (string $column) => (bool) $row->{$column})
-                ->keys()
-                ->map(fn (string $action) => "{$row->module}.{$action}");
-        })
+        return collect(array_merge($rolePermissions, $groupPermissions))
             ->unique()
             ->sort()
             ->values()
             ->all();
+    }
+
+    private function roleHasPermission(string $module, string $action): bool
+    {
+        $actions = self::ROLE_DEFAULT_PERMISSIONS[$this->role][$module] ?? [];
+
+        return in_array($action, $actions, true);
+    }
+
+    private function actionColumn(string $action): string
+    {
+        return [
+            'view' => 'can_view',
+            'create' => 'can_create',
+            'update' => 'can_edit',
+            'delete' => 'can_delete',
+        ][$action] ?? 'can_view';
     }
 
     private function parsePermission(string $permission): array
@@ -162,13 +201,11 @@ class User extends Authenticatable
         $position = strrpos($permission, '.');
         $module = $position === false ? $permission : substr($permission, 0, $position);
         $action = $position === false ? 'view' : substr($permission, $position + 1);
-        $columns = [
-            'view' => 'can_view',
-            'create' => 'can_create',
-            'update' => 'can_edit',
-            'delete' => 'can_delete',
-        ];
 
-        return [$module, $columns[$action] ?? 'can_view'];
+        if (! in_array($action, ['view', 'create', 'update', 'delete'], true)) {
+            $action = 'view';
+        }
+
+        return [$module, $action];
     }
 }

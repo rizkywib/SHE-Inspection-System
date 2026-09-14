@@ -75,7 +75,7 @@ class SafetyTalkTrainingTest extends TestCase
 
     public function test_user_without_permission_is_rejected(): void
     {
-        $user = $this->makeUser('inspector');
+        $user = $this->makeUser('user_dept_head');
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/safety-talk-trainings')
             ->assertForbidden();
