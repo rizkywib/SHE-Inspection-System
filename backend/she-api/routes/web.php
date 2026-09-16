@@ -62,9 +62,15 @@ Route::middleware('web')->group(function () {
 
     Route::get('/dashboard/fire-alarms/{id}/items/create', function (int $id) {
         return response()
-            ->view('pages.fire_alarm_item_form', ['inspectionId' => $id])
+            ->view('pages.fire_alarm_item_form', ['inspectionId' => $id, 'itemId' => null, 'mode' => 'create'])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     })->whereNumber('id');
+
+    Route::get('/dashboard/fire-alarms/{id}/items/{itemId}/edit', function (int $id, int $itemId) {
+        return response()
+            ->view('pages.fire_alarm_item_form', ['inspectionId' => $id, 'itemId' => $itemId, 'mode' => 'edit'])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    })->whereNumber('id')->whereNumber('itemId');
 
     Route::prefix('/dashboard/es-ew-inspections')->name('es-ew-inspections.')->group(function () {
         Route::get('/', fn () => view('pages.es_ew_inspections.index'))->name('index');

@@ -145,8 +145,8 @@
                     ${photoLink(item.photo_after, 'Foto Sesudah')}
                 </div></td>
                 <td class="px-4 py-4 text-sm whitespace-nowrap">
-                    ${canModify(inspection) ? `<a href="/dashboard/fire-alarms/${inspection.id}/items/create" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</a>
-                    <button type="button" onclick="deleteInspection(${inspection.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>` : '-'}
+                    ${canModify(inspection) ? `<a href="/dashboard/fire-alarms/${inspection.id}/items/${item.id}/edit" class="text-blue-600 hover:text-blue-800 mr-3 font-medium"><i class="fas fa-edit mr-1"></i>Edit</a>
+                    <button type="button" onclick="deleteItem(${item.id})" class="text-red-600 hover:text-red-800 font-medium"><i class="fas fa-trash mr-1"></i>Delete</button>` : '-'}
                 </td>
             </tr>`).join('');
         } catch (error) {
@@ -155,18 +155,18 @@
         }
     }
 
-    async function deleteInspection(id) {
-        if (!confirm('Delete this inspection?')) return;
-        const response = await apiFetch(`/fire-alarms/${id}`, { method: 'DELETE' });
+    async function deleteItem(id) {
+        if (!confirm('Delete this item?')) return;
+        const response = await apiFetch(`/fire-alarms/${inspectionId}/items/${id}`, { method: 'DELETE' });
         if (!response.ok) {
             const json = await response.json().catch(() => ({}));
             alert(json.message || 'Delete failed');
             return;
         }
-        window.location.href = '/dashboard/fire-alarms';
+        loadItems();
     }
 
-    window.deleteInspection = deleteInspection;
+    window.deleteItem = deleteItem;
     window.logout = function () {
         fetch(`${API_URL}/auth/logout`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }

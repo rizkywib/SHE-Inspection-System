@@ -117,6 +117,76 @@ class FireAlarmController extends Controller
         return response()->json(['data' => $item], 201);
     }
 
+    public function updateItem(Request $request, $inspectionId, $itemId)
+    {
+        $inspection = FireAlarmInspection::findOrFail($inspectionId);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
+        $item = $inspection->items()->findOrFail($itemId);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:100',
+            'alarm_number' => 'nullable|string|max:200',
+            'type' => 'nullable|string|max:200',
+            'location_detail' => 'nullable|string|max:299',
+            'condition_good' => 'nullable|boolean',
+            'correction_needed' => 'nullable|boolean',
+            'remark' => 'nullable|string',
+            'photo_before' => 'nullable|image|max:5120',
+            'photo_after' => 'nullable|image|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $oldPhotos = [];
+
+        foreach (['photo_before', 'photo_after'] as $field) {
+            if ($request->hasFile($field) && $request->file($field)->isValid()) {
+                $data[$field] = $this->storeItemPhoto($request, $field);
+                $oldPhotos[] = $item->{$field};
+            } else {
+                unset($data[$field]);
+            }
+        }
+
+        $item->update($data);
+
+        foreach ($oldPhotos as $oldPhoto) {
+            $this->deleteItemPhoto($oldPhoto);
+        }
+
+        return response()->json([
+            'message' => 'Item Fire Alarm berhasil diperbarui.',
+            'data' => $item->fresh(),
+        ]);
+    }
+
+    public function destroyItem(Request $request, $inspectionId, $itemId)
+    {
+        $inspection = FireAlarmInspection::findOrFail($inspectionId);
+
+        if ($forbidden = $this->authorizeOwnerOrAdmin($request, $inspection, 'inspector_id')) {
+            return $forbidden;
+        }
+
+        $item = $inspection->items()->findOrFail($itemId);
+        $photos = [$item->photo_before, $item->photo_after];
+
+        $item->delete();
+
+        foreach ($photos as $photo) {
+            $this->deleteItemPhoto($photo);
+        }
+
+        return response()->json(['message' => 'Item Fire Alarm berhasil dihapus.']);
+    }
+
     public function update(Request $request, $id)
     {
         $inspection = FireAlarmInspection::findOrFail($id);
@@ -236,6 +306,22 @@ class FireAlarmController extends Controller
         $file->move($targetPath, $filename);
 
         return 'images/' . $filename;
+    }
+
+    private function deleteItemPhoto(?string $path): void
+    {
+        $normalized = str_replace('\\', '/', ltrim((string) $path, '/'));
+
+        if (!str_starts_with($normalized, 'images/')) {
+            return;
+        }
+
+        $filename = substr($normalized, strlen('images/'));
+        if ($filename === '' || basename($filename) !== $filename) {
+            return;
+        }
+
+        File::delete(public_path('images/' . $filename));
     }
 
     private function storeItemPhotos(Request $request): void

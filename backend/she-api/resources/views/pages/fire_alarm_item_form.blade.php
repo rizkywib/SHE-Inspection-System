@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Create Fire Alarm Item')
+@php
+    $mode = $mode ?? 'create';
+    $itemId = $itemId ?? null;
+    $isEdit = $mode === 'edit';
+@endphp
+
+@section('title', ($isEdit ? 'Edit' : 'Create') . ' Fire Alarm Item')
 @section('nav-fire-alarms', 'active')
 
 @section('content')
@@ -10,10 +16,12 @@
             <i class="fas fa-arrow-left text-xl"></i>
         </a>
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Create Fire Alarm Item</h1>
+            <h1 class="text-3xl font-bold text-gray-900">{{ $isEdit ? 'Edit' : 'Create' }} Fire Alarm Item</h1>
             <p class="text-gray-600 mt-1">Header inspection mengikuti data sebelumnya (readonly), hanya bagian item yang dapat diisi.</p>
         </div>
     </div>
+
+    <div id="messageBox" class="hidden mb-6 rounded-lg border px-4 py-3" role="alert"></div>
 
     <div class="bg-white rounded-xl shadow-lg p-6">
         <form id="alarmItemForm" class="space-y-6">
@@ -86,10 +94,12 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Foto Sebelum</label>
                         <input id="item_photo_before" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white">
+                        <div id="preview_before" class="mt-2 text-xs text-gray-500"></div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Foto Sesudah</label>
                         <input id="item_photo_after" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white">
+                        <div id="preview_after" class="mt-2 text-xs text-gray-500"></div>
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Remark</label>
@@ -112,6 +122,9 @@
 (function () {
     const API_URL = '/api';
     const inspectionId = @json($inspectionId);
+    const itemId = @json($itemId);
+    const mode = @json($mode);
+    const isEdit = mode === 'edit';
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     let points = [];
@@ -130,6 +143,33 @@
 
     function formatDate(value) { return value ? String(value).slice(0, 10) : ''; }
     function getRadioValue(name) { return document.querySelector(`input[name="${name}"]:checked`)?.value ?? null; }
+    function setRadioValue(name, value) {
+        const normalized = String(value === true ? '1' : value === false ? '0' : value);
+        const input = document.querySelector(`input[name="${name}"][value="${normalized === '1' ? '1' : '0'}"]`);
+        if (input) input.checked = true;
+    }
+    function photoUrl(value) {
+        if (!value) return '';
+        const path = String(value);
+        if (/^(https?:|data:|blob:)/i.test(path)) return path;
+        return `/${path.replace(/^\/+/, '').replace(/^public\//, '')}`;
+    }
+    function showMessage(text, type = 'error') {
+        const box = document.getElementById('messageBox');
+        box.textContent = text;
+        box.className = `mb-6 rounded-lg border px-4 py-3 ${type === 'success'
+            ? 'bg-green-50 border-green-300 text-green-800'
+            : 'bg-red-50 border-red-300 text-red-800'}`;
+        box.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function setPhotoPreview(field, path) {
+        const preview = document.getElementById(`preview_${field}`);
+        if (!preview) return;
+        preview.innerHTML = path
+            ? `Foto saat ini: <a href="${escapeHtml(photoUrl(path))}" target="_blank" class="text-blue-600 hover:text-blue-800">lihat</a>`
+            : '';
+    }
     function validationMessage(json, fallback) {
         const errors = json?.errors ? Object.values(json.errors).flat() : [];
         return errors.length ? errors.join('\n') : (json?.message || fallback);
@@ -183,6 +223,32 @@
             document.getElementById('inspector_id').value = inspection.inspector_id || '';
             document.getElementById('location_name').value = (inspection.location && inspection.location.name) || '-';
             document.getElementById('inspector_name').value = (inspection.inspector && inspection.inspector.name) || '-';
+
+            if (isEdit) {
+                const items = Array.isArray(inspection.items) ? inspection.items : [];
+                const item = items.find(row => String(row.id) === String(itemId));
+                if (!item) {
+                    showMessage('Item Fire Alarm tidak ditemukan.');
+                    document.getElementById('saveButton').disabled = true;
+                    return;
+                }
+
+                const selectedPoint = points.find(point =>
+                    point.name_point === item.name
+                    && String(point.ket1 ?? '') === String(item.type ?? '')
+                    && String(point.ket2 ?? '') === String(item.location_detail ?? '')
+                ) || points.find(point => point.name_point === item.name);
+
+                document.getElementById('item_name').value = selectedPoint?.id || '';
+                document.getElementById('item_alarm_number').value = item.alarm_number || '';
+                document.getElementById('item_type').value = item.type || '';
+                document.getElementById('item_location_detail').value = item.location_detail || '';
+                document.getElementById('item_remark').value = item.remark || '';
+                setRadioValue('condition_good', item.condition_good);
+                setRadioValue('correction_needed', item.correction_needed);
+                setPhotoPreview('before', item.photo_before);
+                setPhotoPreview('after', item.photo_after);
+            }
         } catch (error) {
             alert(error.message || 'Gagal memuat form');
         }
@@ -216,7 +282,12 @@
             if (beforePhoto) formData.append('photo_before', beforePhoto);
             if (afterPhoto) formData.append('photo_after', afterPhoto);
 
-            const response = await apiFetch(`/fire-alarms/${inspectionId}/items`, { method: 'POST', body: formData });
+            const endpoint = isEdit
+                ? `/fire-alarms/${inspectionId}/items/${itemId}`
+                : `/fire-alarms/${inspectionId}/items`;
+            if (isEdit) formData.append('_method', 'PUT');
+
+            const response = await apiFetch(endpoint, { method: 'POST', body: formData });
             const json = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(validationMessage(json, `Save failed (${response.status})`));
             window.location.href = `/dashboard/fire-alarms/${inspectionId}/items`;

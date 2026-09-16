@@ -172,6 +172,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/fire-alarms/{id}', [FireAlarmController::class, 'show']);
     Route::put('/fire-alarms/{id}', [FireAlarmController::class, 'update']);
     Route::post('/fire-alarms/{id}/items', [FireAlarmController::class, 'storeItem']);
+    Route::put('/fire-alarms/{inspectionId}/items/{itemId}', [FireAlarmController::class, 'updateItem'])
+        ->whereNumber('inspectionId')
+        ->whereNumber('itemId');
+    Route::delete('/fire-alarms/{inspectionId}/items/{itemId}', [FireAlarmController::class, 'destroyItem'])
+        ->whereNumber('inspectionId')
+        ->whereNumber('itemId');
     Route::delete('/fire-alarms/{id}', [FireAlarmController::class, 'destroy']);
     Route::post('/fire-alarms/{id}/checkin', [FireAlarmController::class, 'checkin']);
     Route::post('/fire-alarms/{id}/sign', [FireAlarmController::class, 'sign']);
