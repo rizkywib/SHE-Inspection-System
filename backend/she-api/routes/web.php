@@ -168,6 +168,14 @@ Route::middleware('web')->group(function () {
         return view('pages.users');
     });
 
+    Route::get('/dashboard/activity-logs', function () {
+        return response()
+            ->view('pages.activity_logs')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    });
+
     Route::get('/dashboard/profile', function () {
         return view('pages.profile.edit');
     })->name('profile.edit');

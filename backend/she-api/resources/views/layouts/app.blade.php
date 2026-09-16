@@ -136,6 +136,10 @@
                     <i class="fas fa-users w-5"></i>
                     <span>Users</span>
                 </a>
+                <a id="activityLogsMenuDesktop" href="/dashboard/activity-logs" class="hidden nav-link items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 @yield('nav-activity-logs', '')">
+                    <i class="fas fa-history w-5"></i>
+                    <span>Activity Log</span>
+                </a>
             </nav>
 
             <div class="px-4 py-4 border-t border-gray-700">
@@ -193,6 +197,7 @@
                     <a href="/dashboard/permit-main-areas" class="block py-2 text-gray-600 hover:text-gray-900">Main Area</a>
                     <a href="/dashboard/permit-sub-areas" class="block py-2 text-gray-600 hover:text-gray-900">Sub Area</a>
                     <a id="usersMenuMobile" href="/dashboard/users" class="hidden py-2 text-gray-600 hover:text-gray-900">Users</a>
+                    <a id="activityLogsMenuMobile" href="/dashboard/activity-logs" class="hidden py-2 text-gray-600 hover:text-gray-900">Activity Log</a>
                     <a href="/dashboard/profile" class="block py-2 text-blue-600 hover:text-blue-800"><i class="fas fa-user-pen mr-2"></i>Edit Profil</a>
                     <button onclick="logout()" class="text-red-600 hover:text-red-800 text-sm py-2">Logout</button>
                 </div>
@@ -242,6 +247,13 @@
                 desktopUsersMenu?.classList.add('flex');
                 mobileUsersMenu?.classList.remove('hidden');
                 mobileUsersMenu?.classList.add('block');
+
+                const desktopLogsMenu = document.getElementById('activityLogsMenuDesktop');
+                const mobileLogsMenu = document.getElementById('activityLogsMenuMobile');
+                desktopLogsMenu?.classList.remove('hidden');
+                desktopLogsMenu?.classList.add('flex');
+                mobileLogsMenu?.classList.remove('hidden');
+                mobileLogsMenu?.classList.add('block');
             }
         })();
     </script>

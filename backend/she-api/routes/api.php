@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CompanyController;
@@ -105,6 +106,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/incident-types/{id}', [IncidentTypeController::class, 'destroy'])->middleware('admin');
     Route::apiResource('users', UserController::class)->only(['index', 'show']);
     Route::apiResource('users', UserController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
+
+    // Activity Logs (admin / super admin only)
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->middleware('admin');
 
     // Permit Matrix / Safe Work Permit Inspections
     Route::get('/safe-work-permit-inspections/master-data', [SafeWorkPermitInspectionController::class, 'masterData'])

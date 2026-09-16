@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api([
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\LogActivity::class,
         ]);
         $middleware->alias([
             'permission' => \App\Http\Middleware\EnsurePermission::class,
