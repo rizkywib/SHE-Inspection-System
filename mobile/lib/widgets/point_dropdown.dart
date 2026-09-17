@@ -9,6 +9,7 @@ class PointDropdown extends StatelessWidget {
     required this.onChanged,
     this.icon = Icons.numbers,
     this.isLoading = false,
+    this.optionBuilder,
   });
 
   final String label;
@@ -17,6 +18,7 @@ class PointDropdown extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>> onChanged;
   final IconData icon;
   final bool isLoading;
+  final String Function(Map<String, dynamic> point)? optionBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +59,7 @@ class PointDropdown extends StatelessWidget {
             (point) => DropdownMenuItem<int>(
               value: _asInt(point['id']),
               child: Text(
-                _pointOption(point),
+                optionBuilder?.call(point) ?? _pointOption(point),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

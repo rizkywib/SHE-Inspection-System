@@ -10,6 +10,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/point_dropdown.dart';
 import 'es_ew_common.dart';
 
 class EsEwSetupScreen extends StatefulWidget {
@@ -93,6 +94,36 @@ class _EsEwSetupScreenState extends State<EsEwSetupScreen> {
     if (didSave == true && mounted) Navigator.pop(context, true);
   }
 
+  Future<void> _openManualForm() async {
+    final areaId = _areaId;
+    if (areaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih area terlebih dahulu.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final area = _areas.map(esEwMap).firstWhere(
+          (value) => esEwInt(value['id']) == areaId,
+          orElse: () => <String, dynamic>{},
+        );
+    final didSave = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EsEwCreateScreen(
+          inspectionDate: _inspectionDate,
+          areaId: areaId,
+          areaName: esEwText(area['name']),
+          isManual: true,
+        ),
+      ),
+    );
+    if (didSave == true && mounted) Navigator.pop(context, true);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,6 +185,18 @@ class _EsEwSetupScreenState extends State<EsEwSetupScreen> {
                                 icon: const Icon(Icons.qr_code_scanner),
                                 label: const Text('Scan QR Code'),
                                 style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _openManualForm,
+                                icon: const Icon(Icons.edit_note_outlined),
+                                label: const Text('Add Manual Form'),
+                                style: OutlinedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(50),
                                 ),
                               ),
@@ -374,15 +417,17 @@ class EsEwCreateScreen extends StatefulWidget {
     required this.inspectionDate,
     required this.areaId,
     required this.areaName,
-    required this.point,
-    required this.scannedQr,
+    this.point,
+    this.scannedQr,
+    this.isManual = false,
   });
 
   final String inspectionDate;
   final int areaId;
   final String areaName;
-  final Map<String, dynamic> point;
-  final String scannedQr;
+  final Map<String, dynamic>? point;
+  final String? scannedQr;
+  final bool isManual;
 
   @override
   State<EsEwCreateScreen> createState() => _EsEwCreateScreenState();
@@ -392,9 +437,15 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
   final ImagePicker _picker = ImagePicker();
   late final TextEditingController _remarkController;
   late final Map<String, bool> _conditions;
+  List<dynamic> _points = [];
+  Map<String, dynamic>? _selectedPoint;
+  bool _isLoadingPoints = false;
   File? _eyeWashPhoto;
   File? _emergencyShowerPhoto;
   bool _isSaving = false;
+
+  Map<String, dynamic> get _activePoint =>
+      _selectedPoint ?? widget.point ?? <String, dynamic>{};
 
   @override
   void initState() {
@@ -403,6 +454,31 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
     _conditions = {
       for (final field in esEwConditionLabels.keys) field: true,
     };
+    if (widget.isManual) {
+      _loadPoints();
+    }
+  }
+
+  Future<void> _loadPoints() async {
+    setState(() => _isLoadingPoints = true);
+    try {
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> points;
+      if (connectivity.isOnline) {
+        points = await context.read<ApiService>().getPoints();
+        unawaited(OfflineStorageService.instance.saveCache('points', points));
+      } else {
+        points = await OfflineStorageService.instance.readCache('points') ?? [];
+      }
+      if (!mounted) return;
+      setState(() {
+        _points = points.where(isEsEwPoint).toList(growable: false);
+        _isLoadingPoints = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingPoints = false);
+    }
   }
 
   @override
@@ -428,11 +504,15 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
   }
 
   Future<void> _save() async {
-    final pointId = esEwInt(widget.point['id']);
+    final pointId = esEwInt(_activePoint['id']);
     if (pointId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Point ES/EW dari QR Code tidak valid.'),
+        SnackBar(
+          content: Text(
+            widget.isManual
+                ? 'Pilih ES/EW Name terlebih dahulu.'
+                : 'Point ES/EW dari QR Code tidak valid.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -468,7 +548,7 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
           method: 'POST',
           fields: fields,
           files: fileMap,
-          displayName: 'ES/EW ${esEwText(widget.point['name_point'])}',
+          displayName: 'ES/EW ${esEwText(_activePoint['name_point'])}',
         );
         if (!mounted) return;
         setState(() => _isSaving = false);
@@ -543,7 +623,7 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
       method: 'POST',
       fields: fields,
       files: fileMap,
-      displayName: 'ES/EW ${esEwText(widget.point['name_point'])}',
+      displayName: 'ES/EW ${esEwText(_activePoint['name_point'])}',
     );
   }
 
@@ -590,27 +670,42 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
               const SizedBox(height: 16),
               _FormSection(
                 title: 'ES/EW Detail',
-                trailing: const Chip(
-                  avatar: Icon(Icons.qr_code_2, size: 18),
-                  label: Text('QR Scanned'),
+                trailing: Chip(
+                  avatar: Icon(
+                    widget.isManual ? Icons.edit_note : Icons.qr_code_2,
+                    size: 18,
+                  ),
+                  label: Text(widget.isManual ? 'Manual' : 'QR Scanned'),
                 ),
                 child: Column(
                   children: [
-                    _ReadOnlyField(
-                      label: 'Name',
-                      value: esEwText(widget.point['name_point']),
-                      icon: Icons.shower_outlined,
-                    ),
+                    if (widget.isManual)
+                      PointDropdown(
+                        label: 'ES/EW Name',
+                        points: _points,
+                        selectedId: esEwInt(_selectedPoint?['id']),
+                        isLoading: _isLoadingPoints,
+                        icon: Icons.shower_outlined,
+                        optionBuilder: esEwPointOption,
+                        onChanged: (point) =>
+                            setState(() => _selectedPoint = point),
+                      )
+                    else
+                      _ReadOnlyField(
+                        label: 'Name',
+                        value: esEwText(_activePoint['name_point']),
+                        icon: Icons.shower_outlined,
+                      ),
                     const SizedBox(height: 12),
                     _ReadOnlyField(
                       label: 'Location',
-                      value: esEwText(widget.point['ket1']),
+                      value: esEwText(_activePoint['ket1']),
                       icon: Icons.place_outlined,
                     ),
                     const SizedBox(height: 12),
                     _ReadOnlyField(
                       label: 'Section',
-                      value: esEwText(widget.point['ket2']),
+                      value: esEwText(_activePoint['ket2']),
                       icon: Icons.account_tree_outlined,
                     ),
                   ],
@@ -666,18 +761,20 @@ class _EsEwCreateScreenState extends State<EsEwCreateScreen> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          _isSaving ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('Scan Ulang'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
+                  if (!widget.isManual) ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _isSaving ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan Ulang'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _isSaving ? null : _save,
