@@ -11,6 +11,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/point_dropdown.dart';
 
 class FireAlarmSetupScreen extends StatefulWidget {
   const FireAlarmSetupScreen({super.key});
@@ -99,6 +100,40 @@ class _FireAlarmSetupScreenState extends State<FireAlarmSetupScreen> {
     }
   }
 
+  Future<void> _openManualForm() async {
+    final locationId = _locationId;
+    if (locationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih location terlebih dahulu.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final location = _locations.map(_asMap).firstWhere(
+          (item) => _asInt(item['id_location'] ?? item['id']) == locationId,
+          orElse: () => <String, dynamic>{},
+        );
+
+    final didSave = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FireAlarmCreateScreen(
+          inspectionDate: _inspectionDate,
+          locationId: locationId,
+          locationName: _locationName(location),
+          isManual: true,
+        ),
+      ),
+    );
+
+    if (didSave == true && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -173,6 +208,18 @@ class _FireAlarmSetupScreenState extends State<FireAlarmSetupScreen> {
                                 icon: const Icon(Icons.qr_code_scanner),
                                 label: const Text('Scan QR Code'),
                                 style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _openManualForm,
+                                icon: const Icon(Icons.edit_note_outlined),
+                                label: const Text('Add Manual Form'),
+                                style: OutlinedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(50),
                                 ),
                               ),
@@ -457,15 +504,17 @@ class FireAlarmCreateScreen extends StatefulWidget {
     required this.inspectionDate,
     required this.locationId,
     required this.locationName,
-    required this.point,
-    required this.scannedQr,
+    this.point,
+    this.scannedQr,
+    this.isManual = false,
   });
 
   final String inspectionDate;
   final int locationId;
   final String locationName;
-  final Map<String, dynamic> point;
-  final String scannedQr;
+  final Map<String, dynamic>? point;
+  final String? scannedQr;
+  final bool isManual;
 
   @override
   State<FireAlarmCreateScreen> createState() => _FireAlarmCreateScreenState();
@@ -478,19 +527,51 @@ class _FireAlarmCreateScreenState extends State<FireAlarmCreateScreen> {
   bool _conditionGood = true;
   bool _correctionNeeded = false;
   bool _isSaving = false;
+  bool _isLoadingPoints = false;
+  List<dynamic> _points = [];
+  Map<String, dynamic>? _selectedPoint;
   File? _photoBefore;
   File? _photoAfter;
 
+  Map<String, dynamic> get _activePoint =>
+      _selectedPoint ?? widget.point ?? <String, dynamic>{};
+
   String get _alarmName =>
-      (widget.point['name_point'] ?? widget.point['id'] ?? '').toString();
-  String get _type => widget.point['ket1']?.toString().trim() ?? '';
-  String get _locationDetail => widget.point['ket2']?.toString().trim() ?? '';
+      (_activePoint['name_point'] ?? _activePoint['id'] ?? '').toString();
+  String get _type => _activePoint['ket1']?.toString().trim() ?? '';
+  String get _locationDetail =>
+      _activePoint['ket2']?.toString().trim() ?? '';
 
   @override
   void initState() {
     super.initState();
     _alarmNumberController = TextEditingController();
     _remarkController = TextEditingController();
+    if (widget.isManual) {
+      _loadPoints();
+    }
+  }
+
+  Future<void> _loadPoints() async {
+    setState(() => _isLoadingPoints = true);
+    try {
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> points;
+      if (connectivity.isOnline) {
+        points = await context.read<ApiService>().getPoints();
+        unawaited(OfflineStorageService.instance.saveCache('points', points));
+      } else {
+        points = await OfflineStorageService.instance.readCache('points') ?? [];
+      }
+      if (!mounted) return;
+      setState(() {
+        _points = points;
+        _isLoadingPoints = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingPoints = false);
+    }
   }
 
   @override
@@ -519,8 +600,12 @@ class _FireAlarmCreateScreenState extends State<FireAlarmCreateScreen> {
   Future<void> _save() async {
     if (_alarmName.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Detail alarm dari QR Code tidak lengkap.'),
+        SnackBar(
+          content: Text(
+            widget.isManual
+                ? 'Pilih Alarm Number terlebih dahulu.'
+                : 'Detail alarm dari QR Code tidak lengkap.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -535,7 +620,8 @@ class _FireAlarmCreateScreenState extends State<FireAlarmCreateScreen> {
       'location_id': widget.locationId.toString(),
       if (inspectorId != null) 'inspector_id': inspectorId.toString(),
       'items[0][name]': _alarmName,
-      'items[0][alarm_number]': _nullIfEmpty(_alarmNumberController.text) ?? '',
+      'items[0][alarm_number]': _nullIfEmpty(_alarmNumberController.text) ??
+          (widget.isManual ? _alarmName : ''),
       'items[0][type]': _type,
       'items[0][location_detail]': _locationDetail,
       'items[0][condition_good]': _conditionGood ? '1' : '0',
@@ -688,26 +774,40 @@ class _FireAlarmCreateScreenState extends State<FireAlarmCreateScreen> {
               const SizedBox(height: 16),
               _FormSection(
                 title: 'Fire Alarm Detail',
-                trailing: const Chip(
-                  avatar: Icon(Icons.qr_code_2, size: 18),
-                  label: Text('QR Scanned'),
+                trailing: Chip(
+                  avatar: Icon(
+                    widget.isManual ? Icons.edit_note : Icons.qr_code_2,
+                    size: 18,
+                  ),
+                  label: Text(widget.isManual ? 'Manual' : 'QR Scanned'),
                 ),
                 child: Column(
                   children: [
-                    _ReadOnlyField(
-                      label: 'Name',
-                      value: _alarmName,
-                      icon: Icons.notifications_active_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _alarmNumberController,
-                      decoration: const InputDecoration(
-                        labelText: 'Alarm Number',
-                        prefixIcon: Icon(Icons.numbers),
-                        border: OutlineInputBorder(),
+                    if (widget.isManual)
+                      PointDropdown(
+                        label: 'Alarm Number',
+                        points: _points,
+                        selectedId: _asInt(_selectedPoint?['id']),
+                        isLoading: _isLoadingPoints,
+                        onChanged: (point) =>
+                            setState(() => _selectedPoint = point),
+                      )
+                    else ...[
+                      _ReadOnlyField(
+                        label: 'Name',
+                        value: _alarmName,
+                        icon: Icons.notifications_active_outlined,
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _alarmNumberController,
+                        decoration: const InputDecoration(
+                          labelText: 'Alarm Number',
+                          prefixIcon: Icon(Icons.numbers),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     _ReadOnlyField(
                       label: 'Type',
@@ -777,17 +877,20 @@ class _FireAlarmCreateScreenState extends State<FireAlarmCreateScreen> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isSaving ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('Scan Ulang'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
+                  if (!widget.isManual) ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _isSaving ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan Ulang'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _isSaving ? null : _save,

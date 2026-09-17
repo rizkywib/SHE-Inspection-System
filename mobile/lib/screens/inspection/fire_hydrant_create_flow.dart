@@ -11,6 +11,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_storage_service.dart';
+import '../../widgets/point_dropdown.dart';
 
 class FireHydrantSetupScreen extends StatefulWidget {
   const FireHydrantSetupScreen({super.key});
@@ -99,6 +100,40 @@ class _FireHydrantSetupScreenState extends State<FireHydrantSetupScreen> {
     }
   }
 
+  Future<void> _openManualForm() async {
+    final locationId = _locationId;
+    if (locationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih location terlebih dahulu.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final location = _locations.map(_asMap).firstWhere(
+          (item) => _asInt(item['id_location'] ?? item['id']) == locationId,
+          orElse: () => <String, dynamic>{},
+        );
+
+    final didSave = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FireHydrantCreateScreen(
+          inspectionDate: _inspectionDate,
+          locationId: locationId,
+          locationName: _locationName(location),
+          isManual: true,
+        ),
+      ),
+    );
+
+    if (didSave == true && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -173,6 +208,18 @@ class _FireHydrantSetupScreenState extends State<FireHydrantSetupScreen> {
                                 icon: const Icon(Icons.add),
                                 label: const Text('Add Form'),
                                 style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(50),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _openManualForm,
+                                icon: const Icon(Icons.edit_note_outlined),
+                                label: const Text('Add Manual Form'),
+                                style: OutlinedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(50),
                                 ),
                               ),
@@ -458,15 +505,17 @@ class FireHydrantCreateScreen extends StatefulWidget {
     required this.inspectionDate,
     required this.locationId,
     required this.locationName,
-    required this.point,
-    required this.scannedQr,
+    this.point,
+    this.scannedQr,
+    this.isManual = false,
   });
 
   final String inspectionDate;
   final int locationId;
   final String locationName;
-  final Map<String, dynamic> point;
-  final String scannedQr;
+  final Map<String, dynamic>? point;
+  final String? scannedQr;
+  final bool isManual;
 
   @override
   State<FireHydrantCreateScreen> createState() =>
@@ -483,23 +532,55 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
   bool _valveCondition = true;
   bool _couplingExtraCondition = true;
   bool _isSaving = false;
+  bool _isLoadingPoints = false;
+  List<dynamic> _points = [];
+  Map<String, dynamic>? _selectedPoint;
   File? _photoBefore;
   File? _photoAfter;
 
+  Map<String, dynamic> get _activePoint =>
+      _selectedPoint ?? widget.point ?? <String, dynamic>{};
+
   String get _hydrantNumber =>
-      (widget.point['name_point'] ?? widget.point['id'] ?? '').toString();
+      (_activePoint['name_point'] ?? _activePoint['id'] ?? '').toString();
 
   String get _hydrantName {
-    final value = widget.point['ket1']?.toString().trim() ?? '';
+    final value = _activePoint['ket1']?.toString().trim() ?? '';
     return value.isEmpty ? _hydrantNumber : value;
   }
 
-  String get _locationDetail => widget.point['ket2']?.toString().trim() ?? '';
+  String get _locationDetail =>
+      _activePoint['ket2']?.toString().trim() ?? '';
 
   @override
   void initState() {
     super.initState();
     _remarkController = TextEditingController();
+    if (widget.isManual) {
+      _loadPoints();
+    }
+  }
+
+  Future<void> _loadPoints() async {
+    setState(() => _isLoadingPoints = true);
+    try {
+      final connectivity = context.read<ConnectivityService>();
+      List<dynamic> points;
+      if (connectivity.isOnline) {
+        points = await context.read<ApiService>().getPoints();
+        unawaited(OfflineStorageService.instance.saveCache('points', points));
+      } else {
+        points = await OfflineStorageService.instance.readCache('points') ?? [];
+      }
+      if (!mounted) return;
+      setState(() {
+        _points = points;
+        _isLoadingPoints = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingPoints = false);
+    }
   }
 
   @override
@@ -527,8 +608,12 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
   Future<void> _save() async {
     if (_hydrantNumber.trim().isEmpty || _hydrantName.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Detail hydrant dari QR Code tidak lengkap.'),
+        SnackBar(
+          content: Text(
+            widget.isManual
+                ? 'Pilih Hydrant Number terlebih dahulu.'
+                : 'Detail hydrant dari QR Code tidak lengkap.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -700,17 +785,30 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
               const SizedBox(height: 16),
               _FormSection(
                 title: 'Hydrant Detail',
-                trailing: const Chip(
-                  avatar: Icon(Icons.qr_code_2, size: 18),
-                  label: Text('QR Scanned'),
+                trailing: Chip(
+                  avatar: Icon(
+                    widget.isManual ? Icons.edit_note : Icons.qr_code_2,
+                    size: 18,
+                  ),
+                  label: Text(widget.isManual ? 'Manual' : 'QR Scanned'),
                 ),
                 child: Column(
                   children: [
-                    _ReadOnlyField(
-                      label: 'Hydrant Number',
-                      value: _hydrantNumber,
-                      icon: Icons.numbers,
-                    ),
+                    if (widget.isManual)
+                      PointDropdown(
+                        label: 'Hydrant Number',
+                        points: _points,
+                        selectedId: _asInt(_selectedPoint?['id']),
+                        isLoading: _isLoadingPoints,
+                        onChanged: (point) =>
+                            setState(() => _selectedPoint = point),
+                      )
+                    else
+                      _ReadOnlyField(
+                        label: 'Hydrant Number',
+                        value: _hydrantNumber,
+                        icon: Icons.numbers,
+                      ),
                     const SizedBox(height: 12),
                     _ReadOnlyField(
                       label: 'Name',
@@ -804,18 +902,20 @@ class _FireHydrantCreateScreenState extends State<FireHydrantCreateScreen> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          _isSaving ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('Scan Ulang'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
+                  if (!widget.isManual) ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _isSaving ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan Ulang'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _isSaving ? null : _save,
